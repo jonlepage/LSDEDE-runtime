@@ -85,7 +85,6 @@
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\Attributes\LabelWidthAttributeProcessor.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\Attributes\SectionHeaderAttributeProcessor.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\Extensions\EnumExtensions.cs" />
-    <Compile Include="Assets\LSDE\Demo\Editor\BubbleSpriteGenerator.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\InspectorProperty\InspectorPropertyGroup.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\Attributes\EnableIfAttributeProcessor.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\Attributes\ShowIfAttributeProcessor.cs" />
