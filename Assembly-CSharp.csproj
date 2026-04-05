@@ -50,8 +50,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\LSDE\blueprints\BlueprintTypes.cs" />
+    <Compile Include="Assets\LSDE\Runtime\Handlers\ActionBlockHandler.cs" />
+    <Compile Include="Assets\LSDE\Demo\Resolvers\DemoCharacterResolver.cs" />
+    <Compile Include="Assets\LSDE\Runtime\Resolvers\ICharacterResolver.cs" />
+    <Compile Include="Assets\LSDE\Runtime\BlueprintLoader.cs" />
+    <Compile Include="Assets\LSDE\Runtime\Resolvers\IConditionResolver.cs" />
+    <Compile Include="Assets\LSDE\Runtime\Handlers\ChoiceBlockHandler.cs" />
+    <Compile Include="Assets\LSDE\Runtime\Handlers\ConditionBlockHandler.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
+    <Compile Include="Assets\LSDE\Demo\Resolvers\DemoConditionResolver.cs" />
+    <Compile Include="Assets\LSDE\Demo\Presenters\ConsoleDialoguePresenter.cs" />
     <Compile Include="Assets\LSDE\blueprints\BlueprintEnums.cs" />
+    <Compile Include="Assets\LSDE\Runtime\Handlers\DialogBlockHandler.cs" />
+    <Compile Include="Assets\LSDE\Runtime\DialogueEngineBootstrap.cs" />
+    <Compile Include="Assets\LSDE\Demo\DemoSceneTrigger.cs" />
+    <Compile Include="Assets\LSDE\Runtime\Interfaces\IDialoguePresenter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Packages\LsdeDialogEngine.Newtonsoft.0.3.0\lib\netstandard2.1\LsdeDialogEngine.Newtonsoft.xml" />
