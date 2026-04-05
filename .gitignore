@@ -39,3 +39,6 @@ dist-ssr
 
 .claude/
 Temp/*
+_bmad/*
+_bmad-output/*
+Assets/Packages/*
