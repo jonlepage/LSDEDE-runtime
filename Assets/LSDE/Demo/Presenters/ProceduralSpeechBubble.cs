@@ -35,11 +35,11 @@ namespace LSDE.Demo
         [Header("Tail")]
         [SerializeField]
         [Tooltip("Height of the tail extending below the bubble body.")]
-        private float _tailHeight = 55f;
+        private float _tailHeight = 50.6f;
 
         [SerializeField]
         [Tooltip("Horizontal offset of the tail from center.")]
-        private float _tailHorizontalOffset = 15f;
+        private float _tailHorizontalOffset = 114.8f;
 
         [Header("Animation")]
         [SerializeField]
@@ -56,7 +56,6 @@ namespace LSDE.Demo
 
         private float _elapsedTime;
         private List<ControlPointData> _controlPoints;
-        private int _tailInsertionIndex = -1;
 
         /// <summary>
         /// Use Unity's default UI material so the graphic renders properly.
@@ -68,7 +67,6 @@ namespace LSDE.Demo
         {
             base.OnEnable();
             _controlPoints = null;
-            _tailInsertionIndex = -1;
         }
 
         private void Update()
@@ -156,8 +154,15 @@ namespace LSDE.Demo
         }
 
         /// <summary>
-        /// Insert a bezier-curved tail into the body contour at the bottom,
-        /// creating a single seamless closed shape (no gaps).
+        /// Build the full contour by replacing the bottom section of the ellipse
+        /// with the tail bezier curves. Uses DETERMINISTIC indices based on the
+        /// control point angles (not animated positions), so the tail never flickers.
+        ///
+        /// With 14 control points starting at angle -π/2 (bottom), and 4 curve segments
+        /// per control point = 56 total curve points:
+        /// - Index 0 = bottom center (control point 0, angle -90°)
+        /// - The bottom section spans roughly indices 53-56 and 0-3
+        /// The tail replaces this section.
         /// </summary>
         private List<Vector2> BuildContourWithTail(
             List<Vector2> bodyCurvePoints,
@@ -168,45 +173,33 @@ namespace LSDE.Demo
             int tailSegmentCount = 8
         )
         {
-            // Find the insertion index ONCE and cache it.
-            // Recalculating every frame causes the tail to flicker because
-            // wobble animation shifts points, changing which point is "closest".
-            if (_tailInsertionIndex < 0 || _tailInsertionIndex >= bodyCurvePoints.Count)
-            {
-                float closestDistance = float.MaxValue;
-                _tailInsertionIndex = 0;
+            int totalCurvePoints = bodyCurvePoints.Count;
+            int segmentsPerControlPoint = 4;
 
-                for (int pointIndex = 0; pointIndex < bodyCurvePoints.Count; pointIndex++)
-                {
-                    var point = bodyCurvePoints[pointIndex];
-                    float distance =
-                        Mathf.Abs(point.x - tailCenterX) + Mathf.Abs(point.y - bodyBottom) * 3f;
-
-                    if (distance < closestDistance)
-                    {
-                        closestDistance = distance;
-                        _tailInsertionIndex = pointIndex;
-                    }
-                }
-            }
-
-            int insertionIndex = _tailInsertionIndex;
+            // The tail replaces a NARROW section at the bottom of the ellipse.
+            // Control point 0 is at angle -π/2 (bottom). Each control point
+            // generates segmentsPerControlPoint (4) curve points.
+            // We cut only 1 control point's worth of arc on each side of the bottom.
+            int tailRightBaseIndex = totalCurvePoints - segmentsPerControlPoint; // = 52
+            int tailLeftBaseIndex = segmentsPerControlPoint; // = 4
 
             var result = new List<Vector2>();
 
-            // Body points before the tail insertion
-            for (int pointIndex = 0; pointIndex <= insertionIndex; pointIndex++)
+            // Body arc: from tailLeftBaseIndex to tailRightBaseIndex
+            // (the entire top arc, from bottom-left up and around to bottom-right)
+            for (int pointIndex = tailLeftBaseIndex; pointIndex <= tailRightBaseIndex; pointIndex++)
             {
-                result.Add(bodyCurvePoints[pointIndex]);
+                result.Add(bodyCurvePoints[pointIndex % totalCurvePoints]);
             }
 
-            // Tail: right side (from body down to tip) — bezier curve
-            Vector2 tailBaseRight = bodyCurvePoints[insertionIndex];
-            Vector2 tailRightControl = new Vector2(
-                tailBaseRight.x + 15f,
-                (bodyBottom + tailTipY) * 0.5f
-            );
+            // Tail right base = where the body arc ends (bottom-right)
+            Vector2 tailBaseRight = bodyCurvePoints[tailRightBaseIndex % totalCurvePoints];
             Vector2 tailTip = new Vector2(tailTipX, tailTipY);
+
+            // Tail right side: bezier from tailBaseRight down to tip
+            // Control point stays in vertical axis — no horizontal offset to avoid crossing
+            float tailMidY = (bodyBottom + tailTipY) * 0.5f;
+            Vector2 tailRightControl = new Vector2(tailTip.x, tailMidY);
 
             for (int segmentIndex = 1; segmentIndex <= tailSegmentCount; segmentIndex++)
             {
@@ -216,26 +209,24 @@ namespace LSDE.Demo
                 );
             }
 
-            // Tail: left side (from tip back up to body) — bezier curve
-            int resumeIndex = Mathf.Min(insertionIndex + 3, bodyCurvePoints.Count - 1);
-            Vector2 tailBaseLeft = bodyCurvePoints[resumeIndex];
-            Vector2 tailLeftControl = new Vector2(
-                tailBaseLeft.x - 8f,
-                (bodyBottom + tailTipY) * 0.6f
-            );
+            // Tail left side: bezier from tip back up to tailBaseLeft
+            Vector2 tailBaseLeft = bodyCurvePoints[tailLeftBaseIndex];
+            Vector2 tailLeftControl = new Vector2(tailBaseLeft.x, tailMidY);
 
+            // Go up to but NOT including the last point (tailBaseLeft = result[0])
+            // to avoid a duplicate vertex at the seam. But we must get CLOSE enough
+            // that the outline closes cleanly.
             for (int segmentIndex = 1; segmentIndex <= tailSegmentCount; segmentIndex++)
             {
                 float interpolation = (float)segmentIndex / tailSegmentCount;
+                // Stop just before 1.0 to avoid exact duplicate with result[0]
+                if (segmentIndex == tailSegmentCount)
+                {
+                    interpolation = 0.98f;
+                }
                 result.Add(
                     EvaluateQuadraticBezier(tailTip, tailLeftControl, tailBaseLeft, interpolation)
                 );
-            }
-
-            // Remaining body points after the tail
-            for (int pointIndex = resumeIndex + 1; pointIndex < bodyCurvePoints.Count; pointIndex++)
-            {
-                result.Add(bodyCurvePoints[pointIndex]);
             }
 
             return result;
@@ -470,7 +461,7 @@ namespace LSDE.Demo
         {
             base.OnValidate();
             _controlPoints = null;
-            _tailInsertionIndex = -1;
+
             SetVerticesDirty();
         }
 #endif
