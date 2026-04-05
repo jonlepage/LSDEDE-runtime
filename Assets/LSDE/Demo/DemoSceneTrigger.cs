@@ -8,22 +8,42 @@ namespace LSDE.Demo
 {
     /// <summary>
     /// Demo trigger that launches <see cref="LSDE_SCENES.simpleDialogFlow"/> on scene start.
-    /// Creates and injects all demo dependencies into the bootstrap, then starts the dialogue flow.
-    ///
-    /// Phase 1: All handlers call Next() immediately, so the entire 8-block flow
-    /// completes synchronously within a single frame. The console output confirms
-    /// the runtime works end-to-end.
+    /// Supports two presenter modes toggled via the Inspector:
+    /// - Visual mode: speech bubbles above characters, click to advance
+    /// - Console mode: Debug.Log output, auto-advance (Phase 1 behavior)
     ///
     /// Setup in Unity Editor:
     /// 1. Create an empty GameObject named "DemoSceneTrigger"
     /// 2. Attach this script
-    /// 3. Drag the DialogueEngineBootstrap GameObject onto the "Dialogue Engine Bootstrap" field
+    /// 3. Drag the DialogueEngineBootstrap onto the "Dialogue Engine Bootstrap" field
+    /// 4. For visual mode: also assign CharacterRegistry, ClickAdvancer, BubblePresenter
     /// </summary>
     public class DemoSceneTrigger : MonoBehaviour
     {
+        [Header("Core")]
         [SerializeField]
         [Tooltip("Reference to the DialogueEngineBootstrap component in the scene.")]
         private DialogueEngineBootstrap _dialogueEngineBootstrap;
+
+        [Header("Visual Presenter (Phase 2b)")]
+        [SerializeField]
+        [Tooltip(
+            "Enable to use speech bubbles above characters. "
+                + "Disable to use console-only output (Phase 1 mode)."
+        )]
+        private bool _useVisualPresenter = true;
+
+        [SerializeField]
+        [Tooltip("Registry that maps LSDE character IDs to scene GameObjects.")]
+        private DialogueCharacterRegistry _characterRegistry;
+
+        [SerializeField]
+        [Tooltip("Click handler that advances dialogue on mouse click.")]
+        private DialogueClickAdvancer _dialogueClickAdvancer;
+
+        [SerializeField]
+        [Tooltip("Visual presenter that displays speech bubbles above characters.")]
+        private BubbleDialoguePresenter _bubbleDialoguePresenter;
 
         /// <summary>
         /// Unity calls Start() once when the GameObject becomes active.
@@ -40,10 +60,15 @@ namespace LSDE.Demo
                 return;
             }
 
-            // Wire demo implementations into the bootstrap
-            _dialogueEngineBootstrap.DialoguePresenter = new ConsoleDialoguePresenter();
-            _dialogueEngineBootstrap.CharacterResolver = new DemoCharacterResolver();
-            _dialogueEngineBootstrap.ConditionResolver = new DemoConditionResolver();
+            // Wire presenter and resolvers based on the selected mode
+            if (_useVisualPresenter)
+            {
+                WireVisualPresenter();
+            }
+            else
+            {
+                WireConsolePresenter();
+            }
 
             // Initialize the engine (parse blueprint, register handlers, etc.)
             _dialogueEngineBootstrap.InitializeEngine();
@@ -56,6 +81,45 @@ namespace LSDE.Demo
             }
 
             LaunchSimpleDialogFlowScene();
+        }
+
+        /// <summary>
+        /// Wire the visual presenter: speech bubbles above characters, click to advance.
+        /// Uses the scene-based character registry instead of the simple demo resolver.
+        /// </summary>
+        private void WireVisualPresenter()
+        {
+            if (
+                _characterRegistry == null
+                || _dialogueClickAdvancer == null
+                || _bubbleDialoguePresenter == null
+            )
+            {
+                Debug.LogWarning(
+                    "[LSDE Demo] Visual presenter references are missing. "
+                        + "Falling back to console mode."
+                );
+                WireConsolePresenter();
+                return;
+            }
+
+            _dialogueEngineBootstrap.DialoguePresenter = _bubbleDialoguePresenter;
+            _dialogueEngineBootstrap.CharacterResolver = _characterRegistry;
+            _dialogueEngineBootstrap.ConditionResolver = new DemoConditionResolver();
+
+            Debug.Log("[LSDE Demo] Using visual presenter (speech bubbles).");
+        }
+
+        /// <summary>
+        /// Wire the console presenter: Debug.Log output, auto-advance (Phase 1 behavior).
+        /// </summary>
+        private void WireConsolePresenter()
+        {
+            _dialogueEngineBootstrap.DialoguePresenter = new ConsoleDialoguePresenter();
+            _dialogueEngineBootstrap.CharacterResolver = new DemoCharacterResolver();
+            _dialogueEngineBootstrap.ConditionResolver = new DemoConditionResolver();
+
+            Debug.Log("[LSDE Demo] Using console presenter (Debug.Log).");
         }
 
         private void LaunchSimpleDialogFlowScene()

@@ -51,14 +51,20 @@
   <ItemGroup>
     <Compile Include="Assets\LSDE\blueprints\BlueprintTypes.cs" />
     <Compile Include="Assets\LSDE\Runtime\Handlers\ActionBlockHandler.cs" />
+    <Compile Include="Assets\LSDE\Demo\Characters\BillboardRotation.cs" />
     <Compile Include="Assets\LSDE\Demo\Resolvers\DemoCharacterResolver.cs" />
+    <Compile Include="Assets\LSDE\Demo\Input\DialogueClickAdvancer.cs" />
     <Compile Include="Assets\LSDE\Runtime\Resolvers\ICharacterResolver.cs" />
     <Compile Include="Assets\LSDE\Runtime\BlueprintLoader.cs" />
+    <Compile Include="Assets\LSDE\Demo\Characters\DialogueCharacterMarker.cs" />
+    <Compile Include="Assets\LSDE\Demo\Characters\DialogueCharacterRegistry.cs" />
     <Compile Include="Assets\LSDE\Runtime\Resolvers\IConditionResolver.cs" />
+    <Compile Include="Assets\LSDE\Demo\Presenters\SpeechBubbleController.cs" />
     <Compile Include="Assets\LSDE\Runtime\Handlers\ChoiceBlockHandler.cs" />
     <Compile Include="Assets\LSDE\Runtime\Handlers\ConditionBlockHandler.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\LSDE\Demo\Resolvers\DemoConditionResolver.cs" />
+    <Compile Include="Assets\LSDE\Demo\Presenters\BubbleDialoguePresenter.cs" />
     <Compile Include="Assets\LSDE\Demo\Presenters\ConsoleDialoguePresenter.cs" />
     <Compile Include="Assets\LSDE\blueprints\BlueprintEnums.cs" />
     <Compile Include="Assets\LSDE\Runtime\Handlers\DialogBlockHandler.cs" />
