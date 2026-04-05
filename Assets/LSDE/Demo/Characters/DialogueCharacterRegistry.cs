@@ -25,7 +25,7 @@ namespace LSDE.Demo
         private void Awake()
         {
             var allCharacterMarkers = FindObjectsByType<DialogueCharacterMarker>(
-                FindObjectsSortMode.None
+                FindObjectsInactive.Exclude
             );
 
             foreach (var characterMarker in allCharacterMarkers)

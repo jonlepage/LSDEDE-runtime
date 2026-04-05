@@ -10,16 +10,28 @@ namespace LSDE.Demo.Editor
     /// <see cref="DialogueCharacterMarker"/> components in the scene.
     /// Accessible via the Unity menu: LSDE > Setup Speech Bubbles.
     ///
+    /// Also provides a "Rebuild" option that deletes existing bubbles and recreates them.
+    ///
     /// This script only runs in the Unity Editor — it is NOT included in builds.
     /// The "Editor" folder name tells Unity to exclude it from runtime compilation.
     /// </summary>
     public static class SpeechBubbleSetupEditor
     {
+        // No sprite needed — ProceduralSpeechBubble draws the shape with geometry
+        private const float CanvasWidthInPixels = 450f;
+        private const float CanvasHeightInPixels = 350f;
+        private const float WorldScaleFactor = 0.007f;
+        private const float BubblePaddingHorizontal = 60f;
+        private const float BubblePaddingVertical = 40f;
+        private const float BubblePaddingBottom = 120f;
+        private const float NameFontSize = 28f;
+        private const float DialogueFontSize = 20f;
+
         [MenuItem("LSDE/Setup Speech Bubbles On All Characters")]
         public static void SetupSpeechBubblesOnAllCharacters()
         {
             var allCharacterMarkers = Object.FindObjectsByType<DialogueCharacterMarker>(
-                FindObjectsSortMode.None
+                FindObjectsInactive.Exclude
             );
 
             if (allCharacterMarkers.Length == 0)
@@ -68,17 +80,42 @@ namespace LSDE.Demo.Editor
             );
         }
 
+        [MenuItem("LSDE/Rebuild All Speech Bubbles")]
+        public static void RebuildAllSpeechBubbles()
+        {
+            var allCharacterMarkers = Object.FindObjectsByType<DialogueCharacterMarker>(
+                FindObjectsInactive.Exclude
+            );
+
+            // Destroy existing bubbles
+            foreach (var characterMarker in allCharacterMarkers)
+            {
+                var anchorPoint = characterMarker.BubbleAnchorPoint;
+                var existingBubbleController =
+                    anchorPoint.GetComponentInChildren<SpeechBubbleController>(true);
+
+                if (existingBubbleController != null)
+                {
+                    Undo.DestroyObjectImmediate(existingBubbleController.gameObject);
+                }
+            }
+
+            // Recreate all
+            SetupSpeechBubblesOnAllCharacters();
+        }
+
         private static void CreateSpeechBubbleOnAnchor(
             Transform bubbleAnchorPoint,
             string characterIdentifier
         )
         {
-            // --- Root: SpeechBubble (empty + BillboardRotation) ---
+            // --- Root: SpeechBubble (empty + BillboardRotation + SpeechBubbleController) ---
             var speechBubbleRoot = new GameObject($"SpeechBubble_{characterIdentifier}");
+            Undo.RegisterCreatedObjectUndo(speechBubbleRoot, "Create Speech Bubble");
             speechBubbleRoot.transform.SetParent(bubbleAnchorPoint, false);
             speechBubbleRoot.transform.localPosition = Vector3.zero;
 
-            var billboardRotation = speechBubbleRoot.AddComponent<BillboardRotation>();
+            speechBubbleRoot.AddComponent<BillboardRotation>();
             var bubbleController = speechBubbleRoot.AddComponent<SpeechBubbleController>();
 
             // --- Canvas (World Space) ---
@@ -88,32 +125,67 @@ namespace LSDE.Demo.Editor
             var canvas = canvasGameObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
 
-            var canvasScaler = canvasGameObject.AddComponent<CanvasScaler>();
-            canvasScaler.dynamicPixelsPerUnit = 10f;
+            canvasGameObject.AddComponent<CanvasScaler>();
+            canvasGameObject.AddComponent<GraphicRaycaster>();
 
-            // Size the canvas in world units (small because it lives in 3D space)
             var canvasRectTransform = canvasGameObject.GetComponent<RectTransform>();
-            canvasRectTransform.sizeDelta = new Vector2(300f, 150f);
-            canvasRectTransform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+            canvasRectTransform.sizeDelta = new Vector2(CanvasWidthInPixels, CanvasHeightInPixels);
+            canvasRectTransform.localScale = new Vector3(
+                WorldScaleFactor,
+                WorldScaleFactor,
+                WorldScaleFactor
+            );
             canvasRectTransform.localPosition = Vector3.zero;
+            // Pivot at bottom-center so the bubble grows upward from the anchor
+            canvasRectTransform.pivot = new Vector2(0.5f, 0f);
 
-            // --- BubblePanel (background Image) ---
-            var bubblePanelGameObject = new GameObject("BubblePanel");
-            bubblePanelGameObject.transform.SetParent(canvasGameObject.transform, false);
+            // --- ProceduralSpeechBubble (draws rounded rect + outline + tail with geometry) ---
+            // No sprite needed — the shape is resolution-independent, never pixelates.
+            // Equivalent to PixiJS Graphics.quadraticCurveTo() in the TS demo.
+            var bubbleBackgroundGameObject = new GameObject("BubbleBackground");
+            bubbleBackgroundGameObject.transform.SetParent(canvasGameObject.transform, false);
 
-            var bubblePanelImage = bubblePanelGameObject.AddComponent<Image>();
-            bubblePanelImage.color = new Color(0.95f, 0.95f, 0.95f, 0.9f);
+            bubbleBackgroundGameObject.AddComponent<CanvasRenderer>();
+            var proceduralBubble =
+                bubbleBackgroundGameObject.AddComponent<ProceduralSpeechBubble>();
+            proceduralBubble.color = Color.white;
+            proceduralBubble.raycastTarget = false;
 
-            var bubblePanelRectTransform = bubblePanelGameObject.GetComponent<RectTransform>();
-            bubblePanelRectTransform.anchorMin = Vector2.zero;
-            bubblePanelRectTransform.anchorMax = Vector2.one;
-            bubblePanelRectTransform.offsetMin = Vector2.zero;
-            bubblePanelRectTransform.offsetMax = Vector2.zero;
+            // Background fills the entire canvas
+            var bubbleBackgroundRectTransform =
+                bubbleBackgroundGameObject.GetComponent<RectTransform>();
+            bubbleBackgroundRectTransform.anchorMin = Vector2.zero;
+            bubbleBackgroundRectTransform.anchorMax = Vector2.one;
+            bubbleBackgroundRectTransform.offsetMin = Vector2.zero;
+            bubbleBackgroundRectTransform.offsetMax = Vector2.zero;
 
-            // Add vertical layout for name + text stacking
-            var verticalLayout = bubblePanelGameObject.AddComponent<VerticalLayoutGroup>();
-            verticalLayout.padding = new RectOffset(15, 15, 10, 10);
-            verticalLayout.spacing = 5f;
+            // --- TextPanel (invisible container for text layout, sits on top of background) ---
+            // This panel uses VerticalLayoutGroup + ContentSizeFitter to auto-size,
+            // then the canvas matches its size. Large padding keeps text inside the bubble outline.
+            var textPanelGameObject = new GameObject("TextPanel", typeof(RectTransform));
+            textPanelGameObject.transform.SetParent(canvasGameObject.transform, false);
+
+            var textPanelRectTransform = textPanelGameObject.GetComponent<RectTransform>();
+            textPanelRectTransform.anchorMin = Vector2.zero;
+            textPanelRectTransform.anchorMax = Vector2.one;
+            textPanelRectTransform.offsetMin = Vector2.zero;
+            textPanelRectTransform.offsetMax = Vector2.zero;
+
+            // ContentSizeFitter drives the canvas size based on text content
+            var contentSizeFitter = textPanelGameObject.AddComponent<ContentSizeFitter>();
+            contentSizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            // VerticalLayoutGroup: stack name + dialogue vertically
+            // Large padding keeps text away from the hand-drawn outline and tail
+            var verticalLayout = textPanelGameObject.AddComponent<VerticalLayoutGroup>();
+            verticalLayout.padding = new RectOffset(
+                (int)BubblePaddingHorizontal,
+                (int)BubblePaddingHorizontal,
+                (int)BubblePaddingVertical,
+                (int)BubblePaddingBottom
+            );
+            verticalLayout.spacing = 8f;
             verticalLayout.childAlignment = TextAnchor.UpperLeft;
             verticalLayout.childControlWidth = true;
             verticalLayout.childControlHeight = true;
@@ -122,31 +194,36 @@ namespace LSDE.Demo.Editor
 
             // --- CharacterNameText (TextMeshProUGUI, bold, top) ---
             var characterNameGameObject = new GameObject("CharacterNameText");
-            characterNameGameObject.transform.SetParent(bubblePanelGameObject.transform, false);
+            characterNameGameObject.transform.SetParent(textPanelGameObject.transform, false);
 
             var characterNameText = characterNameGameObject.AddComponent<TextMeshProUGUI>();
             characterNameText.text = "Character Name";
-            characterNameText.fontSize = 24f;
+            characterNameText.fontSize = NameFontSize;
             characterNameText.fontStyle = FontStyles.Bold;
             characterNameText.color = new Color(0.2f, 0.2f, 0.2f, 1f);
             characterNameText.alignment = TextAlignmentOptions.TopLeft;
+            characterNameText.textWrappingMode = TextWrappingModes.NoWrap;
+            characterNameText.overflowMode = TextOverflowModes.Ellipsis;
 
             var characterNameLayoutElement = characterNameGameObject.AddComponent<LayoutElement>();
-            characterNameLayoutElement.preferredHeight = 30f;
+            characterNameLayoutElement.preferredHeight = NameFontSize + 8f;
 
-            // --- DialogueContentText (TextMeshProUGUI, body) ---
+            // --- DialogueContentText (TextMeshProUGUI, body, word-wrapped) ---
             var dialogueContentGameObject = new GameObject("DialogueContentText");
-            dialogueContentGameObject.transform.SetParent(bubblePanelGameObject.transform, false);
+            dialogueContentGameObject.transform.SetParent(textPanelGameObject.transform, false);
 
             var dialogueContentText = dialogueContentGameObject.AddComponent<TextMeshProUGUI>();
-            dialogueContentText.text = "Dialogue text goes here...";
-            dialogueContentText.fontSize = 18f;
-            dialogueContentText.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+            dialogueContentText.text = "Dialogue text...";
+            dialogueContentText.fontSize = DialogueFontSize;
+            dialogueContentText.color = new Color(0.15f, 0.15f, 0.15f, 1f);
             dialogueContentText.alignment = TextAlignmentOptions.TopLeft;
-            dialogueContentText.enableWordWrapping = true;
+            dialogueContentText.textWrappingMode = TextWrappingModes.Normal;
+            dialogueContentText.overflowMode = TextOverflowModes.Overflow;
 
             var dialogueContentLayoutElement =
                 dialogueContentGameObject.AddComponent<LayoutElement>();
+            dialogueContentLayoutElement.preferredWidth =
+                CanvasWidthInPixels - BubblePaddingHorizontal * 2;
             dialogueContentLayoutElement.flexibleHeight = 1f;
 
             // --- Wire SpeechBubbleController references via SerializedObject ---
@@ -160,7 +237,6 @@ namespace LSDE.Demo.Editor
             // Start hidden — the presenter will show it when a DIALOG block fires
             speechBubbleRoot.SetActive(false);
 
-            // Mark the scene as dirty so Unity knows to save changes
             EditorUtility.SetDirty(speechBubbleRoot);
             EditorUtility.SetDirty(bubbleAnchorPoint.gameObject);
 
