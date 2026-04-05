@@ -6,9 +6,10 @@ using LsdeDialogEngine;
 namespace LSDE.Runtime
 {
     /// <summary>
-    /// Global handler for CHOICE blocks. Filters visible choices,
-    /// auto-selects the first visible one (Phase 1 — no player input),
-    /// and delegates presentation to <see cref="IDialoguePresenter"/>.
+    /// Global handler for CHOICE blocks. Filters visible choices and delegates
+    /// presentation and selection to <see cref="IDialoguePresenter"/>.
+    /// The presenter receives a composed callback that encapsulates both
+    /// SelectChoice and Next — it decides when to invoke it (immediately or on player input).
     /// </summary>
     public class ChoiceBlockHandler
     {
@@ -40,17 +41,16 @@ namespace LSDE.Runtime
                 .Choices.Where(choice => choice.Visible != false)
                 .ToList();
 
-            _dialoguePresenter.PresentChoiceBlock(block, visibleChoices);
-
-            // Phase 1: auto-select the first visible choice to simulate player input.
-            // In a real game, the presenter would wait for player interaction,
-            // then call SelectChoice + Next from a UI callback.
-            if (visibleChoices.Count > 0)
+            // Compose a callback that encapsulates both SelectChoice and Next.
+            // The presenter calls this with the chosen UUID when the player decides.
+            // Console presenter calls it immediately; UI presenter waits for button click.
+            Action<string> selectChoiceAndAdvance = (choiceUuid) =>
             {
-                context.SelectChoice(visibleChoices[0].Uuid);
-            }
+                context.SelectChoice(choiceUuid);
+                arguments.Next();
+            };
 
-            arguments.Next();
+            _dialoguePresenter.PresentChoiceBlock(block, visibleChoices, selectChoiceAndAdvance);
 
             return () => _dialoguePresenter.PresentBlockCleanup(block);
         }

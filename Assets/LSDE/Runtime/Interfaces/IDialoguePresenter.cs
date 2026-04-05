@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using LsdeDialogEngine;
 
@@ -5,31 +6,41 @@ namespace LSDE.Runtime
 {
     /// <summary>
     /// Abstraction layer between LSDEDE runtime handlers and the game's rendering system.
-    /// Handlers delegate all presentation logic to this interface — they never render directly.
-    /// Phase 1 uses a console implementation (Debug.Log). Phase 2+ will swap in UI-based presenters.
+    /// Handlers delegate all presentation and flow control to this interface — they never
+    /// render or call Next() directly. The presenter decides when to advance the dialogue
+    /// (immediately for console mode, on player click for visual mode).
+    /// This pattern matches the official LSDEDE handler design where Next is deferred.
     /// </summary>
     public interface IDialoguePresenter
     {
         /// <summary>
         /// Present a DIALOG block — display character dialogue text.
+        /// The presenter is responsible for calling <paramref name="advanceToNextBlock"/>
+        /// when it is ready to advance (e.g. immediately for console, on player click for UI).
         /// </summary>
         /// <param name="dialogBlock">The dialog block being executed.</param>
         /// <param name="resolvedCharacter">The character resolved by the game (may be null if unavailable).</param>
         /// <param name="localizedText">The dialogue text in the current locale.</param>
+        /// <param name="advanceToNextBlock">Callback to advance the engine to the next block. Must be called exactly once.</param>
         void PresentDialogueBlock(
             DialogBlock dialogBlock,
             BlockCharacter resolvedCharacter,
-            string localizedText
+            string localizedText,
+            Action advanceToNextBlock
         );
 
         /// <summary>
         /// Present a CHOICE block — display available choices for the player.
+        /// The presenter calls <paramref name="selectChoiceAndAdvance"/> with the chosen UUID
+        /// when the player makes a selection. This encapsulates both SelectChoice and Next.
         /// </summary>
         /// <param name="choiceBlock">The choice block being executed.</param>
         /// <param name="visibleChoices">Choices filtered by visibility (Visible != false).</param>
+        /// <param name="selectChoiceAndAdvance">Callback that selects a choice by UUID and advances the engine. Must be called exactly once.</param>
         void PresentChoiceBlock(
             ChoiceBlock choiceBlock,
-            IReadOnlyList<RuntimeChoiceItem> visibleChoices
+            IReadOnlyList<RuntimeChoiceItem> visibleChoices,
+            Action<string> selectChoiceAndAdvance
         );
 
         /// <summary>

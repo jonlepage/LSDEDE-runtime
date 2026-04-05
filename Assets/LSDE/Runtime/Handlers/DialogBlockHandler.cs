@@ -42,9 +42,14 @@ namespace LSDE.Runtime
                 context.ResolveCharacterPort(character.Uuid);
             }
 
-            _dialoguePresenter.PresentDialogueBlock(block, character, localizedText);
-
-            arguments.Next();
+            // Pass Next to the presenter — the presenter decides when to advance.
+            // Console presenter calls it immediately; UI presenter waits for player click.
+            _dialoguePresenter.PresentDialogueBlock(
+                block,
+                character,
+                localizedText,
+                arguments.Next
+            );
 
             return () => _dialoguePresenter.PresentBlockCleanup(block);
         }

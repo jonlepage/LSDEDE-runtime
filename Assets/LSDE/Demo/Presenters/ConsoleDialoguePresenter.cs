@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using LSDE.Runtime;
@@ -20,7 +21,8 @@ namespace LSDE.Demo
         public void PresentDialogueBlock(
             DialogBlock dialogBlock,
             BlockCharacter resolvedCharacter,
-            string localizedText
+            string localizedText,
+            Action advanceToNextBlock
         )
         {
             var characterName = resolvedCharacter?.Name ?? "???";
@@ -33,12 +35,16 @@ namespace LSDE.Demo
                     + $"{LogPrefix}   Character: {characterName} ({characterId}){emotionSuffix}\n"
                     + $"{LogPrefix}   \"{localizedText ?? "—"}\""
             );
+
+            // Console mode: advance immediately (no player interaction needed)
+            advanceToNextBlock();
         }
 
         /// <inheritdoc />
         public void PresentChoiceBlock(
             ChoiceBlock choiceBlock,
-            IReadOnlyList<RuntimeChoiceItem> visibleChoices
+            IReadOnlyList<RuntimeChoiceItem> visibleChoices,
+            Action<string> selectChoiceAndAdvance
         )
         {
             var totalChoiceCount = choiceBlock.Choices?.Count ?? 0;
@@ -61,6 +67,12 @@ namespace LSDE.Demo
             }
 
             Debug.Log(logBuilder.ToString().TrimEnd());
+
+            // Console mode: auto-select first visible choice (no player interaction needed)
+            if (visibleChoices.Count > 0)
+            {
+                selectChoiceAndAdvance(visibleChoices[0].Uuid);
+            }
         }
 
         /// <inheritdoc />
