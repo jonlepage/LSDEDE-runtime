@@ -76,6 +76,8 @@ namespace LSDE.Demo
         private float _currentHopHeight;
         private bool _isMoving;
         private CharacterController _characterController;
+        private float _stuckTimer;
+        private float _previousDistanceToTarget;
 
         /// <summary>
         /// Whether the character is currently moving toward a target.
@@ -95,6 +97,8 @@ namespace LSDE.Demo
         {
             _currentTarget = new Vector3(worldPosition.x, _groundLevelY, worldPosition.z);
             _isMoving = true;
+            _stuckTimer = 0f;
+            _previousDistanceToTarget = float.MaxValue;
 
             // Start the first hop immediately so the character doesn't glide
             if (_hopProgress < 0f)
@@ -248,6 +252,34 @@ namespace LSDE.Demo
             // ------------------------------------------------------------------
             Vector3 desiredPosition = new Vector3(newX, _groundLevelY + _currentHopHeight, newZ);
             ApplyPosition(desiredPosition);
+
+            // ------------------------------------------------------------------
+            // 8. Stuck detection — if the distance to the target is not
+            //    decreasing, the character is blocked by a collider.
+            //    Stop after a short grace period so it doesn't hop in place.
+            // ------------------------------------------------------------------
+            float currentDistanceToTarget = Vector3.Distance(
+                new Vector3(transform.position.x, 0f, transform.position.z),
+                new Vector3(targetPosition.x, 0f, targetPosition.z)
+            );
+
+            if (currentDistanceToTarget >= _previousDistanceToTarget - 0.001f)
+            {
+                _stuckTimer += Time.deltaTime;
+                if (_stuckTimer > 0.2f)
+                {
+                    _stuckTimer = 0f;
+                    _previousDistanceToTarget = float.MaxValue;
+                    StopMovement();
+                    return;
+                }
+            }
+            else
+            {
+                _stuckTimer = 0f;
+            }
+
+            _previousDistanceToTarget = currentDistanceToTarget;
         }
 
         /// <summary>
