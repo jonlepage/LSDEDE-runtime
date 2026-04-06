@@ -359,7 +359,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.4
+      value: 1.48
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
       propertyPath: m_LocalPosition.z
@@ -463,12 +463,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f1855460f693c241a7d303c0a297608, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CharacterMovementController
-  _movementSpeed: 4
-  _hopStrideDistance: 0.8
+  _movementSpeed: 5.12
+  _smoothTime: 0.23
+  _arrivalThreshold: 0.3
+  _hopStrideDistance: 0.81
   _hopMaxHeight: 0.15
-  _inertiaTiltFactor: 0.055
-  _inertiaVelocityLerp: 0.1
-  _spriteContainer: {fileID: 0}
+  _hopSpeedFloor: 1.23
+  _maxTiltAngle: 12
+  _inertiaVelocityLerp: 3.46
 --- !u!1 &108988859
 GameObject:
   m_ObjectHideFlags: 0
@@ -1061,7 +1063,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 46.7
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -1087,8 +1089,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.0019056747, y: 0.9683103, z: -0.24963373, w: -0.0073853387}
-  m_LocalPosition: {x: -24.953098, y: 5.6821136, z: -59.309772}
+  m_LocalRotation: {x: -0.0038833194, y: 0.970727, z: -0.23963885, w: -0.015723394}
+  m_LocalPosition: {x: -27.743322, y: 2.795578, z: -66.080696}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1151,8 +1153,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CameraFollowController
   _targetToFollow: {fileID: 93071354}
-  _cameraOffset: {x: 0, y: 5, z: -8}
-  _followSmoothSpeed: 5
+  _cameraOffset: {x: 0, y: 4.91, z: -8.99}
+  _rotationOffset: {x: -9.35, y: 0.38, z: -0.14}
+  _deadZoneRadius: 1.14
+  _fullFollowRadius: 1.44
+  _followLerpSpeed: 0.1
+  _maxDynamicYawAngle: 7.78
+  _maxDynamicRollAngle: 1.19
+  _dynamicTiltSmoothSpeed: 3.74
+  _movementSpeedReference: 4.97
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1245,7 +1254,7 @@ Transform:
   m_GameObject: {fileID: 410087039}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
+  m_LocalPosition: {x: 0.22, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1530,7 +1539,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.4
+      value: 1.16
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2518,7 +2527,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.4
+      value: 1.14
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2631,7 +2640,7 @@ GameObject:
   - component: {fileID: 1360042255}
   - component: {fileID: 1360042254}
   - component: {fileID: 1360042253}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Ground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2727,7 +2736,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -27.24426, y: -0, z: -70.996}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2, y: 0.66, z: 2.2}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -3849,7 +3858,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.4
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4409,7 +4418,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: fef1cf2afab8c8e48b0819ae608ecdcb, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.4
+      value: 1.52
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: fef1cf2afab8c8e48b0819ae608ecdcb, type: 3}
       propertyPath: m_LocalPosition.z

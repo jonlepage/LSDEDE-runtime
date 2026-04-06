@@ -3,288 +3,298 @@ using UnityEngine;
 namespace LSDE.Demo
 {
     /// <summary>
-    /// Applies click-to-move movement with ease-out deceleration, hop sautillant (bouncy walk),
-    /// and inertia tilt. Ported from the TS demo movement.ts.
-    /// Works on any character — player or NPC. The input source is external
-    /// (PlayerClickToMoveInput for the player, scripts for NPCs).
+    /// Click-to-move character controller with bouncy hop walk and inertia tilt.
+    /// Movement uses Vector3.SmoothDamp (Unity's built-in spring-damper) for
+    /// frame-rate independent approach with natural deceleration — no overshoot,
+    /// no teleportation, no manual easing required.
     ///
-    /// The hop is applied to a child Transform (<see cref="_spriteContainer"/>)
-    /// so the hop visual offset doesn't affect the character's real world position.
+    /// Hop and tilt are ported from the TS demo movement.ts.
+    /// Works on any character — player or NPC.
     /// </summary>
     public class CharacterMovementController : MonoBehaviour
     {
         [Header("Movement")]
         [SerializeField]
-        [Tooltip("Movement speed in world units per second.")]
+        [Tooltip("Maximum movement speed in world units per second.")]
         private float _movementSpeed = 4f;
+
+        [SerializeField]
+        [Tooltip(
+            "Approximate time in seconds for the character to reach the target. "
+                + "Controls how early deceleration begins. "
+                + "Lower = snappier arrival, higher = more cinematic glide."
+        )]
+        private float _smoothTime = 0.3f;
+
+        [SerializeField]
+        [Tooltip(
+            "Distance below which the character snaps to the target and stops. "
+                + "Must be very small so the snap is invisible."
+        )]
+        private float _arrivalThreshold = 0.02f;
 
         [Header("Hop (Bouncy Walk)")]
         [SerializeField]
-        [Tooltip("Distance in world units between consecutive hops.")]
-        private float _hopStrideDistance = 0.8f;
+        [Tooltip(
+            "Distance between consecutive hops. Port of HOP_DISTANCE_PER_STRIDE = 30px → 0.8 units."
+        )]
+        private float _hopStrideDistance = 0.4f;
 
         [SerializeField]
         [Tooltip("Maximum height of the hop arc in world units.")]
-        private float _hopMaxHeight = 0.15f;
+        private float _hopMaxHeight = 0.35f;
 
-        [Header("Inertia")]
+        [SerializeField]
+        [Tooltip("Frame distance below which the hop decays instead of advancing.")]
+        private float _hopSpeedFloor = 0.001f;
+
+        [Header("Inertia Tilt")]
         [SerializeField]
         [Tooltip(
-            "How much the sprite tilts in the movement direction (radians per unit velocity)."
+            "Maximum tilt angle in degrees when moving at full speed. "
+                + "Applied proportionally to the character's sideways velocity."
         )]
-        private float _inertiaTiltFactor = 0.055f;
+        private float _maxTiltAngle = 15f;
 
         [SerializeField]
-        [Tooltip("Lag factor for smoothed velocity — lower = more inertia feel.")]
+        [Tooltip(
+            "How fast the smoothed velocity catches up to actual velocity. "
+                + "Port of INERTIA_VELOCITY_LERP = 0.1. Lower = more inertia lag."
+        )]
         private float _inertiaVelocityLerp = 0.1f;
 
-        [Header("References")]
-        [SerializeField]
-        [Tooltip(
-            "Child Transform containing the visual sprite. "
-                + "The hop offset is applied to this, not to the root, "
-                + "so the character's real world position stays on the ground plane."
-        )]
-        private Transform _spriteContainer;
-
-        private const float ArrivalThreshold = 0.1f;
-        private const float HopSpeedFloor = 0.02f;
-        private const float InertiaDecayFactor = 0.85f;
+        // --- Internal state ---
+        private Vector3? _currentTarget;
+        private float _groundLevelY;
+        private Vector3 _smoothDampVelocity;
+        private float _distanceSinceLastHop;
+        private float _hopProgress = -1f;
+        private float _currentHopHeight;
+        private bool _isMoving;
 
         /// <summary>
-        /// The movement state data for this character.
-        /// External scripts (input, AI) call <see cref="SetMovementTarget"/> to set the target.
+        /// Whether the character is currently moving toward a target.
         /// </summary>
-        public CharacterMovementState MovementState { get; private set; }
+        public bool IsCharacterMoving => _isMoving;
 
         private void Awake()
         {
-            MovementState = new CharacterMovementState(
-                _movementSpeed,
-                _hopStrideDistance,
-                _hopMaxHeight
-            );
+            _groundLevelY = transform.position.y;
+        }
 
-            // Default to the first child if no sprite container is assigned
-            if (_spriteContainer == null && transform.childCount > 0)
+        /// <summary>
+        /// Set a movement target in world space. The character will move toward it.
+        /// </summary>
+        public void SetMovementTarget(Vector3 worldPosition)
+        {
+            _currentTarget = new Vector3(worldPosition.x, _groundLevelY, worldPosition.z);
+            _isMoving = true;
+
+            // Start the first hop immediately so the character doesn't glide
+            if (_hopProgress < 0f)
             {
-                _spriteContainer = transform.GetChild(0);
+                _hopProgress = 0f;
+                _distanceSinceLastHop = 0f;
             }
         }
 
         /// <summary>
-        /// Set a movement target in world space. The character will move toward it
-        /// with ease-out deceleration, hop animation, and inertia tilt.
-        /// </summary>
-        public void SetMovementTarget(Vector3 worldPosition)
-        {
-            MovementState.SetTarget(worldPosition);
-        }
-
-        /// <summary>
-        /// Stop all movement immediately.
+        /// Stop all movement immediately and reset to ground.
         /// </summary>
         public void StopMovement()
         {
-            MovementState.ClearTarget();
-            MovementState.ResetAnimationState();
-            ApplyHopOffset(0f);
+            _currentTarget = null;
+            _isMoving = false;
+            _smoothDampVelocity = Vector3.zero;
+            _distanceSinceLastHop = 0f;
+            _hopProgress = -1f;
+            _currentHopHeight = 0f;
+            transform.position = new Vector3(
+                transform.position.x,
+                _groundLevelY,
+                transform.position.z
+            );
             transform.rotation = Quaternion.identity;
         }
 
         private void Update()
         {
-            if (MovementState.CurrentTarget == null)
+            // ------------------------------------------------------------------
+            // 1. IDLE — no target
+            // ------------------------------------------------------------------
+            if (_currentTarget == null)
             {
-                ApplyIdleInertiaDecay();
+                HandleIdleDecay();
                 return;
             }
 
-            Vector3 targetPosition = MovementState.CurrentTarget.Value;
+            Vector3 targetPosition = _currentTarget.Value;
             Vector3 currentPosition = transform.position;
 
-            // Calculate distance remaining on the XZ plane
+            // ------------------------------------------------------------------
+            // 2. Distance remaining on XZ plane
+            // ------------------------------------------------------------------
             float deltaX = targetPosition.x - currentPosition.x;
             float deltaZ = targetPosition.z - currentPosition.z;
             float distanceRemaining = Mathf.Sqrt(deltaX * deltaX + deltaZ * deltaZ);
 
-            // Arrived at target
-            if (distanceRemaining < ArrivalThreshold)
+            // ------------------------------------------------------------------
+            // 3. Arrival — snap only when very close AND nearly stopped
+            //    SmoothDamp brings us smoothly to near-zero distance,
+            //    so the snap is invisible (0.02 units = sub-pixel).
+            // ------------------------------------------------------------------
+            if (
+                distanceRemaining < _arrivalThreshold
+                && _smoothDampVelocity.sqrMagnitude < 0.001f
+                && _currentHopHeight < 0.01f
+            )
             {
                 transform.position = new Vector3(
                     targetPosition.x,
-                    currentPosition.y,
+                    _groundLevelY,
                     targetPosition.z
                 );
-                ApplyHopOffset(0f);
+                _smoothDampVelocity = Vector3.zero;
+                _distanceSinceLastHop = 0f;
+                _hopProgress = -1f;
+                _currentHopHeight = 0f;
                 transform.rotation = Quaternion.identity;
-                MovementState.ResetAnimationState();
-                MovementState.ClearTarget();
+                _currentTarget = null;
+                _isMoving = false;
                 return;
             }
 
-            // Calculate eased step size for this frame
-            float totalStepSize = MovementState.MovementSpeed * Time.deltaTime;
-
-            float newPositionX = ComputeEasedStep(
+            // ------------------------------------------------------------------
+            // 4. SmoothDamp — Unity's built-in spring-damper movement
+            //    Frame-rate independent, no overshoot, smooth deceleration.
+            //    Operates on XZ only (Y is handled by hop system).
+            // ------------------------------------------------------------------
+            Vector3 currentGroundPosition = new Vector3(
                 currentPosition.x,
-                targetPosition.x,
-                distanceRemaining,
-                totalStepSize
+                _groundLevelY,
+                currentPosition.z
             );
-            float newPositionZ = ComputeEasedStep(
-                currentPosition.z,
-                targetPosition.z,
-                distanceRemaining,
-                totalStepSize
+            Vector3 newGroundPosition = Vector3.SmoothDamp(
+                currentGroundPosition,
+                targetPosition,
+                ref _smoothDampVelocity,
+                _smoothTime,
+                _movementSpeed
             );
+            float newX = newGroundPosition.x;
+            float newZ = newGroundPosition.z;
 
-            float frameDeltaX = newPositionX - currentPosition.x;
-            float frameDeltaZ = newPositionZ - currentPosition.z;
+            // ------------------------------------------------------------------
+            // 5. Frame distance — needed for hop and tilt calculations
+            // ------------------------------------------------------------------
+            float frameDeltaX = newX - currentPosition.x;
+            float frameDeltaZ = newZ - currentPosition.z;
             float frameDistance = Mathf.Sqrt(frameDeltaX * frameDeltaX + frameDeltaZ * frameDeltaZ);
 
-            transform.position = new Vector3(newPositionX, currentPosition.y, newPositionZ);
+            // ------------------------------------------------------------------
+            // 6. Inertia tilt
+            //    Use _smoothDampVelocity.x directly — it's already smooth
+            //    (SmoothDamp filters out frame-to-frame noise internally).
+            //    Normalise to -1..+1 by dividing by max speed.
+            // ------------------------------------------------------------------
+            float normalizedTilt =
+                _movementSpeed > 0.001f ? _smoothDampVelocity.x / _movementSpeed : 0f;
+            float tiltDegrees = Mathf.Clamp(normalizedTilt, -1f, 1f) * _maxTiltAngle;
+            transform.rotation = Quaternion.Euler(0f, 0f, tiltDegrees);
 
-            // Inertia tilt — smoothed horizontal velocity creates a lean effect
-            MovementState.SmoothedHorizontalVelocity +=
-                (frameDeltaX - MovementState.SmoothedHorizontalVelocity) * _inertiaVelocityLerp;
-            transform.rotation = Quaternion.Euler(
-                0f,
-                0f,
-                MovementState.SmoothedHorizontalVelocity * _inertiaTiltFactor * Mathf.Rad2Deg
-            );
+            // ------------------------------------------------------------------
+            // 7. Hop — distance-based (movement.ts:184-213)
+            // ------------------------------------------------------------------
+            // Accumulate distance walked
+            _distanceSinceLastHop += frameDistance;
 
-            // Hop animation — small bouncy hops while moving
-            ApplyHopAnimation(frameDistance);
-        }
-
-        /// <summary>
-        /// When idle (no target), decay the inertia smoothly so the sprite
-        /// settles back to upright position.
-        /// </summary>
-        private void ApplyIdleInertiaDecay()
-        {
-            MovementState.SmoothedHorizontalVelocity *= InertiaDecayFactor;
-            if (Mathf.Abs(MovementState.SmoothedHorizontalVelocity) < 0.001f)
+            // Trigger a new hop when stride distance reached (only if not already hopping)
+            if (_hopProgress < 0f && _distanceSinceLastHop >= _hopStrideDistance)
             {
-                MovementState.SmoothedHorizontalVelocity = 0f;
-                transform.rotation = Quaternion.identity;
-            }
-            else
-            {
-                transform.rotation = Quaternion.Euler(
-                    0f,
-                    0f,
-                    MovementState.SmoothedHorizontalVelocity * _inertiaTiltFactor * Mathf.Rad2Deg
-                );
-            }
-        }
-
-        /// <summary>
-        /// Apply the hop (bouncy walk) animation. Ported from movement.ts lines 186-213.
-        /// Uses a parabolic arc: 4 * progress * (1 - progress), peaking at progress = 0.5.
-        /// </summary>
-        private void ApplyHopAnimation(float frameDistance)
-        {
-            float strideDistance = MovementState.HopStrideDistance;
-            float maxHeight = MovementState.HopMaxHeight;
-
-            if (frameDistance < HopSpeedFloor)
-            {
-                // Moving too slowly — dampen hop
-                float currentHopOffset =
-                    _spriteContainer != null ? _spriteContainer.localPosition.y : 0f;
-                ApplyHopOffset(currentHopOffset * InertiaDecayFactor);
-                MovementState.HopProgress = -1f;
-                return;
+                _hopProgress = 0f;
+                _distanceSinceLastHop = 0f;
             }
 
-            MovementState.DistanceSinceLastHop += frameDistance;
-
-            // Start a new hop when enough distance has been covered
-            if (
-                MovementState.HopProgress < 0f
-                && MovementState.DistanceSinceLastHop >= strideDistance
-            )
+            // Advance active hop — always advance regardless of speed,
+            // so SmoothDamp's slow ramp-up doesn't cancel the hop.
+            if (_hopProgress >= 0f)
             {
-                MovementState.HopProgress = 0f;
-                MovementState.DistanceSinceLastHop = 0f;
-            }
+                _hopProgress += frameDistance / _hopStrideDistance;
 
-            // Advance hop animation
-            if (MovementState.HopProgress >= 0f)
-            {
-                MovementState.HopProgress += frameDistance / strideDistance;
-
-                if (MovementState.HopProgress >= 1f)
+                if (_hopProgress >= 1f)
                 {
-                    MovementState.HopProgress = -1f;
-                    ApplyHopOffset(0f);
+                    _hopProgress = -1f;
+                    _currentHopHeight = 0f;
                 }
                 else
                 {
-                    // Parabolic arc: peaks at 0.5, returns to 0 at 0 and 1
-                    float arcHeight =
-                        4f * MovementState.HopProgress * (1f - MovementState.HopProgress);
-                    ApplyHopOffset(arcHeight * maxHeight);
+                    // Parabolic arc: 4*p*(1-p) peaks at 1.0 when p=0.5
+                    float arc = 4f * _hopProgress * (1f - _hopProgress);
+                    _currentHopHeight = arc * _hopMaxHeight;
                 }
             }
-        }
-
-        /// <summary>
-        /// Apply the hop Y offset to the sprite container (not the root transform).
-        /// </summary>
-        private void ApplyHopOffset(float verticalOffset)
-        {
-            if (_spriteContainer == null)
+            else if (frameDistance < _hopSpeedFloor)
             {
-                return;
+                // No active hop AND speed too low: decay residual height
+                _currentHopHeight *= 0.85f;
+                if (_currentHopHeight < 0.001f)
+                {
+                    _currentHopHeight = 0f;
+                }
             }
 
-            var localPosition = _spriteContainer.localPosition;
-            _spriteContainer.localPosition = new Vector3(
-                localPosition.x,
-                verticalOffset,
-                localPosition.z
-            );
+            // ------------------------------------------------------------------
+            // Apply final position: XZ from SmoothDamp, Y from ground + hop
+            // ------------------------------------------------------------------
+            transform.position = new Vector3(newX, _groundLevelY + _currentHopHeight, newZ);
         }
 
         /// <summary>
-        /// Compute the next position for one axis using ease-out interpolation.
-        /// Ported from movement.ts computeEasedStep (lines 83-101).
-        /// The character moves fast initially and decelerates smoothly near the target.
+        /// Idle state: decay smoothed velocity and hop height.
         /// </summary>
-        private static float ComputeEasedStep(
-            float currentPosition,
-            float targetPosition,
-            float distanceRemaining,
-            float totalStepSize
-        )
+        private void HandleIdleDecay()
         {
-            if (distanceRemaining < ArrivalThreshold)
+            // Decay residual hop height smoothly
+            if (_currentHopHeight > 0.001f)
             {
-                return targetPosition;
+                _currentHopHeight *= 0.85f;
+                if (_currentHopHeight < 0.001f)
+                {
+                    _currentHopHeight = 0f;
+                }
+
+                transform.position = new Vector3(
+                    transform.position.x,
+                    _groundLevelY + _currentHopHeight,
+                    transform.position.z
+                );
+            }
+            else if (transform.position.y != _groundLevelY)
+            {
+                transform.position = new Vector3(
+                    transform.position.x,
+                    _groundLevelY,
+                    transform.position.z
+                );
             }
 
-            float directionSign = targetPosition > currentPosition ? 1f : -1f;
-            float axisDistance = Mathf.Abs(targetPosition - currentPosition);
-            float axisRatio = axisDistance / distanceRemaining;
+            // Decay tilt smoothly using SmoothDamp's residual velocity
+            // (it decays naturally to zero after movement stops)
+            float currentTiltZ = transform.rotation.eulerAngles.z;
+            if (currentTiltZ > 180f)
+            {
+                currentTiltZ -= 360f;
+            }
 
-            // Ease-out quadratic: 1 - (1 - t)²
-            float proximityRatio = Mathf.Min(distanceRemaining / 4f, 1f);
-            float easedSpeed = EaseOutQuadratic(proximityRatio) * totalStepSize * axisRatio;
-            float clampedStep = Mathf.Min(easedSpeed, axisDistance);
-
-            return currentPosition + directionSign * clampedStep;
-        }
-
-        /// <summary>
-        /// Ease-out quadratic: fast start, smooth deceleration.
-        /// f(t) = 1 - (1 - t)²
-        /// </summary>
-        private static float EaseOutQuadratic(float progressRatio)
-        {
-            return 1f - (1f - progressRatio) * (1f - progressRatio);
+            if (Mathf.Abs(currentTiltZ) > 0.1f)
+            {
+                float decayedTilt = currentTiltZ * 0.9f;
+                transform.rotation = Quaternion.Euler(0f, 0f, decayedTilt);
+            }
+            else
+            {
+                transform.rotation = Quaternion.identity;
+            }
         }
     }
 }

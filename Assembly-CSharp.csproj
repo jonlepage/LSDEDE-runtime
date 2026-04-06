@@ -95,7 +95,6 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextInfoDebugTool.cs" />
     <Compile Include="Assets\LSDE\Demo\Movement\CharacterMovementController.cs" />
     <Compile Include="Assets\LSDE\Runtime\Handlers\ConditionBlockHandler.cs" />
-    <Compile Include="Assets\LSDE\Demo\Movement\CharacterMovementState.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexShakeA.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Runtime\Attributes\TitleHeaderAttribute.cs" />
     <Compile Include="Assets\Cainos\Common\Script\Utils\SecondOrderDynamics.cs" />

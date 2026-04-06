@@ -62,12 +62,6 @@ namespace LSDE.Demo
             Vector2 mouseScreenPosition = currentMouse.position.ReadValue();
             Ray rayFromCamera = _cachedMainCamera.ScreenPointToRay(mouseScreenPosition);
 
-            Debug.Log(
-                $"[Movement] Click at screen ({mouseScreenPosition.x:F0}, {mouseScreenPosition.y:F0}), "
-                    + $"ray origin={rayFromCamera.origin}, dir={rayFromCamera.direction}, "
-                    + $"groundMask={_groundLayerMask.value}"
-            );
-
             if (
                 Physics.Raycast(
                     rayFromCamera,
@@ -84,20 +78,9 @@ namespace LSDE.Demo
                     groundHitInfo.point.z
                 );
 
-                Debug.Log(
-                    $"[Movement] Raycast hit '{groundHitInfo.collider.gameObject.name}' "
-                        + $"at {targetWorldPosition}, layer={groundHitInfo.collider.gameObject.layer}"
-                );
-
                 _movementController.SetMovementTarget(targetWorldPosition);
             }
-            else
-            {
-                Debug.LogWarning(
-                    "[Movement] Raycast missed — no ground detected. "
-                        + "Check that the Ground plane has a Collider and is on the 'Ground' layer."
-                );
-            }
+            // If raycast missed, no action — ground plane might not be under cursor
         }
     }
 }
