@@ -5,6 +5,8 @@ using System.Linq;
 using LSDE.Runtime;
 using LsdeDialogEngine;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 
 namespace LSDE.Demo
 {
@@ -67,6 +69,8 @@ namespace LSDE.Demo
         /// </summary>
         private void Start()
         {
+            EnsureEventSystemExists();
+
             var allBubbleControllers = FindObjectsByType<SpeechBubbleController>(
                 FindObjectsInactive.Include,
                 FindObjectsSortMode.None
@@ -76,6 +80,31 @@ namespace LSDE.Demo
             {
                 bubbleController.WarmUp();
             }
+        }
+
+        /// <summary>
+        /// Ensure an EventSystem exists in the scene. Without it, Unity cannot process
+        /// pointer events (click, hover, drag) on any Canvas UI element — including
+        /// the choice buttons in speech bubbles.
+        ///
+        /// If no EventSystem is found, one is created automatically with the
+        /// <see cref="InputSystemUIInputModule"/> required by the new Input System.
+        /// This avoids requiring manual setup in each scene.
+        /// </summary>
+        private static void EnsureEventSystemExists()
+        {
+            if (EventSystem.current != null)
+            {
+                return;
+            }
+
+            var eventSystemGameObject = new GameObject("EventSystem");
+            eventSystemGameObject.AddComponent<EventSystem>();
+            eventSystemGameObject.AddComponent<InputSystemUIInputModule>();
+
+            Debug.Log(
+                "[LSDE] Created EventSystem automatically — required for choice button interaction."
+            );
         }
 
         /// <inheritdoc />
