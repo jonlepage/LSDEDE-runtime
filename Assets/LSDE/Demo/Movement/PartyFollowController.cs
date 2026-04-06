@@ -118,6 +118,13 @@ namespace LSDE.Demo
             /// Used to avoid resending when the follower hasn't moved enough.
             /// </summary>
             public Vector3 LastAssignedTarget;
+
+            /// <summary>
+            /// When true, this follower is being moved by an external system
+            /// (e.g. <see cref="DemoActionExecutor.ExecuteMoveCharacterAt"/>).
+            /// The follow controller will not assign trail targets until this is cleared.
+            /// </summary>
+            public bool IsExternallyControlled;
         }
 
         private readonly List<BreadcrumbPoint> _trailPoints = new();
@@ -175,6 +182,60 @@ namespace LSDE.Demo
             if (_gameState != null)
             {
                 _gameState.OnPartyMemberAdded -= HandlePartyMemberAdded;
+            }
+        }
+
+        /// <summary>
+        /// Temporarily suspend follow-controller targeting for a specific character.
+        /// Call this before an external system (e.g. <see cref="DemoActionExecutor"/>)
+        /// takes control of the character's movement. While suspended, the follow controller
+        /// will not assign trail targets to this character.
+        /// </summary>
+        /// <param name="characterId">The LSDE character ID to suspend (e.g. <c>lsdeCharacter.l1</c>).</param>
+        public void SuspendFollower(string characterId)
+        {
+            for (int index = 0; index < _activeFollowers.Count; index++)
+            {
+                if (_activeFollowers[index].CharacterId == characterId)
+                {
+                    var follower = _activeFollowers[index];
+                    follower.IsExternallyControlled = true;
+                    _activeFollowers[index] = follower;
+
+                    Debug.Log(
+                        $"[LSDE Demo] Follower '{characterId}' suspended — "
+                            + "external system has control."
+                    );
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Resume follow-controller targeting for a character that was suspended
+        /// via <see cref="SuspendFollower"/>. The character will rejoin the trail
+        /// on the next frame.
+        /// </summary>
+        /// <param name="characterId">The LSDE character ID to resume.</param>
+        public void ResumeFollower(string characterId)
+        {
+            for (int index = 0; index < _activeFollowers.Count; index++)
+            {
+                if (_activeFollowers[index].CharacterId == characterId)
+                {
+                    var follower = _activeFollowers[index];
+                    follower.IsExternallyControlled = false;
+                    // Reset last assigned target so the follower picks up the trail
+                    // from wherever it is now
+                    follower.LastAssignedTarget = follower.MovementController.transform.position;
+                    _activeFollowers[index] = follower;
+
+                    Debug.Log(
+                        $"[LSDE Demo] Follower '{characterId}' resumed — "
+                            + "follow controller has control."
+                    );
+                    return;
+                }
             }
         }
 
@@ -342,6 +403,13 @@ namespace LSDE.Demo
             {
                 var follower = _activeFollowers[followerIndex];
 
+                // Skip followers that are being controlled by an external system
+                // (e.g. DemoActionExecutor's moveCharacterAt action)
+                if (follower.IsExternallyControlled)
+                {
+                    continue;
+                }
+
                 // Follower 1 is at 1x followDistance, follower 2 at 2x, etc.
                 float targetTrailDistance = (followerIndex + 1) * _followDistance;
 
@@ -444,9 +512,15 @@ namespace LSDE.Demo
         {
             _isTrailPaused = true;
 
+            // Only stop followers that are NOT externally controlled.
+            // Externally controlled followers (e.g. being moved by an action) must
+            // keep their current movement — StopMovement() would interrupt the action.
             foreach (var follower in _activeFollowers)
             {
-                follower.MovementController.StopMovement();
+                if (!follower.IsExternallyControlled)
+                {
+                    follower.MovementController.StopMovement();
+                }
             }
         }
 

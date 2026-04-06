@@ -52,6 +52,15 @@ namespace LSDE.Demo
         )]
         private float _shakeIntensityWorldScaleFactor = 0.02f;
 
+        [SerializeField]
+        [Tooltip(
+            "Optional reference to the party follow controller. When assigned, "
+                + "moveCharacterAt will suspend the follower before moving it "
+                + "and resume it after, preventing the follow controller from fighting "
+                + "with action-driven movement."
+        )]
+        private PartyFollowController _partyFollowController;
+
         [Header("Character Movement Settings")]
         [SerializeField]
         [Tooltip(
@@ -63,11 +72,19 @@ namespace LSDE.Demo
 
         [SerializeField]
         [Tooltip(
-            "World-space origin point for absolute character positioning. "
-                + "When moveCharacterAt uses isAbsolute=true, offsets are relative to this point. "
-                + "Default (0,0,0) means the center of the scene."
+            "Reference Transform used as the origin for absolute character positioning. "
+                + "When moveCharacterAt uses isAbsolute=true, pixel offsets are applied relative "
+                + "to this Transform's position. Drag the player character or a central scene "
+                + "object here. If not assigned, falls back to (0,0,0) which is rarely correct."
         )]
-        private Vector3 _absolutePositionOrigin = Vector3.zero;
+        private Transform _absolutePositionOriginTransform;
+
+        [SerializeField]
+        [Tooltip(
+            "Fallback origin point if no Transform is assigned above. "
+                + "Only used when _absolutePositionOriginTransform is null."
+        )]
+        private Vector3 _absolutePositionOriginFallback = Vector3.zero;
 
         private const string LogPrefix = "[LSDE Action]";
 
@@ -272,7 +289,7 @@ namespace LSDE.Demo
         /// Two positioning modes:
         /// - <b>Relative</b> (<c>isAbsolute=false</c>): offset from the character's current position.
         ///   Example: character at X=500, offsetX=-100 → target = 400.
-        /// - <b>Absolute</b> (<c>isAbsolute=true</c>): offset from <see cref="_absolutePositionOrigin"/>.
+        /// - <b>Absolute</b> (<c>isAbsolute=true</c>): offset from <see cref="_absolutePositionOriginTransform"/>.
         ///   The dev configures the origin point (default: scene center at 0,0,0).
         ///
         /// Blueprint offsets are in 2D pixel space. <see cref="_pixelToWorldScaleFactor"/>
@@ -287,11 +304,23 @@ namespace LSDE.Demo
             var characterId = parameters.Count > 0 ? parameters[0]?.ToString() : "unknown";
             var offsetX = ConvertParameterToFloat(parameters, 1, "offsetX");
             var offsetY = ConvertParameterToFloat(parameters, 2, "offsetY");
-            var isAbsolute = parameters.Count > 3 && parameters[3] is bool boolValue && boolValue;
+            // The boolean parameter may arrive as a raw bool or as a Newtonsoft JValue
+            // wrapping a bool. "parameters[3] is bool" fails for JValue, so we use
+            // Convert.ToBoolean which handles both via IConvertible.
+            var isAbsolute = ConvertParameterToBoolean(parameters, 3);
+
+            // Diagnostic log: print the actual C# type of the boolean parameter
+            // to verify Newtonsoft deserialization (JValue vs bool).
+            string boolParamDebugInfo =
+                parameters.Count > 3 && parameters[3] != null
+                    ? $"type={parameters[3].GetType().Name}, value={parameters[3]}"
+                    : "missing/null";
 
             Debug.Log(
                 $"{LogPrefix} moveCharacterAt — character={characterId}, "
-                    + $"offsetX={offsetX}, offsetY={offsetY}, absolute={isAbsolute}"
+                    + $"offsetX={offsetX}, offsetY={offsetY}, absolute={isAbsolute}, "
+                    + $"scaleFactor={_pixelToWorldScaleFactor}, "
+                    + $"boolParam=[{boolParamDebugInfo}]"
             );
 
             if (_characterRegistry == null)
@@ -331,11 +360,17 @@ namespace LSDE.Demo
 
             if (isAbsolute)
             {
-                // Absolute: offset from the configurable origin point
+                // Absolute: offset from the origin reference point.
+                // Uses the Transform if assigned, otherwise falls back to the Vector3 field.
+                Vector3 originPosition =
+                    _absolutePositionOriginTransform != null
+                        ? _absolutePositionOriginTransform.position
+                        : _absolutePositionOriginFallback;
+
                 targetPosition = new Vector3(
-                    _absolutePositionOrigin.x + worldOffsetX,
+                    originPosition.x + worldOffsetX,
                     characterMarker.transform.position.y,
-                    _absolutePositionOrigin.z + worldOffsetZ
+                    originPosition.z + worldOffsetZ
                 );
             }
             else
@@ -348,7 +383,28 @@ namespace LSDE.Demo
                 );
             }
 
-            Debug.Log($"{LogPrefix} moveCharacterAt — target world position: {targetPosition}");
+            Vector3 logOrigin = isAbsolute
+                ? (
+                    _absolutePositionOriginTransform != null
+                        ? _absolutePositionOriginTransform.position
+                        : _absolutePositionOriginFallback
+                )
+                : characterMarker.transform.position;
+
+            Debug.Log(
+                $"{LogPrefix} moveCharacterAt — "
+                    + $"currentPos={characterMarker.transform.position}, "
+                    + $"worldOffset=({worldOffsetX}, {worldOffsetZ}), "
+                    + $"origin={logOrigin}, "
+                    + $"targetPos={targetPosition}"
+            );
+
+            // Suspend the follower in the party follow controller to prevent
+            // the trail system from fighting with this action-driven movement.
+            if (_partyFollowController != null)
+            {
+                _partyFollowController.SuspendFollower(characterId);
+            }
 
             movementController.SetMovementTarget(targetPosition);
 
@@ -356,6 +412,12 @@ namespace LSDE.Demo
             while (movementController.IsCharacterMoving)
             {
                 yield return null;
+            }
+
+            // Resume the follower so the follow controller can take over again
+            if (_partyFollowController != null)
+            {
+                _partyFollowController.ResumeFollower(characterId);
             }
 
             Debug.Log($"{LogPrefix} moveCharacterAt — complete");
@@ -415,6 +477,34 @@ namespace LSDE.Demo
                         + $"value '{parameters[index]}' to float. Defaulting to 0."
                 );
                 return 0f;
+            }
+        }
+
+        /// <summary>
+        /// Safely extract a boolean parameter by index from the action's parameter list.
+        /// Handles the same Newtonsoft deserialization quirk as <see cref="ConvertParameterToFloat"/>:
+        /// JSON <c>true</c>/<c>false</c> may arrive as a raw <c>bool</c> OR as a Newtonsoft
+        /// <c>JValue</c> wrapping a bool. Direct <c>is bool</c> pattern matching fails for
+        /// <c>JValue</c>, so we use <see cref="Convert.ToBoolean(object)"/> which handles
+        /// both via <see cref="IConvertible"/>.
+        /// </summary>
+        /// <param name="parameters">The action's parameter list.</param>
+        /// <param name="index">The position of the parameter to extract.</param>
+        /// <returns>The parameter value as a bool, or false if missing or unconvertible.</returns>
+        private static bool ConvertParameterToBoolean(List<object> parameters, int index)
+        {
+            if (parameters == null || index >= parameters.Count || parameters[index] == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                return Convert.ToBoolean(parameters[index]);
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
     }
