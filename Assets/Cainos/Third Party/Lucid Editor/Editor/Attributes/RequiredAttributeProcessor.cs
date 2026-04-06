@@ -1,5 +1,5 @@
-using UnityEditor;
 using Cainos.LucidEditor;
+using UnityEditor;
 
 namespace Cainos.LucidEditor
 {
@@ -10,10 +10,17 @@ namespace Cainos.LucidEditor
         {
             RequiredAttribute required = (RequiredAttribute)attribute;
 
-            if (property.serializedProperty.propertyType == SerializedPropertyType.ObjectReference &&
-                property.serializedProperty.objectReferenceValue == null)
+            if (
+                property.serializedProperty.propertyType == SerializedPropertyType.ObjectReference
+                && property.serializedProperty.objectReferenceValue == null
+            )
             {
-                EditorGUILayout.HelpBox(required.message == null ? $"{property.displayName} is required." : required.message, MessageType.Error);
+                EditorGUILayout.HelpBox(
+                    required.message == null
+                        ? $"{property.displayName} is required."
+                        : required.message,
+                    MessageType.Error
+                );
             }
         }
     }

@@ -11,7 +11,10 @@ namespace Cainos.LucidEditor
             return fi.FieldType;
         }
 
-        public static System.Reflection.FieldInfo GetFieldViaPath(this System.Type type, string path)
+        public static System.Reflection.FieldInfo GetFieldViaPath(
+            this System.Type type,
+            string path
+        )
         {
             System.Type parentType = type;
             System.Reflection.FieldInfo fi = type.GetField(path);
@@ -26,7 +29,8 @@ namespace Cainos.LucidEditor
             }
             if (fi != null)
                 return fi;
-            else return null;
+            else
+                return null;
         }
     }
 }

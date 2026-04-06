@@ -1,5 +1,5 @@
-using UnityEditor;
 using Cainos.LucidEditor;
+using UnityEditor;
 
 namespace Cainos.LucidEditor
 {
@@ -9,7 +9,7 @@ namespace Cainos.LucidEditor
         public override void OnBeforeDrawProperty()
         {
             HorizontalLineAttribute horizontalLine = (HorizontalLineAttribute)attribute;
-            
+
             EditorGUILayout.Space(EditorGUIUtility.standardVerticalSpacing);
             if (horizontalLine.useCustomColor)
             {

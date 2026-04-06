@@ -12,7 +12,7 @@ namespace Cainos.LucidEditor
         {
             this.indent = 1;
         }
-        
+
         public IndentAttribute(int indent)
         {
             this.indent = indent;

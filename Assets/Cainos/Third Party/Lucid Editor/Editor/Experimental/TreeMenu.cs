@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
+using UnityEngine;
 
 namespace Cainos.LucidEditor.Experimental
 {
@@ -16,7 +16,8 @@ namespace Cainos.LucidEditor.Experimental
         private int currentId = 0;
         private List<TreeMenuItem> _selectedItems = new List<TreeMenuItem>();
 
-        public IReadOnlyList<TreeMenuItem> selectedItems => Array.AsReadOnly(_selectedItems.ToArray());
+        public IReadOnlyList<TreeMenuItem> selectedItems =>
+            Array.AsReadOnly(_selectedItems.ToArray());
         public event Action<IReadOnlyList<TreeMenuItem>> onSelectionChanged;
 
         public Action<Rect, TreeMenuItem> drawItemCallback;
@@ -24,14 +25,12 @@ namespace Cainos.LucidEditor.Experimental
 
         public string searchString
         {
-            get
-            {
-                return _searchString;
-            }
+            get { return _searchString; }
             set
             {
                 _searchString = value;
-                if (simpleTreeView != null) simpleTreeView.searchString = _searchString;
+                if (simpleTreeView != null)
+                    simpleTreeView.searchString = _searchString;
             }
         }
         private string _searchString;
@@ -89,14 +88,18 @@ namespace Cainos.LucidEditor.Experimental
 
         public void Show(Rect position)
         {
-            if (simpleTreeView == null) Setup();
+            if (simpleTreeView == null)
+                Setup();
             simpleTreeView.OnGUI(position);
         }
 
         public void ShowLayout(params GUILayoutOption[] options)
         {
-            if (simpleTreeView == null) Setup();
-            simpleTreeView.OnGUI(EditorGUILayout.GetControlRect(false, simpleTreeView.totalHeight, options));
+            if (simpleTreeView == null)
+                Setup();
+            simpleTreeView.OnGUI(
+                EditorGUILayout.GetControlRect(false, simpleTreeView.totalHeight, options)
+            );
         }
 
         public void Setup()
@@ -111,7 +114,8 @@ namespace Cainos.LucidEditor.Experimental
                 foreach (int id in idList)
                 {
                     TreeMenuItem item = FindItem(id);
-                    if (item != null) _selectedItems.Add(item);
+                    if (item != null)
+                        _selectedItems.Add(item);
                 }
                 onSelectionChanged?.Invoke(_selectedItems);
             };
@@ -136,28 +140,30 @@ namespace Cainos.LucidEditor.Experimental
         private TreeMenuItem FindItem(int id)
         {
             TreeMenuItem item = null;
-            foreach(TreeMenuItem child in baseElements)
+            foreach (TreeMenuItem child in baseElements)
             {
                 item = FindItem(child, id);
-                if (item != null) return item;
+                if (item != null)
+                    return item;
             }
             return null;
         }
 
         private TreeMenuItem FindItem(TreeMenuItem root, int id)
         {
-            if (root.id == id) return root;
+            if (root.id == id)
+                return root;
             TreeMenuItem item = null;
 
             foreach (TreeMenuItem child in root.childElements)
             {
                 item = FindItem(child, id);
-                if (item != null) return item;
+                if (item != null)
+                    return item;
             }
 
             return null;
         }
-
     }
 
     public class TreeMenuItem
@@ -176,10 +182,7 @@ namespace Cainos.LucidEditor.Experimental
 
         public string name
         {
-            get
-            {
-                return _name;
-            }
+            get { return _name; }
         }
         private string _name;
 

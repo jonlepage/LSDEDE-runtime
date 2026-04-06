@@ -1,19 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
+using UnityEngine;
 
 namespace Cainos.LucidEditor
 {
     public class SerializeReferenceDropdownItem : AdvancedDropdownItem
     {
         public readonly Type type;
-        public SerializeReferenceDropdownItem(Type type, string name) : base(name)
+
+        public SerializeReferenceDropdownItem(Type type, string name)
+            : base(name)
         {
             this.type = type;
-            if (type != null) icon = (Texture2D)EditorIcons.CsScriptIcon.image;
+            if (type != null)
+                icon = (Texture2D)EditorIcons.CsScriptIcon.image;
         }
     }
 
@@ -31,7 +34,7 @@ namespace Cainos.LucidEditor
             int itemCount = 0;
             var nullItem = new SerializeReferenceDropdownItem(null, nullDisplayName)
             {
-                id = itemCount++
+                id = itemCount++,
             };
             root.AddChild(nullItem);
 
@@ -69,7 +72,8 @@ namespace Cainos.LucidEditor
             foreach (Type type in typeArray)
             {
                 string[] splittedTypePath = GetSplittedTypePath(type);
-                if (splittedTypePath.Length == 0) continue;
+                if (splittedTypePath.Length == 0)
+                    continue;
 
                 AdvancedDropdownItem parent = root;
 
@@ -94,9 +98,12 @@ namespace Cainos.LucidEditor
                     }
                 }
 
-                var item = new SerializeReferenceDropdownItem(type, ObjectNames.NicifyVariableName(splittedTypePath[splittedTypePath.Length - 1]))
+                var item = new SerializeReferenceDropdownItem(
+                    type,
+                    ObjectNames.NicifyVariableName(splittedTypePath[splittedTypePath.Length - 1])
+                )
                 {
-                    id = itemCount++
+                    id = itemCount++,
                 };
                 parent.AddChild(item);
             }
@@ -106,15 +113,24 @@ namespace Cainos.LucidEditor
         {
             foreach (AdvancedDropdownItem item in parent.children)
             {
-                if (item.name == name) return item;
+                if (item.name == name)
+                    return item;
             }
             return null;
         }
 
-        public SerializeReferenceDropdown(IEnumerable<Type> types, int maxLineCount, AdvancedDropdownState state) : base(state)
+        public SerializeReferenceDropdown(
+            IEnumerable<Type> types,
+            int maxLineCount,
+            AdvancedDropdownState state
+        )
+            : base(state)
         {
             SetTypes(types);
-            minimumSize = new Vector2(minimumSize.x, EditorGUIUtility.singleLineHeight * maxLineCount + headerHeight);
+            minimumSize = new Vector2(
+                minimumSize.x,
+                EditorGUIUtility.singleLineHeight * maxLineCount + headerHeight
+            );
         }
 
         public void SetTypes(IEnumerable<Type> types)
@@ -143,13 +159,16 @@ namespace Cainos.LucidEditor
             int splitIndex = type.FullName.LastIndexOf('.');
             if (splitIndex >= 0)
             {
-                return new string[] { type.FullName.Substring(0, splitIndex), type.FullName.Substring(splitIndex + 1) };
+                return new string[]
+                {
+                    type.FullName.Substring(0, splitIndex),
+                    type.FullName.Substring(splitIndex + 1),
+                };
             }
             else
             {
                 return new string[] { type.Name };
             }
         }
-
     }
 }

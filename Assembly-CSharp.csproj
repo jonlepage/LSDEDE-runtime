@@ -65,6 +65,7 @@
     <Compile Include="Assets\LSDE\Runtime\Resolvers\ICharacterResolver.cs" />
     <Compile Include="Assets\LSDE\Runtime\BlueprintLoader.cs" />
     <Compile Include="Assets\LSDE\Demo\Characters\DialogueCharacterMarker.cs" />
+    <Compile Include="Assets\LSDE\Demo\Presenters\TypewriterEffect.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Runtime\Attributes\HideLabelAttribute.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Runtime\Attributes\RequiredAttribute.cs" />
     <Compile Include="Assets\LSDE\Demo\Characters\DialogueCharacterRegistry.cs" />

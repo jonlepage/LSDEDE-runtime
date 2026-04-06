@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -12,13 +14,18 @@ namespace LSDE.Demo
     /// to avoid the TextMeshPro first-activation lag spike. The GameObject stays
     /// active at all times so TMP initializes during scene load.
     ///
+    /// When <see cref="ShowDialogue"/> is called, the bubble fades in (alpha 0→1)
+    /// while the <see cref="TypewriterEffect"/> reveals text character by character
+    /// in parallel.
+    ///
     /// Structure expected:
     /// <code>
     /// SpeechBubble (this script + BillboardRotation)
     /// └── Canvas (World Space, with CanvasGroup)
-    ///     └── BubblePanel (Image background)
+    ///     ├── BubbleBackground (ProceduralSpeechBubble)
+    ///     └── TextPanel
     ///         ├── CharacterNameText (TextMeshProUGUI)
-    ///         └── DialogueContentText (TextMeshProUGUI)
+    ///         └── DialogueContentText (TextMeshProUGUI + TypewriterEffect)
     /// </code>
     /// </summary>
     public class SpeechBubbleController : MonoBehaviour
@@ -31,13 +38,26 @@ namespace LSDE.Demo
         [Tooltip("TextMeshPro component displaying the dialogue text (body).")]
         private TextMeshProUGUI _dialogueContentText;
 
+        [SerializeField]
+        [Tooltip("Duration in seconds for the bubble fade-in animation (alpha 0 → 1).")]
+        private float _fadeInDurationSeconds = 0.25f;
+
         private CanvasGroup _canvasGroup;
         private bool _isBubbleVisible;
+        private Coroutine _activeFadeCoroutine;
+        private TypewriterEffect _typewriterEffect;
 
         /// <summary>
         /// Whether the speech bubble is currently visible.
         /// </summary>
         public bool IsVisible => _isBubbleVisible;
+
+        /// <summary>
+        /// Whether the typewriter animation is currently playing on this bubble.
+        /// Used by <see cref="DialogueClickAdvancer"/> to decide whether a click
+        /// should skip the typewriter or advance to the next block.
+        /// </summary>
+        public bool IsTypewriterPlaying => _typewriterEffect != null && _typewriterEffect.IsPlaying;
 
         /// <summary>
         /// Initialize the CanvasGroup and hide the bubble.
@@ -68,6 +88,12 @@ namespace LSDE.Demo
                 }
             }
 
+            // Resolve the TypewriterEffect on the dialogue content text
+            if (_dialogueContentText != null)
+            {
+                _typewriterEffect = _dialogueContentText.GetComponent<TypewriterEffect>();
+            }
+
             // Start hidden — alpha 0, non-interactable, non-blocking
             SetBubbleVisible(false);
         }
@@ -79,11 +105,21 @@ namespace LSDE.Demo
 
         /// <summary>
         /// Show the speech bubble with the given character name and dialogue text.
-        /// Uses CanvasGroup.alpha to make the bubble visible without SetActive.
+        /// Launches a fade-in animation (alpha 0→1) and the typewriter effect in parallel.
+        /// When the typewriter finishes (or is skipped), <paramref name="onTypewriterComplete"/>
+        /// is invoked so the presenter can enable click-to-advance.
         /// </summary>
         /// <param name="characterName">The name of the speaking character.</param>
         /// <param name="dialogueText">The localized dialogue text to display.</param>
-        public void ShowDialogue(string characterName, string dialogueText)
+        /// <param name="onTypewriterComplete">
+        /// Callback invoked when the typewriter finishes revealing all characters
+        /// (either naturally or via skip). Can be null if no callback is needed.
+        /// </param>
+        public void ShowDialogue(
+            string characterName,
+            string dialogueText,
+            Action onTypewriterComplete = null
+        )
         {
             if (_characterNameText != null)
             {
@@ -95,7 +131,32 @@ namespace LSDE.Demo
                 _dialogueContentText.text = dialogueText;
             }
 
-            SetBubbleVisible(true);
+            // Start fade-in animation (alpha 0 → 1 with ease-out)
+            _isBubbleVisible = true;
+            StartFadeIn();
+
+            // Start typewriter effect in parallel with the fade-in
+            if (_typewriterEffect != null)
+            {
+                _typewriterEffect.Play(onTypewriterComplete);
+            }
+            else
+            {
+                // No typewriter component — reveal all text immediately
+                onTypewriterComplete?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Skip the typewriter animation, immediately revealing all remaining text.
+        /// Called by the click advancer when the player clicks during the typewriter.
+        /// </summary>
+        public void SkipTypewriter()
+        {
+            if (_typewriterEffect != null)
+            {
+                _typewriterEffect.Skip();
+            }
         }
 
         /// <summary>
@@ -104,7 +165,62 @@ namespace LSDE.Demo
         /// </summary>
         public void HideDialogue()
         {
+            StopFade();
             SetBubbleVisible(false);
+        }
+
+        /// <summary>
+        /// Start the fade-in coroutine. Stops any running fade first.
+        /// Uses an ease-out curve (fast start, slow finish) for organic feel.
+        /// </summary>
+        private void StartFadeIn()
+        {
+            StopFade();
+
+            if (_canvasGroup != null)
+            {
+                _canvasGroup.alpha = 0f;
+                _canvasGroup.interactable = true;
+                _canvasGroup.blocksRaycasts = true;
+                _activeFadeCoroutine = StartCoroutine(FadeInCoroutine());
+            }
+        }
+
+        /// <summary>
+        /// Stop any running fade coroutine.
+        /// </summary>
+        private void StopFade()
+        {
+            if (_activeFadeCoroutine != null)
+            {
+                StopCoroutine(_activeFadeCoroutine);
+                _activeFadeCoroutine = null;
+            }
+        }
+
+        /// <summary>
+        /// Coroutine that interpolates CanvasGroup.alpha from 0 to 1
+        /// over <see cref="_fadeInDurationSeconds"/> using an ease-out curve.
+        /// Ease-out: fast at the start, decelerates toward the end.
+        /// </summary>
+        private IEnumerator FadeInCoroutine()
+        {
+            float elapsedTime = 0f;
+
+            while (elapsedTime < _fadeInDurationSeconds)
+            {
+                elapsedTime += Time.deltaTime;
+                float linearProgress = Mathf.Clamp01(elapsedTime / _fadeInDurationSeconds);
+
+                // Ease-out: 1 - (1 - t)^2 — fast start, smooth deceleration
+                float easedProgress = 1f - (1f - linearProgress) * (1f - linearProgress);
+
+                _canvasGroup.alpha = easedProgress;
+                yield return null;
+            }
+
+            _canvasGroup.alpha = 1f;
+            _activeFadeCoroutine = null;
         }
 
         private void SetBubbleVisible(bool visible)

@@ -10,7 +10,7 @@ namespace Cainos.PixelArtPlatformer_VillageProps
 
     public class MovingPlatform : MonoBehaviour
     {
-        public float velocityInheritPercent = 0.8f;     
+        public float velocityInheritPercent = 0.8f;
 
         private List<Transform> onPlatformObjects;
 
@@ -34,26 +34,35 @@ namespace Cainos.PixelArtPlatformer_VillageProps
             }
         }
 
-
         private void OnTriggerEnter2D(Collider2D collision)
         {
-            if (collision.attachedRigidbody && collision.attachedRigidbody.bodyType == RigidbodyType2D.Dynamic)
+            if (
+                collision.attachedRigidbody
+                && collision.attachedRigidbody.bodyType == RigidbodyType2D.Dynamic
+            )
             {
-                if (onPlatformObjects.Contains(collision.transform)) return;
+                if (onPlatformObjects.Contains(collision.transform))
+                    return;
 
                 onPlatformObjects.Add(collision.transform);
-                if (collision.attachedRigidbody) collision.attachedRigidbody.linearVelocity -= velocity * velocityInheritPercent;
+                if (collision.attachedRigidbody)
+                    collision.attachedRigidbody.linearVelocity -= velocity * velocityInheritPercent;
             }
         }
 
         private void OnTriggerExit2D(Collider2D collision)
         {
-            if (collision.attachedRigidbody && collision.attachedRigidbody.bodyType == RigidbodyType2D.Dynamic)
+            if (
+                collision.attachedRigidbody
+                && collision.attachedRigidbody.bodyType == RigidbodyType2D.Dynamic
+            )
             {
-                if (onPlatformObjects.Contains(collision.transform) == false) return;
+                if (onPlatformObjects.Contains(collision.transform) == false)
+                    return;
                 onPlatformObjects.Remove(collision.transform);
 
-                if (collision.attachedRigidbody) collision.attachedRigidbody.linearVelocity += velocity * velocityInheritPercent;
+                if (collision.attachedRigidbody)
+                    collision.attachedRigidbody.linearVelocity += velocity * velocityInheritPercent;
             }
         }
     }

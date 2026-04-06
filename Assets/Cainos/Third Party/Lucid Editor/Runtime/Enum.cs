@@ -1,11 +1,11 @@
 namespace Cainos.LucidEditor
 {
     public enum InspectorButtonSize
-    { 
+    {
         Small,
         Medium,
         Large,
-        ExtraLarge
+        ExtraLarge,
     }
 
     public enum InspectorColor
@@ -31,6 +31,6 @@ namespace Cainos.LucidEditor
         EditorLine,
         EditorThinLine,
         EditorWarning,
-        EditorError
+        EditorError,
     }
 }

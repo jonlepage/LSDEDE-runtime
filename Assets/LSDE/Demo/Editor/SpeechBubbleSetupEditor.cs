@@ -231,6 +231,11 @@ namespace LSDE.Demo.Editor
                 CanvasWidthInPixels - BubblePaddingHorizontal * 2;
             dialogueContentLayoutElement.flexibleHeight = 1f;
 
+            // --- TypewriterEffect (reveals text character by character) ---
+            // Attached to the same GameObject as DialogueContentText so it can
+            // access the TextMeshProUGUI component via GetComponent in Awake().
+            dialogueContentGameObject.AddComponent<TypewriterEffect>();
+
             // --- Wire SpeechBubbleController references via SerializedObject ---
             var serializedBubbleController = new SerializedObject(bubbleController);
             serializedBubbleController.FindProperty("_characterNameText").objectReferenceValue =

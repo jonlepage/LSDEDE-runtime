@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using UnityEngine;
 using Cainos.Common;
+using UnityEngine;
 
 namespace Cainos.PixelArtPlatformer_VillageProps
 {
@@ -21,13 +21,17 @@ namespace Cainos.PixelArtPlatformer_VillageProps
         private Vector3 platformPrevPos;
         private Vector2 platformVel;
 
-        private SecondOrderDynamics secondOrderDynamics = new SecondOrderDynamics(4.0f, 0.5f, -0.3f);
+        private SecondOrderDynamics secondOrderDynamics = new SecondOrderDynamics(
+            4.0f,
+            0.5f,
+            -0.3f
+        );
 
         private List<Rigidbody2D> onPlatformRigidbodies;
 
         private void Push()
         {
-            foreach ( Rigidbody2D rb2d in onPlatformRigidbodies)
+            foreach (Rigidbody2D rb2d in onPlatformRigidbodies)
             {
                 rb2d.linearVelocity += pushSpeed * Vector2.up;
             }
@@ -51,7 +55,7 @@ namespace Cainos.PixelArtPlatformer_VillageProps
             platformPrevPos = platform.transform.position;
 
             waitTimer += Time.fixedDeltaTime;
-            if ( waitTimer > waitTime )
+            if (waitTimer > waitTime)
             {
                 //to up
                 if (curState == State.Down)
@@ -78,14 +82,19 @@ namespace Cainos.PixelArtPlatformer_VillageProps
                 }
             }
 
-            platform.transform.localPosition = Vector3.up * secondOrderDynamics.Update(platformYPos, Time.fixedDeltaTime);
+            platform.transform.localPosition =
+                Vector3.up * secondOrderDynamics.Update(platformYPos, Time.fixedDeltaTime);
         }
 
         private void OnTriggerEnter2D(Collider2D collision)
         {
-            if (collision.attachedRigidbody && collision.attachedRigidbody.bodyType == RigidbodyType2D.Dynamic)
+            if (
+                collision.attachedRigidbody
+                && collision.attachedRigidbody.bodyType == RigidbodyType2D.Dynamic
+            )
             {
-                if (onPlatformRigidbodies.Contains(collision.attachedRigidbody)) return;
+                if (onPlatformRigidbodies.Contains(collision.attachedRigidbody))
+                    return;
 
                 onPlatformRigidbodies.Add(collision.attachedRigidbody);
             }
@@ -93,9 +102,13 @@ namespace Cainos.PixelArtPlatformer_VillageProps
 
         private void OnTriggerExit2D(Collider2D collision)
         {
-            if (collision.attachedRigidbody && collision.attachedRigidbody.bodyType == RigidbodyType2D.Dynamic)
+            if (
+                collision.attachedRigidbody
+                && collision.attachedRigidbody.bodyType == RigidbodyType2D.Dynamic
+            )
             {
-                if (onPlatformRigidbodies.Contains(collision.attachedRigidbody) == false) return;
+                if (onPlatformRigidbodies.Contains(collision.attachedRigidbody) == false)
+                    return;
                 onPlatformRigidbodies.Remove(collision.attachedRigidbody);
             }
         }
@@ -103,7 +116,7 @@ namespace Cainos.PixelArtPlatformer_VillageProps
         public enum State
         {
             Up,
-            Down
+            Down,
         }
     }
 }

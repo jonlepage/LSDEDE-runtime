@@ -1,13 +1,18 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using Cainos.LucidEditor;
+using UnityEditor;
 
 namespace Cainos.LucidEditor
 {
     public sealed class InspectorPropertyGroup : InspectorProperty
     {
-        internal InspectorPropertyGroup(string path, SerializedObject serializedObject, PropertyGroupAttribute attribute) : base(serializedObject, null, null, path.Split('/').Last(), new[] { attribute })
+        internal InspectorPropertyGroup(
+            string path,
+            SerializedObject serializedObject,
+            PropertyGroupAttribute attribute
+        )
+            : base(serializedObject, null, null, path.Split('/').Last(), new[] { attribute })
         {
             this.path = path;
             groupDepth = path.Split('/').Count();
@@ -27,17 +32,21 @@ namespace Cainos.LucidEditor
         internal void Add(InspectorProperty item)
         {
             item._isInGroup = true;
-            if (!_childProperties.Contains(item)) _childProperties.Add(item);
+            if (!_childProperties.Contains(item))
+                _childProperties.Add(item);
         }
 
         internal override void Draw()
         {
             processor?.BeginPropertyGroup();
 
-            if (isHidden) return;
+            if (isHidden)
+                return;
 
-            if (!isEditable) EditorGUI.BeginDisabledGroup(true);
-            if (indent > 0) LucidEditorGUILayout.BeginLayoutIndent(indent);
+            if (!isEditable)
+                EditorGUI.BeginDisabledGroup(true);
+            if (indent > 0)
+                LucidEditorGUILayout.BeginLayoutIndent(indent);
             {
                 if (isExpanded)
                 {
@@ -47,8 +56,10 @@ namespace Cainos.LucidEditor
                     }
                 }
             }
-            if (indent > 0) LucidEditorGUILayout.EndLayoutIndent();
-            if (!isEditable) EditorGUI.EndDisabledGroup();
+            if (indent > 0)
+                LucidEditorGUILayout.EndLayoutIndent();
+            if (!isEditable)
+                EditorGUI.EndDisabledGroup();
 
             processor?.EndPropertyGroup();
         }
@@ -86,7 +97,5 @@ namespace Cainos.LucidEditor
                 property.OnAfterInspectorGUI();
             }
         }
-
     }
-
 }

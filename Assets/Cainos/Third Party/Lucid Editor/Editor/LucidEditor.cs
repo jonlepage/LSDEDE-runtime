@@ -1,7 +1,7 @@
 using System.Linq;
-using UnityEngine;
-using UnityEditor;
 using Cainos.LucidEditor;
+using UnityEditor;
+using UnityEngine;
 
 namespace Cainos.LucidEditor
 {
@@ -10,6 +10,7 @@ namespace Cainos.LucidEditor
         private InspectorProperty[] properties;
 
         internal bool hideMonoScript;
+
         //internal bool disableEditor;
 
         protected virtual void OnEnable()
@@ -27,12 +28,14 @@ namespace Cainos.LucidEditor
             //}
 
             serializedObject.Update();
-            if (properties == null) InitializeProperties();
+            if (properties == null)
+                InitializeProperties();
             ResetProperties();
 
             OnBeforeInspectorGUI();
 
-            if (!hideMonoScript) LucidEditorGUILayout.ScriptField(target);
+            if (!hideMonoScript)
+                LucidEditorGUILayout.ScriptField(target);
             DrawAllProperties();
 
             OnAfterInspectorGUI();
@@ -42,7 +45,9 @@ namespace Cainos.LucidEditor
 
         private void InitializeProperties()
         {
-            properties = InspectorPropertyUtil.GroupProperties(InspectorPropertyUtil.CreateProperties(serializedObject)).ToArray();
+            properties = InspectorPropertyUtil
+                .GroupProperties(InspectorPropertyUtil.CreateProperties(serializedObject))
+                .ToArray();
             foreach (InspectorProperty property in properties)
             {
                 property.Initialize();
@@ -80,7 +85,6 @@ namespace Cainos.LucidEditor
                 property.OnAfterInspectorGUI();
             }
         }
-
     }
 
     //[CanEditMultipleObjects]
@@ -90,5 +94,4 @@ namespace Cainos.LucidEditor
     //[CanEditMultipleObjects]
     //[CustomEditor(typeof(ScriptableObject), true)]
     //internal class ScriptableObjectEditor : LucidEditor { }
-
 }

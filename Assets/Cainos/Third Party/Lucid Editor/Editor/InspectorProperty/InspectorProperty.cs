@@ -13,7 +13,8 @@ namespace Cainos.LucidEditor
 
         public readonly Attribute[] attributes;
 
-        public TAttribute GetAttribute<TAttribute>() where TAttribute : Attribute
+        public TAttribute GetAttribute<TAttribute>()
+            where TAttribute : Attribute
         {
             foreach (Attribute att in attributes)
             {
@@ -25,7 +26,8 @@ namespace Cainos.LucidEditor
             return null;
         }
 
-        public bool TryGetAttribute<TAttribute>(out TAttribute result) where TAttribute : Attribute
+        public bool TryGetAttribute<TAttribute>(out TAttribute result)
+            where TAttribute : Attribute
         {
             foreach (Attribute att in attributes)
             {
@@ -39,7 +41,13 @@ namespace Cainos.LucidEditor
             return false;
         }
 
-        internal InspectorProperty(SerializedObject serializedObject, SerializedProperty serializedProperty, object parentObject, string name, Attribute[] attributes)
+        internal InspectorProperty(
+            SerializedObject serializedObject,
+            SerializedProperty serializedProperty,
+            object parentObject,
+            string name,
+            Attribute[] attributes
+        )
         {
             this.serializedObject = serializedObject;
             if (serializedProperty != null)
@@ -83,5 +91,4 @@ namespace Cainos.LucidEditor
             _changed = false;
         }
     }
-
 }

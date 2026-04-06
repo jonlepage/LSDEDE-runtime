@@ -1,6 +1,6 @@
-using UnityEngine;
-using UnityEditor;
 using Cainos.LucidEditor;
+using UnityEditor;
+using UnityEngine;
 
 namespace Cainos.LucidEditor
 {
@@ -17,7 +17,7 @@ namespace Cainos.LucidEditor
         {
             EditorGUILayout.EndVertical();
             LucidEditorGUILayout.EndLayoutIndent();
-            
+
             EditorGUILayout.Space(2);
         }
     }

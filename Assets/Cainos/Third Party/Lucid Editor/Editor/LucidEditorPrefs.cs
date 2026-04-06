@@ -19,7 +19,8 @@ namespace Cainos.LucidEditor
         {
             T defaultValue = default(T);
             string data = EditorPrefs.GetString(key);
-            if (string.IsNullOrEmpty(data)) return defaultValue;
+            if (string.IsNullOrEmpty(data))
+                return defaultValue;
 
             switch (defaultValue)
             {
@@ -72,7 +73,8 @@ namespace Cainos.LucidEditor
         {
             T defaultValue = default(T);
             string data = EditorUserSettings.GetConfigValue(key);
-            if (string.IsNullOrEmpty(data)) return defaultValue;
+            if (string.IsNullOrEmpty(data))
+                return defaultValue;
 
             switch (defaultValue)
             {
@@ -141,10 +143,7 @@ namespace Cainos.LucidEditor
 
         public T Value
         {
-            get
-            {
-                return value;
-            }
+            get { return value; }
             set
             {
                 if (!comparer.Equals(this.value, value))
@@ -170,10 +169,7 @@ namespace Cainos.LucidEditor
 
         public T Value
         {
-            get
-            {
-                return value;
-            }
+            get { return value; }
             set
             {
                 if (!comparer.Equals(this.value, value))

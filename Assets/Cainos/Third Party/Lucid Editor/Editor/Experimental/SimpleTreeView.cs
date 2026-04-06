@@ -13,7 +13,8 @@ namespace Cainos.LucidEditor.Experimental
         public Func<int, float> itemHeightCallback;
         public event Action<IList<int>> onSelectionChanged;
 
-        public SimpleTreeView(TreeViewState treeViewState) : base(treeViewState) { }
+        public SimpleTreeView(TreeViewState treeViewState)
+            : base(treeViewState) { }
 
         public void Setup(TreeMenuItem[] baseElements)
         {
@@ -23,7 +24,12 @@ namespace Cainos.LucidEditor.Experimental
 
         protected override TreeViewItem BuildRoot()
         {
-            return new TreeViewItem { id = -1, depth = -1, displayName = "Root" };
+            return new TreeViewItem
+            {
+                id = -1,
+                depth = -1,
+                displayName = "Root",
+            };
         }
 
         protected override void RowGUI(RowGUIArgs args)
@@ -84,7 +90,11 @@ namespace Cainos.LucidEditor.Experimental
             onSelectionChanged?.Invoke(selectedIds);
         }
 
-        private void AddChildrenRecursive(TreeMenuItem model, TreeViewItem item, IList<TreeViewItem> rows)
+        private void AddChildrenRecursive(
+            TreeMenuItem model,
+            TreeViewItem item,
+            IList<TreeViewItem> rows
+        )
         {
             foreach (var childElement in model.childElements)
             {

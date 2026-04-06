@@ -7,7 +7,8 @@ namespace Cainos.LucidEditor
     {
         public readonly string tabName;
 
-        public TabGroupAttribute(string groupName, string tabName) : base(groupName)
+        public TabGroupAttribute(string groupName, string tabName)
+            : base(groupName)
         {
             this.tabName = tabName;
         }

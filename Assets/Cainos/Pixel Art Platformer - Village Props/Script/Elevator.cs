@@ -1,20 +1,31 @@
-using UnityEngine;
-
-using Cainos.LucidEditor;
 using Cainos.Common;
+using Cainos.LucidEditor;
+using UnityEngine;
 
 namespace Cainos.PixelArtPlatformer_VillageProps
 {
     public class Elevator : MonoBehaviour
     {
-        [FoldoutGroup("Params")] public Vector2 lengthRange = new Vector2(2, 5);
-        [FoldoutGroup("Params")] public float waitTime = 1.0f;
-        [FoldoutGroup("Params")] public float moveSpeed = 3.0f;
-        [FoldoutGroup("Params")] public State startState = State.Up;
+        [FoldoutGroup("Params")]
+        public Vector2 lengthRange = new Vector2(2, 5);
 
-        [FoldoutGroup("Reference")] public Rigidbody2D platform;
-        [FoldoutGroup("Reference")] public SpriteRenderer chainL;
-        [FoldoutGroup("Reference")] public SpriteRenderer chainR;
+        [FoldoutGroup("Params")]
+        public float waitTime = 1.0f;
+
+        [FoldoutGroup("Params")]
+        public float moveSpeed = 3.0f;
+
+        [FoldoutGroup("Params")]
+        public State startState = State.Up;
+
+        [FoldoutGroup("Reference")]
+        public Rigidbody2D platform;
+
+        [FoldoutGroup("Reference")]
+        public SpriteRenderer chainL;
+
+        [FoldoutGroup("Reference")]
+        public SpriteRenderer chainR;
 
         [FoldoutGroup("Runtime"), ShowInInspector]
         public float Length
@@ -22,12 +33,13 @@ namespace Cainos.PixelArtPlatformer_VillageProps
             get { return length; }
             set
             {
-                if (value < 0) value = 0.0f;
+                if (value < 0)
+                    value = 0.0f;
                 this.length = value;
 
                 platform.transform.localPosition = new Vector3(0.0f, -value, 0.0f);
-                chainL.size = new Vector2(0.09375f, value - 8 * 0.03125f );
-                chainR.size = new Vector2(0.09375f, value - 8 * 0.03125f );
+                chainL.size = new Vector2(0.09375f, value - 8 * 0.03125f);
+                chainR.size = new Vector2(0.09375f, value - 8 * 0.03125f);
             }
         }
         private float length;
@@ -36,13 +48,9 @@ namespace Cainos.PixelArtPlatformer_VillageProps
         public State CurState
         {
             get { return curState; }
-            set
-            {
-                curState = value;
-            }
+            set { curState = value; }
         }
         private State curState;
-
 
         [FoldoutGroup("Runtime"), ShowInInspector]
         public bool IsWaiting
@@ -50,19 +58,22 @@ namespace Cainos.PixelArtPlatformer_VillageProps
             get { return isWaiting; }
             set
             {
-                if (isWaiting == value) return;
+                if (isWaiting == value)
+                    return;
                 isWaiting = value;
                 waitTimer = 0.0f;
             }
         }
         private bool isWaiting = false;
 
-
         private float waitTimer;
         private float curSpeed;
         private float targetLength;
-        private SecondOrderDynamics secondOrderDynamics = new SecondOrderDynamics(4.0f, 0.3f, -0.3f);
-
+        private SecondOrderDynamics secondOrderDynamics = new SecondOrderDynamics(
+            4.0f,
+            0.3f,
+            -0.3f
+        );
 
         private void Start()
         {
@@ -78,7 +89,8 @@ namespace Cainos.PixelArtPlatformer_VillageProps
             if (IsWaiting)
             {
                 waitTimer += Time.deltaTime;
-                if (waitTimer > waitTime) IsWaiting = false;
+                if (waitTimer > waitTime)
+                    IsWaiting = false;
                 curSpeed = 0.0f;
             }
             else
@@ -114,7 +126,7 @@ namespace Cainos.PixelArtPlatformer_VillageProps
         public enum State
         {
             Up,
-            Down
+            Down,
         }
     }
 }
@@ -165,7 +177,6 @@ namespace Cainos.PixelArtPlatformer_VillageProps
 //        }
 //        private State curState;
 
-
 //        [FoldoutGroup("Runtime"), ShowInInspector]
 //        public bool IsWaiting
 //        {
@@ -179,10 +190,8 @@ namespace Cainos.PixelArtPlatformer_VillageProps
 //        }
 //        private bool isWaiting = false;
 
-
 //        private float waitTimer;
 //        private float curSpeed;
-
 
 //        private void Start()
 //        {
@@ -233,4 +242,3 @@ namespace Cainos.PixelArtPlatformer_VillageProps
 //        }
 //    }
 //}
-

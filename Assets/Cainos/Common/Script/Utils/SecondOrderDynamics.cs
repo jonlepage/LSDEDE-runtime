@@ -8,35 +8,44 @@ namespace Cainos.Common
     public struct SecondOrderDynamics
     {
         private Vector3 xp;
-        private Vector3 y, yd;
-        private float k1, k2, k3;
+        private Vector3 y,
+            yd;
+        private float k1,
+            k2,
+            k3;
         private Vector3 xd;
 
         private float k2_stable;
 
-        [SerializeField] private float f;
-        [SerializeField] private float d;
-        [SerializeField] private float r;
+        [SerializeField]
+        private float f;
+
+        [SerializeField]
+        private float d;
+
+        [SerializeField]
+        private float r;
 
         public float Frequency
         {
             get { return f; }
             set
             {
-                if (value <= 0.01f) value = 0.01f;
+                if (value <= 0.01f)
+                    value = 0.01f;
 
                 f = value;
                 UpdateInnerParams();
             }
         }
 
-
         public float Damping
         {
             get { return d; }
             set
             {
-                if (value <= 0.01f) value = 0.01f;
+                if (value <= 0.01f)
+                    value = 0.01f;
 
                 d = value;
                 UpdateInnerParams();
@@ -101,7 +110,8 @@ namespace Cainos.Common
 
         public Vector3 Update(Vector3 x, float t)
         {
-            if (t < Mathf.Epsilon) return y;
+            if (t < Mathf.Epsilon)
+                return y;
 
             xd = (x - xp) / t;
             xp = x;
@@ -115,7 +125,7 @@ namespace Cainos.Common
 
         public Vector2 Update(Vector2 x, float t)
         {
-            return Update(new Vector3(x.x,x.y,0.0f), t);
+            return Update(new Vector3(x.x, x.y, 0.0f), t);
         }
 
         public float Update(float x, float t)

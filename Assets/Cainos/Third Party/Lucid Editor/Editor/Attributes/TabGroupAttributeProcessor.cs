@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
 using Cainos.LucidEditor;
+using UnityEditor;
+using UnityEngine;
 
 namespace Cainos.LucidEditor
 {
@@ -19,7 +19,8 @@ namespace Cainos.LucidEditor
             foreach (InspectorProperty property in group.childProperties)
             {
                 TabGroupAttribute att = property.GetAttribute<TabGroupAttribute>();
-                if (!tabList.Contains(att.tabName)) tabList.Add(att.tabName);
+                if (!tabList.Contains(att.tabName))
+                    tabList.Add(att.tabName);
             }
             tabArray = tabList.ToArray();
         }
@@ -27,7 +28,11 @@ namespace Cainos.LucidEditor
         public override void BeginPropertyGroup()
         {
             LucidEditorGUILayout.BeginLayoutIndent(EditorGUI.indentLevel);
-            selected.Value = LucidEditorGUILayout.BeginTabGroup(selected.Value, tabArray, GUILayout.MinWidth(0));
+            selected.Value = LucidEditorGUILayout.BeginTabGroup(
+                selected.Value,
+                tabArray,
+                GUILayout.MinWidth(0)
+            );
 
             foreach (InspectorProperty property in group.childProperties)
             {

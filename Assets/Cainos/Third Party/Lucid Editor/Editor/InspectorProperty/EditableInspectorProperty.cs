@@ -1,7 +1,7 @@
-using Cainos.LucidEditor;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Cainos.LucidEditor;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,14 +14,24 @@ namespace Cainos.LucidEditor
         private PropertyInfo info;
 
         private List<PropertyProcessor> processors = new List<PropertyProcessor>();
-        internal EditableInspectorProperty(SerializedObject serializedObject, object parentObject, string name, Attribute[] attributes) : base(serializedObject, null, parentObject, name, attributes) { }
+
+        internal EditableInspectorProperty(
+            SerializedObject serializedObject,
+            object parentObject,
+            string name,
+            Attribute[] attributes
+        )
+            : base(serializedObject, null, parentObject, name, attributes) { }
 
         internal override void Initialize()
         {
             processors.Clear();
             foreach (Attribute attribute in attributes)
             {
-                PropertyProcessor processor = ProcessorUtil.CreateAttributeProcessor(this, attribute);
+                PropertyProcessor processor = ProcessorUtil.CreateAttributeProcessor(
+                    this,
+                    attribute
+                );
 
                 if (processor != null)
                 {
@@ -37,32 +47,34 @@ namespace Cainos.LucidEditor
 
         private string Name
         {
-            get
-            {
-                return ObjectNames.NicifyVariableName(name);
-            }
+            get { return ObjectNames.NicifyVariableName(name); }
         }
 
         internal override void Draw()
         {
-            foreach (PropertyProcessor processor in processors) processor.OnBeforeDrawProperty();
+            foreach (PropertyProcessor processor in processors)
+                processor.OnBeforeDrawProperty();
 
-            if (isHidden) return;
+            if (isHidden)
+                return;
 
             LucidEditorGUILayout.BeginLayoutIndent(EditorGUI.indentLevel + indent);
-            if (!isEditable) EditorGUI.BeginDisabledGroup(true);
+            if (!isEditable)
+                EditorGUI.BeginDisabledGroup(true);
             {
                 //object value = ReflectionUtil.GetValue(parentObject, name);
                 //LucidEditorGUILayout.ReadOnlyField(Name, value, value.GetType());
-                if ( GetPropertyType(info, out SerializedPropertyType serialzedProertyType))
+                if (GetPropertyType(info, out SerializedPropertyType serialzedProertyType))
                 {
-                    Draw_Internal( serialzedProertyType);
+                    Draw_Internal(serialzedProertyType);
                 }
             }
-            if (!isEditable) EditorGUI.EndDisabledGroup();
+            if (!isEditable)
+                EditorGUI.EndDisabledGroup();
             LucidEditorGUILayout.EndLayoutIndent();
 
-            foreach (PropertyProcessor processor in processors) processor.OnAfterDrawProperty();
+            foreach (PropertyProcessor processor in processors)
+                processor.OnAfterDrawProperty();
         }
 
         internal void Draw_Internal(SerializedPropertyType serialzedProertyType)
@@ -82,7 +94,7 @@ namespace Cainos.LucidEditor
                 var oldValue = (float)GetValue();
                 var newValue = EditorGUILayout.FloatField(Name, oldValue, emptyOptions);
                 if (oldValue != newValue)
-                   SetValue(newValue);
+                    SetValue(newValue);
             }
             else if (serialzedProertyType == SerializedPropertyType.Boolean)
             {
@@ -126,11 +138,16 @@ namespace Cainos.LucidEditor
                 if (oldValue != newValue)
                     SetValue(newValue);
             }
-
             else if (serialzedProertyType == SerializedPropertyType.ObjectReference)
             {
                 var oldValue = (UnityEngine.Object)GetValue();
-                var newValue = LucidEditorGUILayout.ObjectField(Name, oldValue, info.PropertyType, !TryGetAttribute<AssetsOnlyAttribute>(out _), emptyOptions);
+                var newValue = LucidEditorGUILayout.ObjectField(
+                    Name,
+                    oldValue,
+                    info.PropertyType,
+                    !TryGetAttribute<AssetsOnlyAttribute>(out _),
+                    emptyOptions
+                );
                 if (oldValue != newValue)
                     SetValue(newValue);
             }
@@ -138,10 +155,15 @@ namespace Cainos.LucidEditor
             EditorGUILayout.EndHorizontal();
         }
 
-        private object GetValue() { return getter.Invoke(parentObject, null); }
+        private object GetValue()
+        {
+            return getter.Invoke(parentObject, null);
+        }
+
         private void SetValue(object value)
         {
-            if (setter == null) return;
+            if (setter == null)
+                return;
             setter.Invoke(parentObject, new[] { value });
         }
 
@@ -172,12 +194,14 @@ namespace Cainos.LucidEditor
 
         internal override void OnBeforeInspectorGUI()
         {
-            foreach (PropertyProcessor processor in processors) processor.OnBeforeInspectorGUI();
+            foreach (PropertyProcessor processor in processors)
+                processor.OnBeforeInspectorGUI();
         }
 
         internal override void OnAfterInspectorGUI()
         {
-            foreach (PropertyProcessor processor in processors) processor.OnAfterInspectorGUI();
+            foreach (PropertyProcessor processor in processors)
+                processor.OnAfterInspectorGUI();
         }
     }
 }

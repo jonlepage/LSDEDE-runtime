@@ -1,6 +1,6 @@
 using System;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 namespace Cainos.LucidEditor.Experimental
 {
@@ -70,9 +70,10 @@ namespace Cainos.LucidEditor.Experimental
         public override void OnClose()
         {
             base.OnClose();
-            if (submit) onSubmit?.Invoke();
-            else onCancel?.Invoke();
+            if (submit)
+                onSubmit?.Invoke();
+            else
+                onCancel?.Invoke();
         }
     }
-
 }

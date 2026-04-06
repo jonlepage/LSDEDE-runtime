@@ -1,6 +1,6 @@
 using System;
-using UnityEditor;
 using Cainos.LucidEditor;
+using UnityEditor;
 
 namespace Cainos.LucidEditor
 {
@@ -16,18 +16,22 @@ namespace Cainos.LucidEditor
 
         public LocalPersistentData<T> GetLocalPersistentData<T>(string id)
         {
-            return LucidEditorPrefs.CreateLocalPersistentData<T>
-            (
-                "LucidEditor_PropertyGroupProcessor_" +
-                    GlobalObjectId.GetGlobalObjectIdSlow(serializedObject.targetObject) + "_" +
-                    attribute.GetType().Name + "_" +
-                    attribute.path + "_" + 
-                    id
+            return LucidEditorPrefs.CreateLocalPersistentData<T>(
+                "LucidEditor_PropertyGroupProcessor_"
+                    + GlobalObjectId.GetGlobalObjectIdSlow(serializedObject.targetObject)
+                    + "_"
+                    + attribute.GetType().Name
+                    + "_"
+                    + attribute.path
+                    + "_"
+                    + id
             );
         }
 
         public virtual void Initialize() { }
+
         public virtual void BeginPropertyGroup() { }
+
         public virtual void EndPropertyGroup() { }
     }
 
@@ -35,6 +39,7 @@ namespace Cainos.LucidEditor
     public sealed class CustomGroupProcessorAttribute : Attribute
     {
         public readonly Type type;
+
         public CustomGroupProcessorAttribute(Type type)
         {
             this.type = type;

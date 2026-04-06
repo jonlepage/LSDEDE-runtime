@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using Cainos.LucidEditor;
+using UnityEngine;
 
 namespace Cainos.PixelArtPlatformer_VillageProps
 {
@@ -22,7 +22,7 @@ namespace Cainos.PixelArtPlatformer_VillageProps
         }
         private bool isOpened;
 
-        [FoldoutGroup("Runtime"),Button("Open"), HorizontalGroup("Runtime/Button")]
+        [FoldoutGroup("Runtime"), Button("Open"), HorizontalGroup("Runtime/Button")]
         public void Open()
         {
             IsOpened = true;

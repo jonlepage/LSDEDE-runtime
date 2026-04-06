@@ -1,6 +1,6 @@
-using UnityEngine;
-using UnityEditor;
 using Cainos.LucidEditor;
+using UnityEditor;
+using UnityEngine;
 
 namespace Cainos.LucidEditor
 {
@@ -12,7 +12,7 @@ namespace Cainos.LucidEditor
             BlockquoteAttribute blockquote = (BlockquoteAttribute)attribute;
             GUIStyle style = EditorStyles.label;
             style.wordWrap = true;
-            
+
             LucidEditorGUILayout.Blockquote(blockquote.text);
         }
     }

@@ -27,6 +27,6 @@ namespace Cainos.LucidEditor
         None,
         Info,
         Warning,
-        Error
+        Error,
     }
 }

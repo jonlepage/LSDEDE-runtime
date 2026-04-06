@@ -104,11 +104,16 @@ namespace LSDE.Demo
             }
 
             var characterName = resolvedCharacter.Name ?? resolvedCharacter.Id;
-            bubbleController.ShowDialogue(characterName, localizedText);
             _activeBubbleController = bubbleController;
 
-            // Store the advance callback — the player clicks to invoke it
-            _dialogueClickAdvancer.SetPendingAdvance(advanceToNextBlock);
+            // Show the bubble — fade-in and typewriter play in parallel.
+            bubbleController.ShowDialogue(characterName, localizedText);
+
+            // Arm the click advancer immediately with the bubble reference.
+            // The advancer checks IsTypewriterPlaying on each click:
+            //   - typewriter playing → skip (reveal all text), don't advance yet
+            //   - typewriter done → invoke advance callback to go to next block
+            _dialogueClickAdvancer.SetPendingAdvance(advanceToNextBlock, bubbleController);
 
             Debug.Log(
                 $"{LogPrefix} DIALOG  {dialogBlock.Label} — {characterName}: \"{TruncateText(localizedText, 50)}\""

@@ -8,7 +8,10 @@ namespace Cainos.LucidEditor
         public override void OnBeforeDrawProperty()
         {
             DisableIfAttribute disableIf = (DisableIfAttribute)attribute;
-            property.isEditable = !ReflectionUtil.GetValueBool(property.parentObject, disableIf.condition);
+            property.isEditable = !ReflectionUtil.GetValueBool(
+                property.parentObject,
+                disableIf.condition
+            );
         }
     }
 }

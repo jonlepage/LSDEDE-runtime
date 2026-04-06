@@ -44,7 +44,13 @@ namespace Cainos.LucidEditor.Experimental
 
         private int Show(Rect rect, int selected)
         {
-            this.selected = GUI.Toolbar(rect, selected, _items.ToArray(), style == null ? GUI.skin.button : style, size);
+            this.selected = GUI.Toolbar(
+                rect,
+                selected,
+                _items.ToArray(),
+                style == null ? GUI.skin.button : style,
+                size
+            );
             return this.selected;
         }
 
@@ -55,7 +61,13 @@ namespace Cainos.LucidEditor.Experimental
 
         private int ShowLayout(int selected, params GUILayoutOption[] options)
         {
-            this.selected = GUILayout.Toolbar(selected, _items.ToArray(), style == null ? GUI.skin.button : style, size, options);
+            this.selected = GUILayout.Toolbar(
+                selected,
+                _items.ToArray(),
+                style == null ? GUI.skin.button : style,
+                size,
+                options
+            );
             return this.selected;
         }
     }

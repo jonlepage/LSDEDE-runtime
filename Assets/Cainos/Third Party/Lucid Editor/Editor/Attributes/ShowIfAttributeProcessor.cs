@@ -8,7 +8,10 @@ namespace Cainos.LucidEditor
         public override void OnBeforeDrawProperty()
         {
             ShowIfAttribute showIf = (ShowIfAttribute)attribute;
-            property.isHidden |= !ReflectionUtil.GetValueBool(property.parentObject, showIf.condition);
+            property.isHidden |= !ReflectionUtil.GetValueBool(
+                property.parentObject,
+                showIf.condition
+            );
         }
     }
 }

@@ -1,8 +1,8 @@
 using System;
-using System.Reflection;
 using System.Linq;
-using UnityEditor;
+using System.Reflection;
 using Cainos.LucidEditor;
+using UnityEditor;
 
 namespace Cainos.LucidEditor
 {
@@ -11,11 +11,15 @@ namespace Cainos.LucidEditor
         private static Type[] cacheAttributeProcessorTypes;
         private static Type[] cacheGroupProcessorTypes;
 
-        public static PropertyProcessor CreateAttributeProcessor(InspectorProperty property, Attribute attribute)
+        public static PropertyProcessor CreateAttributeProcessor(
+            InspectorProperty property,
+            Attribute attribute
+        )
         {
             if (cacheAttributeProcessorTypes == null)
             {
-                cacheAttributeProcessorTypes = Assembly.GetAssembly(typeof(PropertyProcessor))
+                cacheAttributeProcessorTypes = Assembly
+                    .GetAssembly(typeof(PropertyProcessor))
                     .GetTypes()
                     .Where(x => x.IsSubclassOf(typeof(PropertyProcessor)) && !x.IsAbstract)
                     .ToArray();
@@ -25,10 +29,13 @@ namespace Cainos.LucidEditor
             {
                 if (t.IsDefined(typeof(CustomAttributeProcessorAttribute), false))
                 {
-                    CustomAttributeProcessorAttribute a = t.GetCustomAttributes(typeof(CustomAttributeProcessorAttribute), false)[0] as CustomAttributeProcessorAttribute;
+                    CustomAttributeProcessorAttribute a =
+                        t.GetCustomAttributes(typeof(CustomAttributeProcessorAttribute), false)[0]
+                        as CustomAttributeProcessorAttribute;
                     if (a.type == attribute.GetType())
                     {
-                        PropertyProcessor processor = (PropertyProcessor)Activator.CreateInstance(t);
+                        PropertyProcessor processor = (PropertyProcessor)
+                            Activator.CreateInstance(t);
                         processor._attribute = attribute;
                         processor._inspectorProperty = property;
                         return processor;
@@ -39,13 +46,19 @@ namespace Cainos.LucidEditor
             return null;
         }
 
-        public static PropertyGroupProcessor CreateGroupProcessor(InspectorPropertyGroup group, SerializedObject serializedObject, PropertyGroupAttribute attribute)
+        public static PropertyGroupProcessor CreateGroupProcessor(
+            InspectorPropertyGroup group,
+            SerializedObject serializedObject,
+            PropertyGroupAttribute attribute
+        )
         {
-            if (attribute == null) return null;
+            if (attribute == null)
+                return null;
 
             if (cacheGroupProcessorTypes == null)
             {
-                cacheGroupProcessorTypes = Assembly.GetAssembly(typeof(PropertyGroupProcessor))
+                cacheGroupProcessorTypes = Assembly
+                    .GetAssembly(typeof(PropertyGroupProcessor))
                     .GetTypes()
                     .Where(x => x.IsSubclassOf(typeof(PropertyGroupProcessor)) && !x.IsAbstract)
                     .ToArray();
@@ -55,11 +68,14 @@ namespace Cainos.LucidEditor
             {
                 if (t.IsDefined(typeof(CustomGroupProcessorAttribute), false))
                 {
-                    CustomGroupProcessorAttribute a = t.GetCustomAttributes(typeof(CustomGroupProcessorAttribute), false)[0] as CustomGroupProcessorAttribute;
+                    CustomGroupProcessorAttribute a =
+                        t.GetCustomAttributes(typeof(CustomGroupProcessorAttribute), false)[0]
+                        as CustomGroupProcessorAttribute;
 
                     if (a.type == attribute.GetType())
                     {
-                        PropertyGroupProcessor processor = (PropertyGroupProcessor)Activator.CreateInstance(t);
+                        PropertyGroupProcessor processor = (PropertyGroupProcessor)
+                            Activator.CreateInstance(t);
                         processor._attribute = attribute;
                         processor._group = group;
                         processor.serializedObject = serializedObject;

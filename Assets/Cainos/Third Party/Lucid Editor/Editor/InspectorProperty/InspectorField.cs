@@ -1,27 +1,25 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Linq;
-using UnityEngine;
+using System.Reflection;
+using Cainos.LucidEditor;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
-using Cainos.LucidEditor;
+using UnityEngine;
 
 namespace Cainos.LucidEditor
 {
     public class InspectorField : InspectorProperty
     {
-        public IReadOnlyList<InspectorProperty> childProperties => Array.AsReadOnly(_childProperties);
+        public IReadOnlyList<InspectorProperty> childProperties =>
+            Array.AsReadOnly(_childProperties);
         private InspectorProperty[] _childProperties;
 
         private List<PropertyProcessor> processors = new List<PropertyProcessor>();
 
         public bool hasChildren
         {
-            get
-            {
-                return _childProperties != null && _childProperties.Length > 0;
-            }
+            get { return _childProperties != null && _childProperties.Length > 0; }
         }
 
         public bool IsManagedReference
@@ -38,10 +36,16 @@ namespace Cainos.LucidEditor
             {
                 return serializedProperty.propertyType == SerializedPropertyType.ObjectReference;
             }
-
         }
 
-        internal InspectorField(SerializedProperty property, Attribute[] attributes) : base(property.serializedObject, property, property.GetParentObject(), property.name, attributes)
+        internal InspectorField(SerializedProperty property, Attribute[] attributes)
+            : base(
+                property.serializedObject,
+                property,
+                property.GetParentObject(),
+                property.name,
+                attributes
+            )
         {
             this.displayName = property.displayName;
             InitializeChildProperties();
@@ -49,7 +53,9 @@ namespace Cainos.LucidEditor
 
         internal void InitializeChildProperties()
         {
-            _childProperties = InspectorPropertyUtil.GroupProperties(InspectorPropertyUtil.CreateChildProperties(this)).ToArray();
+            _childProperties = InspectorPropertyUtil
+                .GroupProperties(InspectorPropertyUtil.CreateChildProperties(this))
+                .ToArray();
         }
 
         internal override void Initialize()
@@ -57,7 +63,10 @@ namespace Cainos.LucidEditor
             processors.Clear();
             foreach (Attribute attribute in attributes)
             {
-                PropertyProcessor processor = ProcessorUtil.CreateAttributeProcessor(this, attribute);
+                PropertyProcessor processor = ProcessorUtil.CreateAttributeProcessor(
+                    this,
+                    attribute
+                );
 
                 if (processor != null)
                 {
@@ -66,19 +75,24 @@ namespace Cainos.LucidEditor
                 }
             }
 
-            foreach (var child in _childProperties) child.Initialize();
+            foreach (var child in _childProperties)
+                child.Initialize();
         }
 
         internal override void OnBeforeInspectorGUI()
         {
-            foreach (PropertyProcessor processor in processors) processor.OnBeforeInspectorGUI();
-            foreach (var child in _childProperties) child.OnBeforeInspectorGUI();
+            foreach (PropertyProcessor processor in processors)
+                processor.OnBeforeInspectorGUI();
+            foreach (var child in _childProperties)
+                child.OnBeforeInspectorGUI();
         }
 
         internal override void OnAfterInspectorGUI()
         {
-            foreach (PropertyProcessor processor in processors) processor.OnAfterInspectorGUI();
-            foreach (var child in _childProperties) child.OnAfterInspectorGUI();
+            foreach (PropertyProcessor processor in processors)
+                processor.OnAfterInspectorGUI();
+            foreach (var child in _childProperties)
+                child.OnAfterInspectorGUI();
         }
 
         internal override void Reset()
@@ -93,13 +107,16 @@ namespace Cainos.LucidEditor
 
         internal override void Draw()
         {
-            foreach (PropertyProcessor processor in processors) processor.OnBeforeDrawProperty();
+            foreach (PropertyProcessor processor in processors)
+                processor.OnBeforeDrawProperty();
 
-            if (isHidden) return;
+            if (isHidden)
+                return;
 
             using (var changeScope = new EditorGUI.ChangeCheckScope())
             {
-                if (!isEditable) EditorGUI.BeginDisabledGroup(true);
+                if (!isEditable)
+                    EditorGUI.BeginDisabledGroup(true);
                 {
                     LucidEditorUtility.PushIndentLevel(EditorGUI.indentLevel + this.indent);
                     Rect foldoutRect = Rect.zero;
@@ -111,7 +128,13 @@ namespace Cainos.LucidEditor
 
                         if (!hasChildren)
                         {
-                            serializedProperty.isExpanded = EditorGUI.Foldout(foldoutRect, serializedProperty.isExpanded, displayName, true, EditorStyles.foldoutHeader);
+                            serializedProperty.isExpanded = EditorGUI.Foldout(
+                                foldoutRect,
+                                serializedProperty.isExpanded,
+                                displayName,
+                                true,
+                                EditorStyles.foldoutHeader
+                            );
                             if (serializedProperty.isExpanded)
                             {
                                 using (new EditorGUI.IndentLevelScope())
@@ -124,19 +147,32 @@ namespace Cainos.LucidEditor
 
                     if (hasChildren)
                     {
-                        if (!IsManagedReference) foldoutRect = EditorGUILayout.GetControlRect();
+                        if (!IsManagedReference)
+                            foldoutRect = EditorGUILayout.GetControlRect();
 
                         if (_isInGroup)
                         {
                             using (new EditorGUI.IndentLevelScope())
                             {
                                 foldoutRect.xMin -= 4f;
-                                serializedProperty.isExpanded = EditorGUI.Foldout(foldoutRect, serializedProperty.isExpanded, displayName, true, EditorStyles.foldoutHeader);
+                                serializedProperty.isExpanded = EditorGUI.Foldout(
+                                    foldoutRect,
+                                    serializedProperty.isExpanded,
+                                    displayName,
+                                    true,
+                                    EditorStyles.foldoutHeader
+                                );
                             }
                         }
                         else
                         {
-                            serializedProperty.isExpanded = EditorGUI.Foldout(foldoutRect, serializedProperty.isExpanded, displayName, true, EditorStyles.foldoutHeader);
+                            serializedProperty.isExpanded = EditorGUI.Foldout(
+                                foldoutRect,
+                                serializedProperty.isExpanded,
+                                displayName,
+                                true,
+                                EditorStyles.foldoutHeader
+                            );
                         }
 
                         if (serializedProperty.isExpanded)
@@ -152,7 +188,12 @@ namespace Cainos.LucidEditor
                     }
                     else if (!IsManagedReference)
                     {
-                        if (_isInGroup && serializedProperty.isArray && serializedProperty.propertyType != SerializedPropertyType.String) EditorGUI.indentLevel++;
+                        if (
+                            _isInGroup
+                            && serializedProperty.isArray
+                            && serializedProperty.propertyType != SerializedPropertyType.String
+                        )
+                            EditorGUI.indentLevel++;
 
                         GUIContent label;
                         if (hideLabel)
@@ -164,29 +205,44 @@ namespace Cainos.LucidEditor
                             label = new GUIContent(displayName);
                         }
 
-                        if (LucidEditorUtility.horizontalGroupCount > 0 && serializedProperty.propertyType != SerializedPropertyType.Generic)
+                        if (
+                            LucidEditorUtility.horizontalGroupCount > 0
+                            && serializedProperty.propertyType != SerializedPropertyType.Generic
+                        )
                         {
                             using (new EditorGUILayout.HorizontalScope())
                             {
                                 GUILayout.Label(label, GUILayout.MinWidth(50f));
-                                EditorGUILayout.PropertyField(serializedProperty, GUIContent.none, true, GUILayout.MinWidth(0));
+                                EditorGUILayout.PropertyField(
+                                    serializedProperty,
+                                    GUIContent.none,
+                                    true,
+                                    GUILayout.MinWidth(0)
+                                );
                             }
                         }
                         else
                         {
-                            EditorGUILayout.PropertyField(serializedProperty, label, true, GUILayout.MinWidth(0));
+                            EditorGUILayout.PropertyField(
+                                serializedProperty,
+                                label,
+                                true,
+                                GUILayout.MinWidth(0)
+                            );
                         }
                     }
                     LucidEditorUtility.PopIndentLevel();
-
                 }
-                if (!isEditable) EditorGUI.EndDisabledGroup();
+                if (!isEditable)
+                    EditorGUI.EndDisabledGroup();
 
                 _changed = changeScope.changed;
-                if (_changed) serializedObject.ApplyModifiedProperties();
+                if (_changed)
+                    serializedObject.ApplyModifiedProperties();
             }
 
-            foreach (PropertyProcessor processor in processors) processor.OnAfterDrawProperty();
+            foreach (PropertyProcessor processor in processors)
+                processor.OnAfterDrawProperty();
         }
 
         private void DrawSerializeReferenceField(Rect position, InspectorField property)
@@ -197,23 +253,30 @@ namespace Cainos.LucidEditor
             position.xMin += EditorGUIUtility.labelWidth;
 
             GUIContent buttonLabel = EditorIcons.CsScriptIcon;
-            buttonLabel.text = (property.serializedProperty.managedReferenceValue == null ? "Null" : property.serializedProperty.managedReferenceValue.GetType().Name) +
-                $" ({GetManagedReferenceFieldTypeName(property.serializedProperty)})";
+            buttonLabel.text =
+                (
+                    property.serializedProperty.managedReferenceValue == null
+                        ? "Null"
+                        : property.serializedProperty.managedReferenceValue.GetType().Name
+                ) + $" ({GetManagedReferenceFieldTypeName(property.serializedProperty)})";
 
             if (GUI.Button(position, buttonLabel, EditorStyles.objectField))
             {
                 Type baseType = GetManagedReferenceFieldType(property.serializedProperty);
                 SerializeReferenceDropdown dropdown = new SerializeReferenceDropdown(
-                    TypeCache.GetTypesDerivedFrom(baseType).Append(baseType).Where(p =>
-                            (p.IsPublic || p.IsNestedPublic) &&
-                            !p.IsAbstract &&
-                            !p.IsGenericType &&
-                            !typeof(UnityEngine.Object).IsAssignableFrom(p) &&
-                            Attribute.IsDefined(p, typeof(SerializableAttribute))
+                    TypeCache
+                        .GetTypesDerivedFrom(baseType)
+                        .Append(baseType)
+                        .Where(p =>
+                            (p.IsPublic || p.IsNestedPublic)
+                            && !p.IsAbstract
+                            && !p.IsGenericType
+                            && !typeof(UnityEngine.Object).IsAssignableFrom(p)
+                            && Attribute.IsDefined(p, typeof(SerializableAttribute))
                         ),
-                        maxTypePopupLineCount,
-                        new AdvancedDropdownState()
-                    );
+                    maxTypePopupLineCount,
+                    new AdvancedDropdownState()
+                );
                 dropdown.onItemSelected += item =>
                 {
                     Type type = item.type;
