@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -110,6 +111,14 @@ namespace LSDE.Demo
         }
 
         /// <summary>
+        /// Raised when a new character joins the party at runtime via <see cref="AddToParty"/>.
+        /// Subscribers (e.g. <see cref="PartyFollowController"/>) use this to start
+        /// tracking the new member as a follower.
+        /// The string parameter is the character ID that was added.
+        /// </summary>
+        public event Action<string> OnPartyMemberAdded;
+
+        /// <summary>
         /// Check whether a character is currently in the player's party.
         /// Used by the condition resolver for <c>party.*</c> dictionary keys.
         /// </summary>
@@ -118,6 +127,32 @@ namespace LSDE.Demo
         public bool IsInParty(string memberId)
         {
             return _partyMemberSet.Contains(memberId);
+        }
+
+        /// <summary>
+        /// Add a character to the player's party at runtime.
+        /// Adds to both the serialized list (visible in Inspector) and the runtime HashSet,
+        /// then raises <see cref="OnPartyMemberAdded"/> so other systems (follow, UI) can react.
+        /// No effect if the character is already in the party.
+        /// </summary>
+        /// <param name="memberId">The character ID to add (e.g. <c>lsdeCharacter.l1</c>).</param>
+        public void AddToParty(string memberId)
+        {
+            if (_partyMemberSet.Contains(memberId))
+            {
+                Debug.Log($"[LSDE GameState] {memberId} is already in the party.");
+                return;
+            }
+
+            _partyMembers.Add(memberId);
+            _partyMemberSet.Add(memberId);
+
+            Debug.Log(
+                $"[LSDE GameState] {memberId} joined the party! "
+                    + $"Members: {_partyMemberSet.Count}"
+            );
+
+            OnPartyMemberAdded?.Invoke(memberId);
         }
 
         /// <summary>

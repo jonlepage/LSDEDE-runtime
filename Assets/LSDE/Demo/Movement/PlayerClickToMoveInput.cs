@@ -87,10 +87,20 @@ namespace LSDE.Demo
 
                 foreach (var hitInfo in interactableHits)
                 {
+                    // Priority 1a: Dialogue trigger (launching an LSDE scene)
                     var proximityTrigger =
                         hitInfo.collider.GetComponentInParent<DialogueProximityTrigger>();
 
                     if (proximityTrigger != null && proximityTrigger.TryTriggerDialogue())
+                    {
+                        return;
+                    }
+
+                    // Priority 1b: Party recruitment trigger (adding NPC to party)
+                    var recruitmentTrigger =
+                        hitInfo.collider.GetComponentInParent<PartyRecruitmentTrigger>();
+
+                    if (recruitmentTrigger != null && recruitmentTrigger.TryRecruit())
                     {
                         return;
                     }
