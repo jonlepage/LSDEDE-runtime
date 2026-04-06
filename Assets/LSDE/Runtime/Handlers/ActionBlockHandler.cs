@@ -25,7 +25,9 @@ namespace LSDE.Runtime
 
         /// <summary>
         /// Handle an ACTION block dispatched by the LSDEDE runtime.
-        /// Matches the <see cref="BlockHandler{ActionBlock, IActionContext}"/> delegate signature.
+        /// Composes resolve+next and reject+next callbacks, then delegates execution
+        /// to the presenter — the presenter controls when to advance, just like
+        /// DIALOG (advanceToNextBlock) and CHOICE (selectChoiceAndAdvance).
         /// </summary>
         /// <param name="arguments">Block handler arguments containing the block, context, and next callback.</param>
         /// <returns>A cleanup action called when the engine leaves this block, or null.</returns>
@@ -34,12 +36,23 @@ namespace LSDE.Runtime
             var block = arguments.Block;
             var context = arguments.Context;
 
-            _dialoguePresenter.PresentActionBlock(block);
+            // Compose callbacks that encapsulate context resolution and engine advancement.
+            // The presenter calls exactly one of these when all actions complete.
+            // This mirrors the CHOICE pattern where selectChoiceAndAdvance wraps
+            // context.SelectChoice(uuid) + arguments.Next().
+            Action resolveAndAdvance = () =>
+            {
+                context.Resolve();
+                arguments.Next();
+            };
 
-            // Resolve follows the "then" port (success path).
-            // Use context.Reject(error) for the "catch" port if action fails.
-            context.Resolve();
-            arguments.Next();
+            Action<object> rejectAndAdvance = (error) =>
+            {
+                context.Reject(error);
+                arguments.Next();
+            };
+
+            _dialoguePresenter.PresentActionBlock(block, resolveAndAdvance, rejectAndAdvance);
 
             return () => _dialoguePresenter.PresentBlockCleanup(block);
         }

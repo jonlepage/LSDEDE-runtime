@@ -56,10 +56,26 @@ namespace LSDE.Runtime
         );
 
         /// <summary>
-        /// Present an ACTION block — display action execution details.
+        /// Present an ACTION block — execute game actions and control flow via callbacks.
+        /// The presenter is responsible for executing all actions in the block (in parallel),
+        /// then calling <paramref name="resolveAndAdvance"/> on success or
+        /// <paramref name="rejectAndAdvance"/> on failure.
+        /// This mirrors the DIALOG/CHOICE pattern where the presenter controls when to advance.
         /// </summary>
         /// <param name="actionBlock">The action block being executed.</param>
-        void PresentActionBlock(ActionBlock actionBlock);
+        /// <param name="resolveAndAdvance">
+        /// Callback that resolves the action (success, follows the "then" port) and advances
+        /// the engine to the next block. Must be called exactly once on the success path.
+        /// </param>
+        /// <param name="rejectAndAdvance">
+        /// Callback that rejects the action (failure, follows the "catch" port) and advances
+        /// the engine. Must be called exactly once on the failure path. Pass the error/exception.
+        /// </param>
+        void PresentActionBlock(
+            ActionBlock actionBlock,
+            Action resolveAndAdvance,
+            Action<object> rejectAndAdvance
+        );
 
         /// <summary>
         /// Called when a scene starts executing.

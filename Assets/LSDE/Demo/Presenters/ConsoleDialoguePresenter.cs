@@ -109,21 +109,32 @@ namespace LSDE.Demo
         }
 
         /// <inheritdoc />
-        public void PresentActionBlock(ActionBlock actionBlock)
+        public void PresentActionBlock(
+            ActionBlock actionBlock,
+            Action resolveAndAdvance,
+            Action<object> rejectAndAdvance
+        )
         {
             var actions = actionBlock.Actions;
             var logBuilder = new StringBuilder();
             logBuilder.AppendLine(
-                $"{LogPrefix} ACTION  {actionBlock.Label} — {actions.Count} actions"
+                $"{LogPrefix} ACTION  {actionBlock.Label} — {actions?.Count ?? 0} actions"
             );
 
-            foreach (var action in actions)
+            if (actions != null)
             {
-                var parameters = string.Join(", ", action.Params);
-                logBuilder.AppendLine($"{LogPrefix}   -> {action.ActionId}({parameters})");
+                foreach (var action in actions)
+                {
+                    var parameters = string.Join(", ", action.Params);
+                    logBuilder.AppendLine($"{LogPrefix}   -> {action.ActionId}({parameters})");
+                }
             }
 
             Debug.Log(logBuilder.ToString().TrimEnd());
+
+            // Console mode: resolve and advance immediately (no execution needed).
+            // Same pattern as PresentDialogueBlock which calls advanceToNextBlock() immediately.
+            resolveAndAdvance();
         }
 
         /// <inheritdoc />

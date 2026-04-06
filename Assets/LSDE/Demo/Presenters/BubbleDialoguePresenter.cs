@@ -33,6 +33,13 @@ namespace LSDE.Demo
         [Tooltip("The click advancer that stores the pending Next callback.")]
         private DialogueClickAdvancer _dialogueClickAdvancer;
 
+        [SerializeField]
+        [Tooltip(
+            "The action executor that maps action IDs to game effects "
+                + "(camera shake, movement, etc.)."
+        )]
+        private DemoActionExecutor _actionExecutor;
+
         private const string LogPrefix = "[LSDE]";
 
         /// <summary>
@@ -320,12 +327,167 @@ namespace LSDE.Demo
         }
 
         /// <inheritdoc />
-        public void PresentActionBlock(ActionBlock actionBlock)
+        public void PresentActionBlock(
+            ActionBlock actionBlock,
+            Action resolveAndAdvance,
+            Action<object> rejectAndAdvance
+        )
         {
-            // Actions are side effects — console log only for now
-            Debug.Log(
-                $"{LogPrefix} ACTION  {actionBlock.Label} — {actionBlock.Actions.Count} actions"
+            var actions = actionBlock.Actions;
+            var actionCount = actions?.Count ?? 0;
+
+            Debug.Log($"{LogPrefix} ACTION  {actionBlock.Label} — {actionCount} actions");
+
+            // No actions or no executor: resolve immediately (nothing to execute)
+            if (actions == null || actionCount == 0 || _actionExecutor == null)
+            {
+                if (_actionExecutor == null && actionCount > 0)
+                {
+                    Debug.LogWarning(
+                        $"{LogPrefix} No IActionExecutor assigned on BubbleDialoguePresenter — "
+                            + "resolving action block immediately without execution."
+                    );
+                }
+                resolveAndAdvance();
+                return;
+            }
+
+            // Start parallel execution of all actions (Unity equivalent of Promise.all).
+            // Each action runs as an independent coroutine. When all complete,
+            // we resolve (success) or reject (failure) and advance the engine.
+            StartCoroutine(
+                ExecuteAllActionsInParallelCoroutine(actions, resolveAndAdvance, rejectAndAdvance)
             );
+        }
+
+        /// <summary>
+        /// Execute all actions from an ACTION block in parallel and wait for all to complete.
+        /// Unity equivalent of <c>Promise.all</c> from the TypeScript reference.
+        ///
+        /// Each action is started as an independent coroutine via <see cref="_actionExecutor"/>.
+        /// A shared completion counter tracks progress. When all actions complete successfully,
+        /// <paramref name="resolveAndAdvance"/> is called. If any action throws an exception,
+        /// <paramref name="rejectAndAdvance"/> is called with the first error encountered.
+        /// </summary>
+        /// <param name="actions">The list of actions to execute in parallel.</param>
+        /// <param name="resolveAndAdvance">Called when all actions complete successfully.</param>
+        /// <param name="rejectAndAdvance">Called if any action fails.</param>
+        private IEnumerator ExecuteAllActionsInParallelCoroutine(
+            List<ExportAction> actions,
+            Action resolveAndAdvance,
+            Action<object> rejectAndAdvance
+        )
+        {
+            int totalActionCount = actions.Count;
+            int completedActionCount = 0;
+            bool hasAnyActionFailed = false;
+            object firstEncounteredError = null;
+
+            // Start all action coroutines in parallel — they run concurrently
+            foreach (var action in actions)
+            {
+                StartCoroutine(
+                    ExecuteSingleActionWithCompletionTracking(
+                        action,
+                        onActionCompleted: () =>
+                        {
+                            completedActionCount++;
+                        },
+                        onActionFailed: (error) =>
+                        {
+                            if (!hasAnyActionFailed)
+                            {
+                                hasAnyActionFailed = true;
+                                firstEncounteredError = error;
+                            }
+                            completedActionCount++;
+                        }
+                    )
+                );
+            }
+
+            // Yield until all actions have reported completion (success or failure)
+            while (completedActionCount < totalActionCount)
+            {
+                yield return null;
+            }
+
+            // All actions finished — resolve or reject based on outcome
+            if (hasAnyActionFailed)
+            {
+                Debug.LogError($"{LogPrefix} Action block failed: {firstEncounteredError}");
+                rejectAndAdvance(firstEncounteredError);
+            }
+            else
+            {
+                resolveAndAdvance();
+            }
+        }
+
+        /// <summary>
+        /// Wrapper coroutine that executes a single action via <see cref="_actionExecutor"/>
+        /// and reports completion or failure through callbacks.
+        ///
+        /// Unity does not allow <c>try/catch</c> around <c>yield return</c>, so this method
+        /// manually advances the <see cref="IEnumerator"/> with <c>MoveNext()</c> inside a
+        /// <c>try/catch</c> block. This is a standard Unity pattern for exception-safe
+        /// coroutine delegation — it prevents one failing action from crashing the
+        /// entire parallel batch.
+        /// </summary>
+        /// <param name="action">The action to execute.</param>
+        /// <param name="onActionCompleted">Called when the action completes successfully.</param>
+        /// <param name="onActionFailed">Called with the error if the action throws an exception.</param>
+        private IEnumerator ExecuteSingleActionWithCompletionTracking(
+            ExportAction action,
+            Action onActionCompleted,
+            Action<object> onActionFailed
+        )
+        {
+            IEnumerator actionCoroutine;
+
+            try
+            {
+                actionCoroutine = _actionExecutor.ExecuteAction(action);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError(
+                    $"{LogPrefix} Action '{action.ActionId}' threw during setup: "
+                        + exception.Message
+                );
+                onActionFailed(exception);
+                yield break;
+            }
+
+            // Manually advance the enumerator with MoveNext() inside try/catch.
+            // Unity forbids try/catch around "yield return", but MoveNext() is a
+            // regular method call that can be wrapped safely.
+            while (true)
+            {
+                bool hasMoreSteps;
+                try
+                {
+                    hasMoreSteps = actionCoroutine.MoveNext();
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogError(
+                        $"{LogPrefix} Action '{action.ActionId}' threw during execution: "
+                            + exception.Message
+                    );
+                    onActionFailed(exception);
+                    yield break;
+                }
+
+                if (!hasMoreSteps)
+                {
+                    break;
+                }
+
+                yield return actionCoroutine.Current;
+            }
+
+            onActionCompleted();
         }
 
         /// <inheritdoc />
