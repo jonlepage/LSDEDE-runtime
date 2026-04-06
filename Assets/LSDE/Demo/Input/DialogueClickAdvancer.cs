@@ -102,11 +102,6 @@ namespace LSDE.Demo
             // skip the typewriter — both systems see the same wasPressedThisFrame.
             if (Time.frameCount == _armedOnFrame)
             {
-                // TODO: Remove this log once the phantom click fix is confirmed working.
-                Debug.Log(
-                    "[LSDE] Phantom click blocked — ignoring click on the same frame "
-                        + $"the advancer was armed (frame {_armedOnFrame})."
-                );
                 return;
             }
 
