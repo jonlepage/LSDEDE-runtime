@@ -28,6 +28,14 @@ namespace LSDE.Demo
         [Tooltip("Reference to the DialogueEngineBootstrap component in the scene.")]
         private DialogueEngineBootstrap _dialogueEngineBootstrap;
 
+        [Header("Resolvers")]
+        [SerializeField]
+        [Tooltip(
+            "Evaluates game-state conditions (inventory, party, variables) for CONDITION blocks. "
+                + "If not assigned, all conditions default to true."
+        )]
+        private DemoConditionResolver _conditionResolver;
+
         [Header("Visual Presenter (Phase 2b)")]
         [SerializeField]
         [Tooltip(
@@ -128,7 +136,7 @@ namespace LSDE.Demo
 
             _dialogueEngineBootstrap.DialoguePresenter = _bubbleDialoguePresenter;
             _dialogueEngineBootstrap.CharacterResolver = _characterRegistry;
-            _dialogueEngineBootstrap.ConditionResolver = new DemoConditionResolver();
+            _dialogueEngineBootstrap.ConditionResolver = ResolveConditionResolver();
 
             Debug.Log("[LSDE Demo] Using visual presenter (speech bubbles).");
         }
@@ -140,7 +148,7 @@ namespace LSDE.Demo
         {
             _dialogueEngineBootstrap.DialoguePresenter = new ConsoleDialoguePresenter();
             _dialogueEngineBootstrap.CharacterResolver = new DemoCharacterResolver();
-            _dialogueEngineBootstrap.ConditionResolver = new DemoConditionResolver();
+            _dialogueEngineBootstrap.ConditionResolver = ResolveConditionResolver();
 
             Debug.Log("[LSDE Demo] Using console presenter (Debug.Log).");
         }
@@ -222,6 +230,36 @@ namespace LSDE.Demo
             }
 
             return resolvedLabels;
+        }
+
+        /// <summary>
+        /// Get the condition resolver — use the serialized reference if available,
+        /// otherwise fall back to a pass-through resolver that returns true for all conditions.
+        /// This ensures backward compatibility for scenes that don't use CONDITION blocks.
+        /// </summary>
+        private IConditionResolver ResolveConditionResolver()
+        {
+            if (_conditionResolver != null)
+            {
+                return _conditionResolver;
+            }
+
+            Debug.LogWarning(
+                "[LSDE Demo] DemoConditionResolver is not assigned. "
+                    + "All conditions will default to true. "
+                    + "Assign it in the Inspector to evaluate game-state conditions."
+            );
+            return new FallbackConditionResolver();
+        }
+
+        /// <summary>
+        /// Minimal condition resolver that always returns true.
+        /// Used as a fallback when no <see cref="DemoConditionResolver"/> is assigned,
+        /// preserving backward compatibility for scenes without CONDITION blocks.
+        /// </summary>
+        private class FallbackConditionResolver : IConditionResolver
+        {
+            public bool EvaluateCondition(ExportCondition condition) => true;
         }
 
         /// <summary>
