@@ -73,6 +73,7 @@
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\LucidEditorUtility.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\Attributes\AssetsOnlyAttributeProcessor.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\LucidEditor.cs" />
+    <Compile Include="Assets\LSDE\Editor\LsdeSceneSelectorDrawer.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\Experimental\Toolbar.cs" />
     <Compile Include="Assets\Cainos\Third Party\Lucid Editor\Editor\EditorIcons.cs" />
     <Compile Include="Assets\Cainos\Pixel Art Platformer - Village Props\Script\Editor\ElevatorEditor.cs" />

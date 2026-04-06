@@ -48,6 +48,19 @@ namespace LSDE.Demo
         [Tooltip("Frame distance below which the hop decays instead of advancing.")]
         private float _hopSpeedFloor = 0.001f;
 
+        [Header("Collision Avoidance")]
+        [SerializeField]
+        [Tooltip(
+            "Layer mask for obstacles the character cannot walk through (e.g. NPCs). "
+                + "After each movement step, overlap with these layers is resolved "
+                + "by pushing the character out."
+        )]
+        private LayerMask _obstacleLayerMask;
+
+        [SerializeField]
+        [Tooltip("Radius used for overlap detection with obstacles.")]
+        private float _collisionRadius = 0.4f;
+
         [Header("Inertia Tilt")]
         [SerializeField]
         [Tooltip(
@@ -71,6 +84,8 @@ namespace LSDE.Demo
         private float _hopProgress = -1f;
         private float _currentHopHeight;
         private bool _isMoving;
+        private Collider _ownCollider;
+        private readonly Collider[] _overlapResultsBuffer = new Collider[8];
 
         /// <summary>
         /// Whether the character is currently moving toward a target.
@@ -80,6 +95,7 @@ namespace LSDE.Demo
         private void Awake()
         {
             _groundLevelY = transform.position.y;
+            _ownCollider = GetComponent<Collider>();
         }
 
         /// <summary>
@@ -149,11 +165,7 @@ namespace LSDE.Demo
                 && _currentHopHeight < 0.01f
             )
             {
-                transform.position = new Vector3(
-                    targetPosition.x,
-                    _groundLevelY,
-                    targetPosition.z
-                );
+                transform.position = new Vector3(targetPosition.x, _groundLevelY, targetPosition.z);
                 _smoothDampVelocity = Vector3.zero;
                 _distanceSinceLastHop = 0f;
                 _hopProgress = -1f;
@@ -247,6 +259,60 @@ namespace LSDE.Demo
             // Apply final position: XZ from SmoothDamp, Y from ground + hop
             // ------------------------------------------------------------------
             transform.position = new Vector3(newX, _groundLevelY + _currentHopHeight, newZ);
+
+            // ------------------------------------------------------------------
+            // 8. Collision resolution — push out of any overlapping obstacles
+            // ------------------------------------------------------------------
+            ResolveObstacleOverlaps();
+        }
+
+        /// <summary>
+        /// Check for overlaps with obstacles and push the character out.
+        /// Uses Physics.OverlapSphere to find nearby colliders on the obstacle layer,
+        /// then Physics.ComputePenetration to find the exact push direction and distance.
+        /// </summary>
+        private void ResolveObstacleOverlaps()
+        {
+            if (_obstacleLayerMask.value == 0 || _ownCollider == null)
+            {
+                return;
+            }
+
+            int overlapCount = Physics.OverlapSphereNonAlloc(
+                transform.position,
+                _collisionRadius,
+                _overlapResultsBuffer,
+                _obstacleLayerMask
+            );
+
+            for (int index = 0; index < overlapCount; index++)
+            {
+                var overlappedCollider = _overlapResultsBuffer[index];
+
+                // Skip our own collider and trigger colliders (proximity zones)
+                if (overlappedCollider == _ownCollider || overlappedCollider.isTrigger)
+                {
+                    continue;
+                }
+
+                if (
+                    Physics.ComputePenetration(
+                        _ownCollider,
+                        transform.position,
+                        transform.rotation,
+                        overlappedCollider,
+                        overlappedCollider.transform.position,
+                        overlappedCollider.transform.rotation,
+                        out Vector3 pushDirection,
+                        out float pushDistance
+                    )
+                )
+                {
+                    // Push only on XZ plane — Y is handled by hop system
+                    Vector3 pushVector = pushDirection * pushDistance;
+                    transform.position += new Vector3(pushVector.x, 0f, pushVector.z);
+                }
+            }
         }
 
         /// <summary>

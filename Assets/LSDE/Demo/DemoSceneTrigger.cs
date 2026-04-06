@@ -7,10 +7,13 @@ using UnityEngine;
 namespace LSDE.Demo
 {
     /// <summary>
-    /// Demo trigger that launches <see cref="LSDE_SCENES.simpleDialogFlow"/> on scene start.
+    /// Demo trigger that launches LSDE dialogue scenes.
     /// Supports two presenter modes toggled via the Inspector:
     /// - Visual mode: speech bubbles above characters, click to advance
     /// - Console mode: Debug.Log output, auto-advance (Phase 1 behavior)
+    ///
+    /// The engine is initialized on Start(). Scenes can then be launched externally
+    /// via <see cref="LaunchDialogueScene"/> (e.g. by a <see cref="DialogueProximityTrigger"/>).
     ///
     /// Setup in Unity Editor:
     /// 1. Create an empty GameObject named "DemoSceneTrigger"
@@ -45,9 +48,25 @@ namespace LSDE.Demo
         [Tooltip("Visual presenter that displays speech bubbles above characters.")]
         private BubbleDialoguePresenter _bubbleDialoguePresenter;
 
+        [Header("Auto-Launch (optional)")]
+        [SerializeField]
+        [LsdeSceneSelector]
+        [Tooltip(
+            "If set, this scene will be launched automatically on Start(). "
+                + "Leave on '(none)' to wait for an external trigger (e.g. DialogueProximityTrigger)."
+        )]
+        private string _autoLaunchSceneUuid;
+
+        /// <summary>
+        /// Whether a dialogue scene is currently active (started but not yet exited).
+        /// Used by triggers to prevent re-triggering while dialogue is in progress.
+        /// </summary>
+        public bool IsDialogueSceneActive { get; private set; }
+
         /// <summary>
         /// Unity calls Start() once when the GameObject becomes active.
-        /// This is where we wire dependencies, initialize the engine, and launch the demo scene.
+        /// Wires dependencies and initializes the engine. Optionally launches a scene
+        /// if <see cref="_autoLaunchSceneUuid"/> is set.
         /// </summary>
         private void Start()
         {
@@ -80,7 +99,11 @@ namespace LSDE.Demo
                 return;
             }
 
-            LaunchSimpleDialogFlowScene();
+            // Auto-launch a scene if configured, otherwise wait for external trigger
+            if (!string.IsNullOrEmpty(_autoLaunchSceneUuid))
+            {
+                LaunchDialogueScene(_autoLaunchSceneUuid);
+            }
         }
 
         /// <summary>
@@ -122,23 +145,36 @@ namespace LSDE.Demo
             Debug.Log("[LSDE Demo] Using console presenter (Debug.Log).");
         }
 
-        private void LaunchSimpleDialogFlowScene()
+        /// <summary>
+        /// Launch a dialogue scene by its UUID. Can be called externally by triggers
+        /// (e.g. <see cref="DialogueProximityTrigger"/>) or internally via auto-launch.
+        /// </summary>
+        /// <param name="sceneUuid">The UUID of the LSDE scene to launch (use LSDE_SCENES constants).</param>
+        public void LaunchDialogueScene(string sceneUuid)
         {
-            Debug.Log("[LSDE Demo] Launching scene: simpleDialogFlow");
+            if (IsDialogueSceneActive)
+            {
+                Debug.LogWarning(
+                    "[LSDE Demo] A dialogue scene is already active — ignoring launch request."
+                );
+                return;
+            }
 
-            var sceneHandle = _dialogueEngineBootstrap.Engine.Scene(LSDE_SCENES.simpleDialogFlow);
+            Debug.Log($"[LSDE Demo] Launching scene: {sceneUuid}");
+            IsDialogueSceneActive = true;
+
+            var sceneHandle = _dialogueEngineBootstrap.Engine.Scene(sceneUuid);
 
             // Register exit callback to log visited blocks and choice history.
             // IMPORTANT: sceneHandle.OnExit() OVERRIDES the global OnSceneExit handler
             // (Tier 2 replaces Tier 1), so we must call PresentSceneExit() here ourselves.
             sceneHandle.OnExit(arguments =>
             {
+                IsDialogueSceneActive = false;
                 _dialogueEngineBootstrap.DialoguePresenter.PresentSceneExit();
                 LogSceneCompletionSummary(sceneHandle);
             });
 
-            // Start the dialogue flow — in Phase 1, this completes synchronously
-            // because all handlers call Next() immediately.
             sceneHandle.Start();
 
             Debug.Log($"[LSDE Demo] Engine running: {_dialogueEngineBootstrap.Engine.IsRunning()}");
