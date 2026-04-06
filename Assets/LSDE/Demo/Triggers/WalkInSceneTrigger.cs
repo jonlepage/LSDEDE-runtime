@@ -136,6 +136,16 @@ namespace LSDE.Demo
         }
 
         /// <summary>
+        /// Reset the trigger to its initial state so it can fire again.
+        /// Called by <see cref="WebGlSceneController"/> when switching between demo scenes.
+        /// </summary>
+        public void ResetTrigger()
+        {
+            _hasTriggered = false;
+            _isPlayerInZone = false;
+        }
+
+        /// <summary>
         /// Draw trigger radius as a wire sphere in the Scene view.
         /// Magenta to distinguish from dialogue triggers (yellow) and recruitment (cyan).
         /// </summary>

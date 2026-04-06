@@ -1214,6 +1214,56 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 297478518}
   m_CullTransparentMesh: 1
+--- !u!1 &312765949
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 312765951}
+  - component: {fileID: 312765950}
+  m_Layer: 0
+  m_Name: WebGlSceneController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &312765950
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 312765949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc16b6b1fbdf5734fa7680853819b6fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.WebGlSceneController
+  _demoSceneTrigger: {fileID: 1361365180}
+  _demoGameState: {fileID: 1914617372}
+  _demoActionExecutor: {fileID: 120999131}
+  _partyFollowController: {fileID: 93071360}
+  _characterRegistry: {fileID: 1959115875}
+  _dialogueEngineBootstrap: {fileID: 1922017197}
+--- !u!4 &312765951
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 312765949}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -31.92309, y: 0, z: -73.87531}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -1365,15 +1415,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CameraFollowController
   _targetToFollow: {fileID: 93071354}
-  _cameraOffset: {x: 0, y: 3.73, z: -7.17}
-  _rotationOffset: {x: -16.48, y: -0.04, z: -0.27}
-  _deadZoneRadius: 1.14
-  _fullFollowRadius: 1.44
+  _cameraOffset: {x: -0.02, y: 6.05, z: -8.71}
+  _rotationOffset: {x: -4.1, y: -0.13, z: -1.21}
+  _deadZone: {x: 1.64, y: 0.83, z: 0.26}
+  _fullFollowRadius: {x: 12.53, y: 1.46, z: 1.68}
   _followLerpSpeed: 0.1
-  _maxDynamicYawAngle: 7.78
-  _maxDynamicRollAngle: 1.19
-  _dynamicTiltSmoothSpeed: 3.74
-  _movementSpeedReference: 4.97
+  _maxDynamicYawAngle: 7.7
+  _maxDynamicRollAngle: -3.32
+  _dynamicTiltSmoothSpeed: 0.4
+  _movementSpeedReference: 11.1
 --- !u!1 &337960817
 GameObject:
   m_ObjectHideFlags: 0
@@ -1686,7 +1736,7 @@ Transform:
   m_GameObject: {fileID: 410087039}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: 0.22, y: 3, z: 0}
+  m_LocalPosition: {x: -86.8, y: 17.4, z: 184.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2630,7 +2680,7 @@ Transform:
   m_GameObject: {fileID: 818428472}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.8, z: 0}
+  m_LocalPosition: {x: -87.020004, y: 15.200001, z: 184.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7539,3 +7589,4 @@ SceneRoots:
   - {fileID: 1707113549}
   - {fileID: 753734358}
   - {fileID: 1343309501}
+  - {fileID: 312765951}

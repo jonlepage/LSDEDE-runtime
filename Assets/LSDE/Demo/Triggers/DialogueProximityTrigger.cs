@@ -169,6 +169,18 @@ namespace LSDE.Demo
         }
 
         /// <summary>
+        /// Reset the trigger to its initial state so it can fire again.
+        /// Called by <see cref="WebGlSceneController"/> when switching between demo scenes.
+        /// Clears the triggered flag and hides any visible interaction hint.
+        /// </summary>
+        public void ResetTrigger()
+        {
+            _hasTriggeredDialogue = false;
+            _isPlayerInZone = false;
+            HideInteractionHint();
+        }
+
+        /// <summary>
         /// Draw interaction radius as a wire sphere in the Scene view.
         /// Yellow when not triggered, green when the player is in zone.
         /// Visible even when the object is not selected (OnDrawGizmos).

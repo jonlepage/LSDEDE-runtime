@@ -49,8 +49,18 @@ namespace LSDE.Demo
         /// </summary>
         private readonly Dictionary<string, float> _variables = new();
 
+        /// <summary>
+        /// Snapshot of the party members list as configured in the Inspector at startup.
+        /// Used by <see cref="ResetToInitialState"/> to restore the party to its original
+        /// composition when switching between demo scenes.
+        /// </summary>
+        private List<string> _initialPartyMembers;
+
         private void Awake()
         {
+            // Snapshot the initial party composition before any runtime changes
+            _initialPartyMembers = new List<string>(_partyMembers);
+
             // Build inventory from the Inspector toggle.
             // A real game would load this from a save file or persistent state.
             if (_playerHasCarrot)
@@ -165,6 +175,40 @@ namespace LSDE.Demo
         public float GetVariable(string variableName)
         {
             return _variables.TryGetValue(variableName, out float value) ? value : 0f;
+        }
+
+        /// <summary>
+        /// Reset all game state back to the initial conditions captured at <see cref="Awake"/>.
+        /// Called by <see cref="WebGlSceneController"/> when switching between demo scenes
+        /// to ensure a clean slate — no leftover inventory items, party members, or variables
+        /// from the previous demo.
+        /// </summary>
+        public void ResetToInitialState()
+        {
+            // Reset inventory
+            _inventory.Clear();
+            if (_playerHasCarrot)
+            {
+                _inventory[lsdeDictionaryinventory.carrot] = 1;
+            }
+
+            // Reset party to initial composition
+            _partyMembers.Clear();
+            _partyMemberSet.Clear();
+            foreach (string memberId in _initialPartyMembers)
+            {
+                _partyMembers.Add(memberId);
+                _partyMemberSet.Add(memberId);
+            }
+
+            // Reset variables
+            _variables.Clear();
+
+            Debug.Log(
+                $"[LSDE GameState] Reset to initial state. "
+                    + $"Party: [{string.Join(", ", _partyMembers)}], "
+                    + $"Inventory items: {_inventory.Count}"
+            );
         }
     }
 }

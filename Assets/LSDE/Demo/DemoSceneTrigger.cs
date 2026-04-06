@@ -66,6 +66,13 @@ namespace LSDE.Demo
         private string _autoLaunchSceneUuid;
 
         /// <summary>
+        /// The currently active scene handle. Stored so it can be force-stopped
+        /// when switching between demo scenes via <see cref="ForceStopActiveScene"/>.
+        /// Null when no scene is active.
+        /// </summary>
+        private ISceneHandle _currentSceneHandle;
+
+        /// <summary>
         /// Whether a dialogue scene is currently active (started but not yet exited).
         /// Used by triggers to prevent re-triggering while dialogue is in progress.
         /// </summary>
@@ -172,6 +179,7 @@ namespace LSDE.Demo
             IsDialogueSceneActive = true;
 
             var sceneHandle = _dialogueEngineBootstrap.Engine.Scene(sceneUuid);
+            _currentSceneHandle = sceneHandle;
 
             // Register exit callback to log visited blocks and choice history.
             // IMPORTANT: sceneHandle.OnExit() OVERRIDES the global OnSceneExit handler
@@ -179,6 +187,7 @@ namespace LSDE.Demo
             sceneHandle.OnExit(arguments =>
             {
                 IsDialogueSceneActive = false;
+                _currentSceneHandle = null;
                 _dialogueEngineBootstrap.DialoguePresenter.PresentSceneExit();
                 LogSceneCompletionSummary(sceneHandle);
             });
@@ -186,6 +195,34 @@ namespace LSDE.Demo
             sceneHandle.Start();
 
             Debug.Log($"[LSDE Demo] Engine running: {_dialogueEngineBootstrap.Engine.IsRunning()}");
+        }
+
+        /// <summary>
+        /// Force-stop the currently active dialogue scene immediately.
+        /// Used by <see cref="WebGlSceneController"/> when switching between demo scenes
+        /// from the React sidebar — the user wants to jump to a different demo without
+        /// waiting for the current one to finish naturally.
+        ///
+        /// Calls <c>Engine.Stop()</c> to cancel all active scenes, cleans up the presenter,
+        /// and resets the active state flag.
+        /// </summary>
+        public void ForceStopActiveScene()
+        {
+            if (!IsDialogueSceneActive)
+            {
+                return;
+            }
+
+            Debug.Log("[LSDE Demo] Force-stopping active dialogue scene.");
+
+            // Stop the engine — cancels all active scenes
+            _dialogueEngineBootstrap.Engine.Stop();
+
+            // Clean up presenter state (hide bubbles, clear click advancer, etc.)
+            _dialogueEngineBootstrap.DialoguePresenter.PresentSceneExit();
+
+            IsDialogueSceneActive = false;
+            _currentSceneHandle = null;
         }
 
         private void LogSceneCompletionSummary(ISceneHandle sceneHandle)

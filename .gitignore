@@ -43,3 +43,10 @@ _bmad/*
 _bmad-output/*
 Assets/Packages/*
 CLAUDE.md
+
+# Web app build artifacts
+web/dist/
+web/node_modules/
+
+# Exception: Unity WebGL build output must be tracked (not ignored)
+!web/public/unity-build/

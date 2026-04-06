@@ -539,5 +539,36 @@ namespace LSDE.Demo
                 new BreadcrumbPoint { Position = transform.position, CumulativeDistance = 0f }
             );
         }
+
+        /// <summary>
+        /// Reset the entire follow system to its initial state.
+        /// Called by <see cref="WebGlSceneController"/> when switching between demo scenes.
+        /// Stops all follower movement, clears the follower list and trail,
+        /// and resets the pause state so the system is ready for a fresh demo.
+        /// </summary>
+        public void ResetFollowers()
+        {
+            // Stop movement on all active followers before clearing
+            foreach (var follower in _activeFollowers)
+            {
+                if (follower.MovementController != null)
+                {
+                    follower.MovementController.StopMovement();
+                }
+            }
+
+            _activeFollowers.Clear();
+
+            // Reset trail
+            _trailPoints.Clear();
+            _trailPoints.Add(
+                new BreadcrumbPoint { Position = transform.position, CumulativeDistance = 0f }
+            );
+
+            _isTrailPaused = false;
+            _wasDialogueActiveLastFrame = false;
+
+            Debug.Log("[LSDE Demo] PartyFollowController reset — all followers cleared.");
+        }
     }
 }

@@ -1,0 +1,7 @@
+# Unity WebGL build binaries (committed from local build, tracked via Git LFS)
+web/public/unity-build/**/*.data filter=lfs diff=lfs merge=lfs -text
+web/public/unity-build/**/*.wasm filter=lfs diff=lfs merge=lfs -text
+web/public/unity-build/**/*.data.br filter=lfs diff=lfs merge=lfs -text
+web/public/unity-build/**/*.wasm.br filter=lfs diff=lfs merge=lfs -text
+web/public/unity-build/**/*.data.gz filter=lfs diff=lfs merge=lfs -text
+web/public/unity-build/**/*.wasm.gz filter=lfs diff=lfs merge=lfs -text

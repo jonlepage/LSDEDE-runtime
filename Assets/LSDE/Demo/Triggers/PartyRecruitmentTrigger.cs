@@ -167,6 +167,17 @@ namespace LSDE.Demo
         }
 
         /// <summary>
+        /// Reset the trigger to its initial state so the NPC can be recruited again.
+        /// Called by <see cref="WebGlSceneController"/> when switching between demo scenes.
+        /// </summary>
+        public void ResetTrigger()
+        {
+            _hasBeenRecruited = false;
+            _isPlayerInZone = false;
+            HideRecruitmentHint();
+        }
+
+        /// <summary>
         /// Draw recruitment radius as a wire sphere in the Scene view.
         /// Cyan when available, grey when already recruited.
         /// </summary>

@@ -3,20 +3,24 @@ using UnityEngine;
 namespace LSDE.Demo
 {
     /// <summary>
-    /// Smooth camera follow with dead zone — faithful port of camera.ts (lines 332-366).
+    /// Smooth camera follow with per-axis dead zones — evolved from camera.ts port.
     ///
-    /// Three states:
-    /// 1. Inside dead zone: camera does NOTHING — no translation, no rotation.
-    ///    This is the key difference from the previous implementation which called
-    ///    LookAt() inside the dead zone, causing micro-rotation jitter.
+    /// Three states per axis (X, Y, Z evaluated independently):
+    /// 1. Inside dead zone: camera does NOTHING on that axis — no movement, no rotation.
     /// 2. Between dead zone and full follow radius: follow strength ramps progressively.
-    /// 3. Beyond full follow radius: full follow strength.
+    /// 3. Beyond full follow radius: full follow strength on that axis.
+    ///
+    /// Using per-axis dead zones (box/AABB) instead of a single circular radius allows
+    /// different tolerances for lateral movement (X), vertical (Y), and forward/backward
+    /// progression (Z). Typical setup: tight Z dead zone so the player can advance freely,
+    /// generous X dead zone for comfortable lateral exploration.
     ///
     /// The camera rotation is fixed at Start() and never changes — matching
     /// the TS demo where the "camera" is just a container pivot with no rotation.
+    /// Dynamic tilt (yaw + roll) adds subtle cinematic rotation on top of the base.
     ///
-    /// The camera ignores the target's Y position (hop offset) by tracking
-    /// ground-level position (Y=0), preventing bouncing with each hop.
+    /// By default, Y dead zone is 0 (instant vertical tracking). Set Y dead zone > 0
+    /// if you need tolerance for jumping or vertical platforms.
     /// </summary>
     public class CameraFollowController : MonoBehaviour
     {
@@ -39,56 +43,87 @@ namespace LSDE.Demo
         )]
         private Vector3 _rotationOffset = Vector3.zero;
 
-        [Header("Dead Zone")]
+        [Header("Dead Zone — Per-Axis")]
         [SerializeField]
         [Tooltip(
-            "Radius within which the camera does absolutely nothing — no movement, "
-                + "no rotation. Port of DEAD_ZONE_RATIO * 1080 ≈ 119px → 1.5 units."
+            "Dead zone size per axis. Inside this zone the camera does absolutely nothing "
+                + "— no movement, no rotation.\n\n"
+                + "X = left/right tolerance (higher = the character can move further "
+                + "sideways before the camera reacts).\n"
+                + "Y = vertical tolerance (0 = camera tracks height instantly, "
+                + "increase if you add jumping/platforms later).\n"
+                + "Z = forward/backward tolerance (keep LOW so the player can advance "
+                + "without feeling stuck — this is the 'progression' axis).\n\n"
+                + "Typical values: X=1.5, Y=0, Z=0.5"
         )]
-        private float _deadZoneRadius = 1.5f;
+        private Vector3 _deadZone = new Vector3(1.5f, 0f, 0.5f);
 
         [SerializeField]
         [Tooltip(
-            "Radius at which the camera reaches full follow speed. "
-                + "Port of FULL_FOLLOW_RATIO * 1080 ≈ 400px → 5 units."
+            "Distance per axis at which the camera reaches full follow speed. "
+                + "Between the dead zone and this radius, follow strength ramps "
+                + "progressively (smooth acceleration).\n\n"
+                + "X = full follow distance for left/right movement.\n"
+                + "Y = full follow distance for vertical movement "
+                + "(only relevant if dead zone Y > 0).\n"
+                + "Z = full follow distance for forward/backward movement.\n\n"
+                + "Must be greater than the corresponding dead zone value on each axis.\n"
+                + "Typical values: X=5, Y=0, Z=3"
         )]
-        private float _fullFollowRadius = 5f;
+        private Vector3 _fullFollowRadius = new Vector3(5f, 0f, 3f);
 
         [SerializeField]
         [Tooltip(
-            "Base follow lerp speed. Port of DEFAULT_FOLLOW_LERP_FACTOR = 0.003. "
-                + "Very low = cinematic lag."
+            "Base follow lerp speed (shared across all axes). "
+                + "Controls how fast the camera catches up once outside the dead zone.\n\n"
+                + "Very low (0.001–0.005) = cinematic lag, smooth and slow.\n"
+                + "Medium (0.01–0.05) = responsive but still smooth.\n"
+                + "High (0.1+) = nearly instant follow.\n\n"
+                + "The actual speed is modulated per axis by the follow strength "
+                + "(distance-based ramp between dead zone and full follow radius)."
         )]
         private float _followLerpSpeed = 0.003f;
 
         [Header("Dynamic Tilt")]
         [SerializeField]
         [Tooltip(
-            "Maximum yaw angle in degrees when the target is at the edge of the follow zone. "
-                + "Creates a subtle 'look toward' effect as the camera turns slightly "
-                + "toward where the character is."
+            "Maximum yaw angle in degrees when the target is at the edge of the "
+                + "follow zone on the X axis. Creates a subtle 'look toward' effect "
+                + "— the camera turns slightly toward where the character is.\n\n"
+                + "0 = disabled (no horizontal rotation).\n"
+                + "1–3 = subtle, cinematic.\n"
+                + "5+ = very noticeable turning."
         )]
         private float _maxDynamicYawAngle = 3f;
 
         [SerializeField]
         [Tooltip(
-            "Maximum roll angle in degrees during lateral movement. "
+            "Maximum roll angle in degrees during lateral (left/right) movement. "
                 + "Creates a cinematic lean effect, like a camera operator tilting "
-                + "their body while tracking a moving subject."
+                + "their body while tracking a moving subject.\n\n"
+                + "0 = disabled (no roll).\n"
+                + "1–2 = subtle, natural lean.\n"
+                + "5+ = exaggerated, stylized."
         )]
         private float _maxDynamicRollAngle = 2f;
 
         [SerializeField]
         [Tooltip(
-            "How fast the dynamic tilt smoothly catches up to its target value. "
-                + "Lower = more cinematic lag, higher = more responsive."
+            "How fast the dynamic tilt (yaw + roll) smoothly catches up to its "
+                + "target value. Think of it as the 'weight' of the camera operator.\n\n"
+                + "Low (1–2) = heavy, cinematic lag — tilt changes slowly.\n"
+                + "Medium (3–5) = balanced responsiveness.\n"
+                + "High (8+) = snappy, almost instant tilt reaction."
         )]
         private float _dynamicTiltSmoothSpeed = 3f;
 
         [SerializeField]
         [Tooltip(
-            "Reference movement speed for normalizing velocity when computing roll. "
-                + "Should match the character's maximum movement speed."
+            "Reference movement speed (units/second) for normalizing the roll "
+                + "computation. Should match the character's maximum movement speed.\n\n"
+                + "If the character moves at 4 units/sec, set this to 4. "
+                + "A mismatch means the roll will feel too weak (value too high) "
+                + "or too aggressive (value too low)."
         )]
         private float _movementSpeedReference = 4f;
 
@@ -224,33 +259,70 @@ namespace LSDE.Demo
             Vector3 desiredCameraPosition = targetGroundPosition + _cameraOffset;
             Vector3 currentCameraPosition = transform.position;
 
-            // Distance on XZ plane between current camera and desired position
+            // Per-axis delta between current camera and desired position
             float deltaX = desiredCameraPosition.x - currentCameraPosition.x;
+            float deltaY = desiredCameraPosition.y - currentCameraPosition.y;
             float deltaZ = desiredCameraPosition.z - currentCameraPosition.z;
-            float horizontalDistance = Mathf.Sqrt(deltaX * deltaX + deltaZ * deltaZ);
 
             // ------------------------------------------------------------------
-            // Position update — only outside dead zone (camera.ts:346)
-            // Inside dead zone: position stays perfectly still (no jitter).
+            // Per-axis position update — each axis has its own dead zone.
+            // Inside the dead zone for a given axis: that axis stays perfectly
+            // still (no jitter). Outside: progressive follow ramps up.
+            // This replaces the old circular dead zone with a box (AABB),
+            // allowing tight follow on Z (progression) and loose on X (lateral).
             // ------------------------------------------------------------------
-            if (horizontalDistance > _deadZoneRadius)
+            float absoluteDeltaX = Mathf.Abs(deltaX);
+            float absoluteDeltaZ = Mathf.Abs(deltaZ);
+            float absoluteDeltaY = Mathf.Abs(deltaY);
+
+            // X axis — lateral movement
+            float followStrengthX = 0f;
+            if (absoluteDeltaX > _deadZone.x && _fullFollowRadius.x > _deadZone.x)
             {
-                // Progressive follow (camera.ts:347-357)
-                float followStrength = Mathf.Clamp01(
-                    (horizontalDistance - _deadZoneRadius) / (_fullFollowRadius - _deadZoneRadius)
-                );
-
-                // Exponential lerp — exact port of camera.ts:359
-                float effectiveLerpSpeed = _followLerpSpeed * followStrength;
-                float lerpAmount = 1f - Mathf.Pow(1f - effectiveLerpSpeed, Time.deltaTime * 60f);
-
-                // XZ uses lerp, Y tracks immediately (no dead zone for height)
-                transform.position = new Vector3(
-                    currentCameraPosition.x + deltaX * lerpAmount,
-                    desiredCameraPosition.y,
-                    currentCameraPosition.z + deltaZ * lerpAmount
+                followStrengthX = Mathf.Clamp01(
+                    (absoluteDeltaX - _deadZone.x) / (_fullFollowRadius.x - _deadZone.x)
                 );
             }
+
+            // Z axis — forward/backward progression
+            float followStrengthZ = 0f;
+            if (absoluteDeltaZ > _deadZone.z && _fullFollowRadius.z > _deadZone.z)
+            {
+                followStrengthZ = Mathf.Clamp01(
+                    (absoluteDeltaZ - _deadZone.z) / (_fullFollowRadius.z - _deadZone.z)
+                );
+            }
+
+            // Y axis — vertical (uses dead zone only if configured, otherwise instant)
+            float followStrengthY = 1f;
+            if (_deadZone.y > 0f && _fullFollowRadius.y > _deadZone.y)
+            {
+                followStrengthY = absoluteDeltaY > _deadZone.y
+                    ? Mathf.Clamp01(
+                        (absoluteDeltaY - _deadZone.y) / (_fullFollowRadius.y - _deadZone.y)
+                    )
+                    : 0f;
+            }
+
+            // Exponential lerp per axis — same formula as the original port
+            // of camera.ts:359 but applied independently per component.
+            float frameMultiplier = Time.deltaTime * 60f;
+
+            float lerpAmountX = 1f - Mathf.Pow(
+                1f - _followLerpSpeed * followStrengthX, frameMultiplier
+            );
+            float lerpAmountZ = 1f - Mathf.Pow(
+                1f - _followLerpSpeed * followStrengthZ, frameMultiplier
+            );
+            float lerpAmountY = 1f - Mathf.Pow(
+                1f - _followLerpSpeed * followStrengthY, frameMultiplier
+            );
+
+            transform.position = new Vector3(
+                currentCameraPosition.x + deltaX * lerpAmountX,
+                currentCameraPosition.y + deltaY * lerpAmountY,
+                currentCameraPosition.z + deltaZ * lerpAmountZ
+            );
 
             // ------------------------------------------------------------------
             // Dynamic tilt — always computed so it decays smoothly to neutral
@@ -262,7 +334,9 @@ namespace LSDE.Demo
             // Roll: subtle lean in the direction of lateral movement, like a
             //       camera operator tilting their body while tracking a subject.
             // ------------------------------------------------------------------
-            float normalizedOffsetX = Mathf.Clamp(deltaX / _fullFollowRadius, -1f, 1f);
+            float normalizedOffsetX = _fullFollowRadius.x > 0f
+                ? Mathf.Clamp(deltaX / _fullFollowRadius.x, -1f, 1f)
+                : 0f;
             float targetYawAngle = normalizedOffsetX * _maxDynamicYawAngle;
 
             float normalizedLateralVelocity = Mathf.Clamp(
