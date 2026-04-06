@@ -40,6 +40,14 @@ namespace LSDE.Demo
         )]
         private DemoActionExecutor _actionExecutor;
 
+        [SerializeField]
+        [Tooltip(
+            "Character ID used as fallback when a CHOICE block has no assigned character. "
+                + "The choice bubble will appear on this character. "
+                + "Leave empty to auto-select the first choice without displaying UI."
+        )]
+        private string _fallbackChoiceCharacterId = lsdeCharacter.l4;
+
         private const string LogPrefix = "[LSDE]";
 
         /// <summary>
@@ -238,6 +246,7 @@ namespace LSDE.Demo
         /// <inheritdoc />
         public void PresentChoiceBlock(
             ChoiceBlock choiceBlock,
+            BlockCharacter resolvedCharacter,
             IReadOnlyList<RuntimeChoiceItem> visibleChoices,
             Action<string> selectChoiceAndAdvance
         )
@@ -253,25 +262,45 @@ namespace LSDE.Demo
                 return;
             }
 
-            // Extract the character from the block's metadata to find the correct bubble.
-            // The choice block's Metadata.Characters contains the character assigned in the editor.
-            var choiceCharacter = choiceBlock.Metadata?.Characters?.FirstOrDefault();
-            if (choiceCharacter == null)
+            // Resolve the character to display choices on.
+            // Priority: 1) resolvedCharacter from engine (context.Character)
+            //           2) static metadata from blueprint editor (Metadata.Characters)
+            //           3) configurable fallback character (_fallbackChoiceCharacterId)
+            // The fallback handles scenes like simpleAction where the CHOICE block
+            // follows an ACTION block and neither the engine nor the metadata provide
+            // a character. The dev configures which character hosts "unattached" choices.
+            var choiceCharacter =
+                resolvedCharacter ?? choiceBlock.Metadata?.Characters?.FirstOrDefault();
+
+            // Find the character marker in the scene
+            DialogueCharacterMarker characterMarker = null;
+
+            if (choiceCharacter != null)
             {
-                Debug.LogWarning(
-                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — no character in metadata. "
-                        + "Auto-selecting first choice."
-                );
-                selectChoiceAndAdvance(visibleChoices[0].Uuid);
-                return;
+                characterMarker = _characterRegistry.FindMarkerByCharacterId(choiceCharacter.Id);
             }
 
-            var characterMarker = _characterRegistry.FindMarkerByCharacterId(choiceCharacter.Id);
+            // Fallback: use the configurable default character for unattached choice blocks
+            if (characterMarker == null && !string.IsNullOrEmpty(_fallbackChoiceCharacterId))
+            {
+                characterMarker = _characterRegistry.FindMarkerByCharacterId(
+                    _fallbackChoiceCharacterId
+                );
+
+                if (characterMarker != null)
+                {
+                    Debug.Log(
+                        $"{LogPrefix} CHOICE  {choiceBlock.Label} — using fallback character "
+                            + $"'{_fallbackChoiceCharacterId}' for choice display."
+                    );
+                }
+            }
+
             if (characterMarker == null)
             {
                 Debug.LogWarning(
-                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — character '{choiceCharacter.Id}' "
-                        + "not found in scene. Auto-selecting first choice."
+                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — no character found in scene. "
+                        + "Auto-selecting first choice."
                 );
                 selectChoiceAndAdvance(visibleChoices[0].Uuid);
                 return;
@@ -286,14 +315,15 @@ namespace LSDE.Demo
             {
                 Debug.LogWarning(
                     $"{LogPrefix} CHOICE  {choiceBlock.Label} — no SpeechBubbleController on "
-                        + $"character '{choiceCharacter.Id}'. Auto-selecting first choice."
+                        + $"character '{characterMarker.LsdeCharacterId}'. Auto-selecting first choice."
                 );
                 selectChoiceAndAdvance(visibleChoices[0].Uuid);
                 return;
             }
 
             var blockUuid = choiceBlock.Uuid;
-            var characterName = choiceCharacter.Name ?? choiceCharacter.Id;
+            var characterName =
+                choiceCharacter?.Name ?? choiceCharacter?.Id ?? characterMarker.LsdeCharacterId;
 
             // Track this bubble for cleanup in PresentBlockCleanup
             _activeBubblesByBlockUuid[blockUuid] = bubbleController;

@@ -50,7 +50,7 @@ namespace LSDE.Demo
             _onChoiceSelected = onChoiceSelected;
 
             _choiceText = GetComponent<TextMeshProUGUI>();
-            _choiceText.text = $"\u25b8 {displayText}";
+            _choiceText.text = $"> {displayText}";
             _choiceText.color = NormalTextColor;
         }
 

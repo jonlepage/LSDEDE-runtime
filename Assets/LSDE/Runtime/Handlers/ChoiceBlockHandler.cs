@@ -50,7 +50,12 @@ namespace LSDE.Runtime
                 arguments.Next();
             };
 
-            _dialoguePresenter.PresentChoiceBlock(block, visibleChoices, selectChoiceAndAdvance);
+            _dialoguePresenter.PresentChoiceBlock(
+                block,
+                context.Character,
+                visibleChoices,
+                selectChoiceAndAdvance
+            );
 
             return () => _dialoguePresenter.PresentBlockCleanup(block);
         }

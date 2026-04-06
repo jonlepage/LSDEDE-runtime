@@ -43,6 +43,7 @@ namespace LSDE.Demo
         /// <inheritdoc />
         public void PresentChoiceBlock(
             ChoiceBlock choiceBlock,
+            BlockCharacter resolvedCharacter,
             IReadOnlyList<RuntimeChoiceItem> visibleChoices,
             Action<string> selectChoiceAndAdvance
         )

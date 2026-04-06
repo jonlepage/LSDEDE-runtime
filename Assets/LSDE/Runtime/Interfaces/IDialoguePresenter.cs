@@ -35,10 +35,16 @@ namespace LSDE.Runtime
         /// when the player makes a selection. This encapsulates both SelectChoice and Next.
         /// </summary>
         /// <param name="choiceBlock">The choice block being executed.</param>
+        /// <param name="resolvedCharacter">
+        /// The character resolved by the engine at runtime (from <c>context.Character</c>).
+        /// Used as the primary source to determine which character presents the choices.
+        /// May be null if the engine could not resolve a character.
+        /// </param>
         /// <param name="visibleChoices">Choices filtered by visibility (Visible != false).</param>
         /// <param name="selectChoiceAndAdvance">Callback that selects a choice by UUID and advances the engine. Must be called exactly once.</param>
         void PresentChoiceBlock(
             ChoiceBlock choiceBlock,
+            BlockCharacter resolvedCharacter,
             IReadOnlyList<RuntimeChoiceItem> visibleChoices,
             Action<string> selectChoiceAndAdvance
         );
