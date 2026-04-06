@@ -358,7 +358,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1450178541376546, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
       propertyPath: m_Name
-      value: CharaRef_08
+      value: player
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
       propertyPath: m_LocalScale.x
@@ -427,6 +427,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 93071359}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 93071360}
   m_SourcePrefab: {fileID: 100100000, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
 --- !u!1 &93071353 stripped
 GameObject:
@@ -517,6 +520,25 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: -0.09, y: -0.95, z: 0}
+--- !u!114 &93071360
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 93071353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9346532298b138f4fb26dc0e4f483a7d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.PartyFollowController
+  _breadcrumbSpacing: 0.5
+  _maximumTrailPoints: 600
+  _followDistance: 2
+  _movementUpdateThreshold: 0.3
+  _gameState: {fileID: 1914617372}
+  _characterRegistry: {fileID: 1959115875}
+  _demoSceneTrigger: {fileID: 1361365180}
 --- !u!1 &120999129
 GameObject:
   m_ObjectHideFlags: 0
@@ -565,8 +587,10 @@ MonoBehaviour:
   _characterRegistry: {fileID: 1959115875}
   _playerCharacterId: l4
   _shakeIntensityWorldScaleFactor: 0.02
+  _partyFollowController: {fileID: 93071360}
   _pixelToWorldScaleFactor: 0.01
-  _absolutePositionOrigin: {x: 0, y: 0, z: 0}
+  _absolutePositionOriginTransform: {fileID: 1343309501}
+  _absolutePositionOriginFallback: {x: 0, y: 0, z: 0}
 --- !u!1 &164205210
 GameObject:
   m_ObjectHideFlags: 0
@@ -736,7 +760,7 @@ GameObject:
   - component: {fileID: 178436944}
   - component: {fileID: 178436946}
   - component: {fileID: 178436945}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SpeechBubble_l3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1976,7 +2000,7 @@ GameObject:
   - component: {fileID: 678826889}
   - component: {fileID: 678826891}
   - component: {fileID: 678826890}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: BubbleBackground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2051,6 +2075,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: CharaRef_04
       objectReference: {fileID: 0}
+    - target: {fileID: 1450178541376546, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
       propertyPath: m_LocalPosition.x
       value: -26.53788
@@ -2104,6 +2132,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
       insertIndex: -1
       addedObject: {fileID: 695945934}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 695945937}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 695945936}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 695945935}
   m_SourcePrefab: {fileID: 100100000, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
 --- !u!1 &695945930 stripped
 GameObject:
@@ -2150,6 +2187,66 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.1, y: 1.15, z: 0.2}
   m_Center: {x: 0, y: -0.575, z: 0}
+--- !u!114 &695945935
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 695945930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f1855460f693c241a7d303c0a297608, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CharacterMovementController
+  _movementSpeed: 5.12
+  _smoothTime: 0.23
+  _arrivalThreshold: 0.3
+  _hopStrideDistance: 0.81
+  _hopMaxHeight: 0.15
+  _hopSpeedFloor: 1.23
+  _maxTiltAngle: 12
+  _inertiaVelocityLerp: 3.46
+--- !u!143 &695945936
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 695945930}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 0
+  m_Radius: 0.55
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &695945937
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 695945930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cddf279edf5d16498cb9db04bff07e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.PartyRecruitmentTrigger
+  _interactionRadius: 0.51
+  _gameState: {fileID: 1914617372}
+  _interactionHintDisplay: {fileID: 883980583}
 --- !u!1001 &711457360
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2600,7 +2697,7 @@ GameObject:
   - component: {fileID: 874488997}
   - component: {fileID: 874488996}
   - component: {fileID: 874488995}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: CharacterNameText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3630,7 +3727,7 @@ GameObject:
   - component: {fileID: 1129395500}
   - component: {fileID: 1129395499}
   - component: {fileID: 1129395498}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4163,7 +4260,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.14
+      value: 1.12
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4210,6 +4307,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1307401951}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1307401954}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1307401953}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1307401952}
   m_SourcePrefab: {fileID: 100100000, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
 --- !u!1 &1307401947 stripped
 GameObject:
@@ -4256,6 +4362,113 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.96, y: 1.16, z: 0.2}
   m_Center: {x: 0, y: -0.58, z: 0}
+--- !u!114 &1307401952
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1307401947}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f1855460f693c241a7d303c0a297608, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CharacterMovementController
+  _movementSpeed: 5.12
+  _smoothTime: 0.23
+  _arrivalThreshold: 0.3
+  _hopStrideDistance: 0.81
+  _hopMaxHeight: 0.15
+  _hopSpeedFloor: 1.23
+  _maxTiltAngle: 12
+  _inertiaVelocityLerp: 3.46
+--- !u!143 &1307401953
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1307401947}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 0
+  m_Radius: 0.48
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1307401954
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1307401947}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cddf279edf5d16498cb9db04bff07e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.PartyRecruitmentTrigger
+  _interactionRadius: 0.61
+  _gameState: {fileID: 1914617372}
+  _interactionHintDisplay: {fileID: 883980583}
+--- !u!1 &1343309499
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1343309501}
+  - component: {fileID: 1343309500}
+  m_Layer: 0
+  m_Name: AdvanceDemoTrigger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1343309500
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1343309499}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f93f377f2b561644b941ce1ec0f7c1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.WalkInSceneTrigger
+  _triggerRadius: 0.5
+  _demoSceneTrigger: {fileID: 1361365180}
+  _sceneUuidToLaunch: c2e75db2-85c7-421b-91ab-f7ea1ea45284
+--- !u!4 &1343309501
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1343309499}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -30.06, y: 0.114, z: -73.378}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1360042252
 GameObject:
   m_ObjectHideFlags: 0
@@ -4889,7 +5102,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1531141608}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: BubbleAnchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4999,7 +5212,7 @@ GameObject:
   - component: {fileID: 1559684933}
   - component: {fileID: 1559684932}
   - component: {fileID: 1559684931}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: DialogueContentText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5876,9 +6089,13 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2581226205637218565, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2581226205637218566, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -31.408575
+      value: -30.05
       objectReference: {fileID: 0}
     - target: {fileID: 2581226205637218566, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
       propertyPath: m_LocalPosition.y
@@ -5886,7 +6103,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2581226205637218566, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -69.31842
+      value: -73.244
       objectReference: {fileID: 0}
     - target: {fileID: 2581226205637218566, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
       propertyPath: m_LocalRotation.w
@@ -6043,6 +6260,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1802940521}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1802940523}
   m_SourcePrefab: {fileID: 100100000, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
 --- !u!1 &1802940515 stripped
 GameObject:
@@ -6075,14 +6295,14 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1802940515}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e4c0689469e049d46a3dddc8dcf3f30c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueProximityTrigger
-  _interactionRadius: 1.23
+  _interactionRadius: 0.62
   _demoSceneTrigger: {fileID: 1361365180}
-  _sceneUuidToLaunch: a037a98b-ffec-40d3-8092-4eedb9857501
+  _sceneUuidToLaunch: 
   _interactionHintDisplay: {fileID: 883980583}
 --- !u!65 &1802940520
 BoxCollider:
@@ -6117,14 +6337,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f1855460f693c241a7d303c0a297608, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CharacterMovementController
-  _movementSpeed: 4
-  _smoothTime: 0.3
-  _arrivalThreshold: 0.02
-  _hopStrideDistance: 0.4
-  _hopMaxHeight: 0.35
-  _hopSpeedFloor: 0.001
-  _maxTiltAngle: 15
-  _inertiaVelocityLerp: 0.1
+  _movementSpeed: 5.12
+  _smoothTime: 0.23
+  _arrivalThreshold: 0.3
+  _hopStrideDistance: 0.81
+  _hopMaxHeight: 0.15
+  _hopSpeedFloor: 1.23
+  _maxTiltAngle: 12
+  _inertiaVelocityLerp: 3.46
 --- !u!143 &1802940522
 CharacterController:
   m_ObjectHideFlags: 0
@@ -6150,6 +6370,21 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1802940523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1802940515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cddf279edf5d16498cb9db04bff07e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.PartyRecruitmentTrigger
+  _interactionRadius: 0.42
+  _gameState: {fileID: 1914617372}
+  _interactionHintDisplay: {fileID: 883980583}
 --- !u!1 &1821645363
 GameObject:
   m_ObjectHideFlags: 0
@@ -6334,7 +6569,7 @@ GameObject:
   - component: {fileID: 1888317949}
   - component: {fileID: 1888317951}
   - component: {fileID: 1888317950}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: TextPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6448,7 +6683,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DemoGameState
   _playerHasCarrot: 0
   _partyMembers:
-  - l1
   - l4
 --- !u!1 &1922017195
 GameObject:
@@ -7304,3 +7538,4 @@ SceneRoots:
   - {fileID: 2052960230}
   - {fileID: 1707113549}
   - {fileID: 753734358}
+  - {fileID: 1343309501}

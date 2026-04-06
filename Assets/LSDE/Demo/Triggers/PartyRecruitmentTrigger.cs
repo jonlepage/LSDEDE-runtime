@@ -165,5 +165,17 @@ namespace LSDE.Demo
                 _interactionHintDisplay.HideHint();
             }
         }
+
+        /// <summary>
+        /// Draw recruitment radius as a wire sphere in the Scene view.
+        /// Cyan when available, grey when already recruited.
+        /// </summary>
+        private void OnDrawGizmos()
+        {
+            Gizmos.color = _hasBeenRecruited
+                ? new Color(0.5f, 0.5f, 0.5f, 0.2f)
+                : new Color(0f, 1f, 1f, 0.3f);
+            Gizmos.DrawWireSphere(transform.position, _interactionRadius);
+        }
     }
 }

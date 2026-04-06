@@ -50,12 +50,33 @@ namespace LSDE.Demo
         private string _sceneUuidToLaunch;
 
         private bool _hasTriggered;
+        private bool _isPlayerInZone;
 
         private void Awake()
         {
             var proximitySphere = gameObject.AddComponent<SphereCollider>();
             proximitySphere.isTrigger = true;
             proximitySphere.radius = _triggerRadius;
+        }
+
+        private void Update()
+        {
+            // Re-arm the trigger when a dialogue scene finishes
+            // (same pattern as DialogueProximityTrigger)
+            if (
+                _hasTriggered
+                && _demoSceneTrigger != null
+                && !_demoSceneTrigger.IsDialogueSceneActive
+            )
+            {
+                _hasTriggered = false;
+
+                // If the player is still in the zone, trigger again immediately
+                if (_isPlayerInZone)
+                {
+                    TriggerScene();
+                }
+            }
         }
 
         private void OnTriggerEnter(Collider other)
@@ -65,11 +86,26 @@ namespace LSDE.Demo
                 return;
             }
 
-            if (_hasTriggered)
+            _isPlayerInZone = true;
+
+            if (!_hasTriggered)
+            {
+                TriggerScene();
+            }
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (!other.CompareTag("Player"))
             {
                 return;
             }
 
+            _isPlayerInZone = false;
+        }
+
+        private void TriggerScene()
+        {
             if (_demoSceneTrigger == null)
             {
                 Debug.LogWarning(
@@ -97,6 +133,18 @@ namespace LSDE.Demo
             _demoSceneTrigger.LaunchDialogueScene(_sceneUuidToLaunch);
 
             Debug.Log($"[LSDE Demo] Walk-in trigger '{gameObject.name}' launched scene.");
+        }
+
+        /// <summary>
+        /// Draw trigger radius as a wire sphere in the Scene view.
+        /// Magenta to distinguish from dialogue triggers (yellow) and recruitment (cyan).
+        /// </summary>
+        private void OnDrawGizmos()
+        {
+            Gizmos.color = _hasTriggered
+                ? new Color(0.5f, 0.5f, 0.5f, 0.2f)
+                : new Color(1f, 0f, 1f, 0.3f);
+            Gizmos.DrawWireSphere(transform.position, _triggerRadius);
         }
     }
 }

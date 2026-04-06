@@ -167,5 +167,18 @@ namespace LSDE.Demo
                 _interactionHintDisplay.HideHint();
             }
         }
+
+        /// <summary>
+        /// Draw interaction radius as a wire sphere in the Scene view.
+        /// Yellow when not triggered, green when the player is in zone.
+        /// Visible even when the object is not selected (OnDrawGizmos).
+        /// </summary>
+        private void OnDrawGizmos()
+        {
+            Gizmos.color = _isPlayerInZone
+                ? new Color(0f, 1f, 0f, 0.4f)
+                : new Color(1f, 1f, 0f, 0.3f);
+            Gizmos.DrawWireSphere(transform.position, _interactionRadius);
+        }
     }
 }
