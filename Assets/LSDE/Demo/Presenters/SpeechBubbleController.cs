@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace LSDE.Demo
 {
@@ -46,6 +48,17 @@ namespace LSDE.Demo
         private bool _isBubbleVisible;
         private Coroutine _activeFadeCoroutine;
         private TypewriterEffect _typewriterEffect;
+
+        /// <summary>
+        /// Dynamically created choice button GameObjects, tracked for cleanup.
+        /// Populated by <see cref="ShowChoices"/> and destroyed by <see cref="HideChoices"/>.
+        /// </summary>
+        private readonly List<GameObject> _dynamicChoiceButtons = new List<GameObject>();
+
+        /// <summary>
+        /// Whether the bubble is currently displaying choice buttons instead of dialogue text.
+        /// </summary>
+        private bool _isShowingChoices;
 
         /// <summary>
         /// Whether the speech bubble is currently visible.
@@ -172,6 +185,102 @@ namespace LSDE.Demo
         }
 
         /// <summary>
+        /// Show choice buttons inside the bubble instead of dialogue text.
+        /// Hides the character name and dialogue content, then creates interactive
+        /// <see cref="ChoiceButtonItem"/> elements for each visible choice.
+        ///
+        /// Each button displays the localized choice text with a triangle marker (▸)
+        /// and changes color on hover. Clicking a button invokes the selection callback.
+        ///
+        /// The bubble uses the same fade-in animation as dialogue display.
+        /// </summary>
+        /// <param name="characterName">The name of the character presenting the choices.</param>
+        /// <param name="choices">List of (uuid, localizedText) tuples for each visible choice.</param>
+        /// <param name="onChoiceSelected">Callback invoked with the chosen UUID when the player clicks.</param>
+        public void ShowChoices(
+            string characterName,
+            IReadOnlyList<(string uuid, string localizedText)> choices,
+            Action<string> onChoiceSelected
+        )
+        {
+            // Clean up any previous choices or dialogue
+            HideChoices();
+
+            if (_characterNameText != null)
+            {
+                _characterNameText.text = characterName;
+            }
+
+            // Hide the dialogue content text — choices replace it
+            if (_dialogueContentText != null)
+            {
+                _dialogueContentText.gameObject.SetActive(false);
+            }
+
+            // Create a choice button for each visible option.
+            // Buttons are added as children of the TextPanel (which has a VerticalLayoutGroup),
+            // so they stack below the character name automatically.
+            var textPanel =
+                _dialogueContentText != null ? _dialogueContentText.transform.parent : null;
+
+            if (textPanel != null)
+            {
+                foreach (var (choiceUuid, choiceLocalizedText) in choices)
+                {
+                    var buttonGameObject = new GameObject($"Choice_{choiceUuid.Substring(0, 8)}");
+                    buttonGameObject.transform.SetParent(textPanel, false);
+
+                    // TextMeshProUGUI acts as both the visual and the raycast target
+                    var buttonText = buttonGameObject.AddComponent<TextMeshProUGUI>();
+                    buttonText.fontSize = 20f;
+                    buttonText.alignment = TextAlignmentOptions.TopLeft;
+                    buttonText.textWrappingMode = TextWrappingModes.Normal;
+                    buttonText.overflowMode = TextOverflowModes.Overflow;
+                    buttonText.raycastTarget = true;
+
+                    // LayoutElement ensures consistent sizing in the vertical layout
+                    var layoutElement = buttonGameObject.AddComponent<LayoutElement>();
+                    layoutElement.preferredHeight = 32f;
+                    layoutElement.flexibleWidth = 1f;
+
+                    // ChoiceButtonItem handles hover color change and click detection
+                    var choiceButton = buttonGameObject.AddComponent<ChoiceButtonItem>();
+                    choiceButton.Initialize(choiceUuid, choiceLocalizedText, onChoiceSelected);
+
+                    _dynamicChoiceButtons.Add(buttonGameObject);
+                }
+            }
+
+            _isShowingChoices = true;
+            _isBubbleVisible = true;
+            StartFadeIn();
+        }
+
+        /// <summary>
+        /// Remove all dynamically created choice buttons and restore the dialogue text area.
+        /// Called when a choice is selected, when the bubble is hidden, or before showing new choices.
+        /// </summary>
+        public void HideChoices()
+        {
+            foreach (var buttonGameObject in _dynamicChoiceButtons)
+            {
+                if (buttonGameObject != null)
+                {
+                    Destroy(buttonGameObject);
+                }
+            }
+            _dynamicChoiceButtons.Clear();
+
+            // Restore dialogue text visibility for future dialogue blocks
+            if (_dialogueContentText != null && _isShowingChoices)
+            {
+                _dialogueContentText.gameObject.SetActive(true);
+            }
+
+            _isShowingChoices = false;
+        }
+
+        /// <summary>
         /// Hide the speech bubble. Uses CanvasGroup.alpha = 0 to hide
         /// without deactivating the GameObject.
         /// </summary>
@@ -184,6 +293,9 @@ namespace LSDE.Demo
             {
                 _typewriterEffect.Skip();
             }
+
+            // Clean up any choice buttons before hiding
+            HideChoices();
 
             StopFade();
             SetBubbleVisible(false);

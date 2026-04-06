@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using LSDE.Runtime;
 using LsdeDialogEngine;
 using UnityEngine;
@@ -234,19 +235,77 @@ namespace LSDE.Demo
             Action<string> selectChoiceAndAdvance
         )
         {
-            // Phase 2b: auto-select first choice (no UI buttons yet).
-            // Phase 3 will display choice buttons in the bubble.
-            Debug.Log(
-                $"{LogPrefix} CHOICE  {choiceBlock.Label} — {visibleChoices.Count} visible (auto-selecting first)"
-            );
-
-            // Clear click advancer — choices don't use click-anywhere
+            // Clear click advancer — choices use their own buttons, not click-anywhere
             _dialogueClickAdvancer.ClearAllPendingAdvances();
 
-            if (visibleChoices.Count > 0)
+            if (visibleChoices.Count == 0)
             {
-                selectChoiceAndAdvance(visibleChoices[0].Uuid);
+                Debug.LogWarning(
+                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — no visible choices. Skipping."
+                );
+                return;
             }
+
+            // Extract the character from the block's metadata to find the correct bubble.
+            // The choice block's Metadata.Characters contains the character assigned in the editor.
+            var choiceCharacter = choiceBlock.Metadata?.Characters?.FirstOrDefault();
+            if (choiceCharacter == null)
+            {
+                Debug.LogWarning(
+                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — no character in metadata. "
+                        + "Auto-selecting first choice."
+                );
+                selectChoiceAndAdvance(visibleChoices[0].Uuid);
+                return;
+            }
+
+            var characterMarker = _characterRegistry.FindMarkerByCharacterId(choiceCharacter.Id);
+            if (characterMarker == null)
+            {
+                Debug.LogWarning(
+                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — character '{choiceCharacter.Id}' "
+                        + "not found in scene. Auto-selecting first choice."
+                );
+                selectChoiceAndAdvance(visibleChoices[0].Uuid);
+                return;
+            }
+
+            var bubbleController =
+                characterMarker.BubbleAnchorPoint.GetComponentInChildren<SpeechBubbleController>(
+                    true
+                );
+
+            if (bubbleController == null)
+            {
+                Debug.LogWarning(
+                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — no SpeechBubbleController on "
+                        + $"character '{choiceCharacter.Id}'. Auto-selecting first choice."
+                );
+                selectChoiceAndAdvance(visibleChoices[0].Uuid);
+                return;
+            }
+
+            var blockUuid = choiceBlock.Uuid;
+            var characterName = choiceCharacter.Name ?? choiceCharacter.Id;
+
+            // Track this bubble for cleanup in PresentBlockCleanup
+            _activeBubblesByBlockUuid[blockUuid] = bubbleController;
+
+            // Build the localized choice list for the bubble
+            var choiceDisplayItems = new List<(string uuid, string localizedText)>();
+            foreach (var choice in visibleChoices)
+            {
+                var localizedText = LsdeUtils.GetLocalizedText(choice.DialogueText);
+                choiceDisplayItems.Add((choice.Uuid, localizedText ?? choice.Label ?? "???"));
+            }
+
+            // Show choice buttons in the bubble — the bubble handles layout and interaction
+            bubbleController.ShowChoices(characterName, choiceDisplayItems, selectChoiceAndAdvance);
+
+            Debug.Log(
+                $"{LogPrefix} CHOICE  {choiceBlock.Label} — {characterName}: "
+                    + $"{visibleChoices.Count} choices displayed"
+            );
         }
 
         /// <inheritdoc />
