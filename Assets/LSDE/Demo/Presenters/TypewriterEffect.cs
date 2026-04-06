@@ -15,6 +15,12 @@ namespace LSDE.Demo
     ///
     /// Attach this component to the same GameObject as the <see cref="TextMeshProUGUI"/>
     /// that displays dialogue content.
+    ///
+    /// <b>Text ownership:</b> The <see cref="Play"/> method receives the dialogue text
+    /// and assigns it to the TMP component internally. Character counting uses the
+    /// raw string length — zero dependency on TMP mesh processing (textInfo,
+    /// GetParsedText, ForceMeshUpdate). This ensures reliability even on the very
+    /// first text display after scene load.
     /// </summary>
     public class TypewriterEffect : MonoBehaviour
     {
@@ -32,6 +38,14 @@ namespace LSDE.Demo
         private TextMeshProUGUI _textComponent;
         private Coroutine _activeTypewriterCoroutine;
         private bool _isTypewriterPlaying;
+
+        /// <summary>
+        /// The full dialogue text passed to <see cref="Play"/>.
+        /// Stored so the coroutine and <see cref="Skip"/> can use the original
+        /// string length for character counting — completely independent of
+        /// TMP's internal mesh state (textInfo, GetParsedText, etc.).
+        /// </summary>
+        private string _currentDialogueText;
 
         /// <summary>
         /// Cached WaitForSeconds for normal character delay.
@@ -56,33 +70,43 @@ namespace LSDE.Demo
         }
 
         /// <summary>
-        /// Start revealing the text that is already assigned to the TextMeshProUGUI component.
-        /// The text must be set on the TMP component BEFORE calling this method.
-        /// When the animation finishes (or is skipped), <paramref name="onComplete"/> is invoked.
+        /// Start revealing the given dialogue text character by character.
+        /// This method assigns the text to the TMP component, hides all characters,
+        /// and starts the reveal coroutine.
+        ///
+        /// The <paramref name="dialogueText"/> is stored internally so that character
+        /// counting uses the raw string length — no dependency on TMP mesh processing.
         /// </summary>
+        /// <param name="dialogueText">The plain dialogue text to reveal (no rich text tags).</param>
         /// <param name="onComplete">Callback invoked when all characters are visible.</param>
-        public void Play(Action onComplete)
+        public void Play(string dialogueText, Action onComplete = null)
         {
             Stop();
 
             if (_textComponent == null)
             {
+                _textComponent = GetComponent<TextMeshProUGUI>();
+            }
+
+            if (_textComponent == null || string.IsNullOrEmpty(dialogueText))
+            {
                 onComplete?.Invoke();
                 return;
             }
 
+            _currentDialogueText = dialogueText;
             _isTypewriterPlaying = true;
-            _textComponent.maxVisibleCharacters = 0;
 
-            // Force TMP to process the mesh so textInfo.characterCount is accurate
-            _textComponent.ForceMeshUpdate();
+            // Assign full text so TMP computes the final layout (and BubbleSizeFitter
+            // gets the correct size immediately). Then hide all characters.
+            _textComponent.text = dialogueText;
+            _textComponent.maxVisibleCharacters = 0;
 
             _activeTypewriterCoroutine = StartCoroutine(RevealCharactersCoroutine(onComplete));
         }
 
         /// <summary>
         /// Immediately reveal all characters, stopping the coroutine.
-        /// The onComplete callback from <see cref="Play"/> will still be invoked.
         /// </summary>
         public void Skip()
         {
@@ -97,9 +121,9 @@ namespace LSDE.Demo
                 _activeTypewriterCoroutine = null;
             }
 
-            if (_textComponent != null)
+            if (_textComponent != null && _currentDialogueText != null)
             {
-                _textComponent.maxVisibleCharacters = _textComponent.textInfo.characterCount;
+                _textComponent.maxVisibleCharacters = _currentDialogueText.Length;
             }
 
             _isTypewriterPlaying = false;
@@ -118,6 +142,7 @@ namespace LSDE.Demo
             }
 
             _isTypewriterPlaying = false;
+            _currentDialogueText = null;
         }
 
         /// <summary>
@@ -134,20 +159,21 @@ namespace LSDE.Demo
         /// <summary>
         /// Coroutine that reveals characters one at a time with appropriate delays.
         /// Punctuation characters get a longer pause for natural reading rhythm.
+        ///
+        /// Uses <see cref="_currentDialogueText"/> (the raw string) for character counting
+        /// and punctuation detection — zero dependency on TMP internals (textInfo,
+        /// GetParsedText, ForceMeshUpdate). This is reliable on every frame, including
+        /// the very first text display after scene load.
         /// </summary>
         private IEnumerator RevealCharactersCoroutine(Action onComplete)
         {
-            int totalCharacterCount = _textComponent.textInfo.characterCount;
+            int totalCharacterCount = _currentDialogueText.Length;
 
             for (int characterIndex = 0; characterIndex < totalCharacterCount; characterIndex++)
             {
                 _textComponent.maxVisibleCharacters = characterIndex + 1;
 
-                // Determine if this character is punctuation for a longer pause
-                char revealedCharacter = _textComponent
-                    .textInfo
-                    .characterInfo[characterIndex]
-                    .character;
+                char revealedCharacter = _currentDialogueText[characterIndex];
 
                 if (IsPunctuationCharacter(revealedCharacter))
                 {

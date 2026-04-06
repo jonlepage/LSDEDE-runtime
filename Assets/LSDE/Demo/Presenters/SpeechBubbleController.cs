@@ -126,23 +126,35 @@ namespace LSDE.Demo
                 _characterNameText.text = characterName;
             }
 
-            if (_dialogueContentText != null)
-            {
-                _dialogueContentText.text = dialogueText;
-            }
-
             // Start fade-in animation (alpha 0 → 1 with ease-out)
             _isBubbleVisible = true;
             StartFadeIn();
 
-            // Start typewriter effect in parallel with the fade-in
+            // Lazy-resolve TypewriterEffect if WarmUp didn't catch it.
+            // This handles initialization order edge cases where WarmUp ran
+            // before TypewriterEffect.Awake() completed, or where SetActive
+            // triggered a reentrant WarmUp call during the first activation.
+            if (_typewriterEffect == null && _dialogueContentText != null)
+            {
+                _typewriterEffect = _dialogueContentText.GetComponent<TypewriterEffect>();
+            }
+
+            // Start typewriter effect in parallel with the fade-in.
+            // TypewriterEffect.Play() handles text assignment internally —
+            // it sets the full text on the TMP component and then hides characters.
+            // If no typewriter is available, assign text directly as fallback.
             if (_typewriterEffect != null)
             {
-                _typewriterEffect.Play(onTypewriterComplete);
+                _typewriterEffect.Play(dialogueText, onTypewriterComplete);
             }
             else
             {
-                // No typewriter component — reveal all text immediately
+                // No typewriter component — assign text directly and reveal immediately
+                if (_dialogueContentText != null)
+                {
+                    _dialogueContentText.text = dialogueText;
+                }
+
                 onTypewriterComplete?.Invoke();
             }
         }
@@ -165,6 +177,14 @@ namespace LSDE.Demo
         /// </summary>
         public void HideDialogue()
         {
+            // Stop the typewriter coroutine if it's still running.
+            // Without this, hiding a bubble during typewriter playback
+            // leaves a coroutine ticking on an invisible object.
+            if (_typewriterEffect != null && _typewriterEffect.IsPlaying)
+            {
+                _typewriterEffect.Skip();
+            }
+
             StopFade();
             SetBubbleVisible(false);
         }

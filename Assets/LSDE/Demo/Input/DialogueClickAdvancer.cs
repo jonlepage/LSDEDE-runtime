@@ -26,6 +26,16 @@ namespace LSDE.Demo
         private SpeechBubbleController _activeBubbleController;
 
         /// <summary>
+        /// The frame number on which <see cref="SetPendingAdvance"/> was last called.
+        /// Clicks on this exact frame are ignored to prevent the "phantom click" problem:
+        /// the player's click to START the dialogue (via NPC interaction) would otherwise
+        /// also be detected as a click to skip the typewriter, because both the dialogue
+        /// trigger and this advancer process the same <c>wasPressedThisFrame</c> input
+        /// within a single Unity frame.
+        /// </summary>
+        private int _armedOnFrame = -1;
+
+        /// <summary>
         /// Whether there is a pending dialogue advance waiting for a click.
         /// </summary>
         public bool HasPendingAdvance => _pendingAdvanceCallback != null;
@@ -46,6 +56,7 @@ namespace LSDE.Demo
         {
             _pendingAdvanceCallback = advanceCallback;
             _activeBubbleController = activeBubbleController;
+            _armedOnFrame = Time.frameCount;
         }
 
         /// <summary>
@@ -82,6 +93,20 @@ namespace LSDE.Demo
 
             if (!currentMouse.leftButton.wasPressedThisFrame)
             {
+                return;
+            }
+
+            // Ignore clicks on the same frame the advancer was armed.
+            // This prevents the "phantom click" where the player's click to START
+            // the dialogue (via NPC interaction) is also detected as a click to
+            // skip the typewriter — both systems see the same wasPressedThisFrame.
+            if (Time.frameCount == _armedOnFrame)
+            {
+                // TODO: Remove this log once the phantom click fix is confirmed working.
+                Debug.Log(
+                    "[LSDE] Phantom click blocked — ignoring click on the same frame "
+                        + $"the advancer was armed (frame {_armedOnFrame})."
+                );
                 return;
             }
 
