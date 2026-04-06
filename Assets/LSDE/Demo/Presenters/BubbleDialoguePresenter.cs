@@ -532,6 +532,15 @@ namespace LSDE.Demo
             HideAllActiveBubbles();
             CancelAllActiveTimeoutCoroutines();
             _dialogueClickAdvancer.ClearAllPendingAdvances();
+
+            // Reset camera to normal follow mode (clears shake, resumes follow).
+            // This ensures the camera returns to tracking the player after
+            // a scene that left it paused on a non-player character.
+            if (_actionExecutor != null)
+            {
+                _actionExecutor.ResetCameraState();
+            }
+
             Debug.Log($"{LogPrefix} === Scene Exit ===");
         }
 

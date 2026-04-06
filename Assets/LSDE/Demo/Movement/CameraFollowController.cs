@@ -107,11 +107,18 @@ namespace LSDE.Demo
         private bool _isFollowPaused;
 
         /// <summary>
-        /// Additive position offset applied after all other camera logic in LateUpdate.
+        /// Position offset to apply this frame for camera shake.
         /// Set each frame by a camera shake coroutine, reset to zero when shake ends.
         /// Works both during normal follow and when follow is paused.
         /// </summary>
         private Vector3 _shakeOffset;
+
+        /// <summary>
+        /// The shake offset that was actually applied to the camera position last frame.
+        /// Used to undo the previous frame's shake before applying the new one,
+        /// preventing cumulative drift when follow is paused.
+        /// </summary>
+        private Vector3 _previousAppliedShakeOffset;
 
         /// <summary>
         /// The camera position offset in world space (height, distance behind, etc.).
@@ -279,16 +286,26 @@ namespace LSDE.Demo
         }
 
         /// <summary>
-        /// Apply the additive shake offset to the camera position.
-        /// Called at the end of LateUpdate so shake works both during
-        /// normal follow and when follow is paused by a camera command.
+        /// Apply the shake offset to the camera position, undoing the previous
+        /// frame's offset first to prevent cumulative drift.
+        ///
+        /// When follow is active, the follow logic recalculates position from scratch
+        /// each frame, so the undo is redundant but harmless.
+        /// When follow is paused, the undo is critical — without it, each frame's
+        /// random shake would accumulate and the camera would drift away.
         /// </summary>
         private void ApplyShakeOffset()
         {
+            // Undo last frame's shake to restore the "clean" base position
+            transform.position -= _previousAppliedShakeOffset;
+
+            // Apply this frame's shake
             if (_shakeOffset != Vector3.zero)
             {
                 transform.position += _shakeOffset;
             }
+
+            _previousAppliedShakeOffset = _shakeOffset;
         }
     }
 }

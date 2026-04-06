@@ -17,7 +17,7 @@ namespace LSDE.Demo
     ///
     /// Camera actions (<c>shakeCamera</c>, <c>moveCameraToLabel</c>) use the
     /// <see cref="CameraFollowController"/> API (pause/resume/shake offset).
-    /// Character movement (<c>moveCharacterAt</c>) is still simulated for now.
+    /// Character movement (<c>moveCharacterAt</c>) uses <see cref="CharacterMovementController"/>.
     ///
     /// Uses <see cref="lsdeActionId"/> constants for compile-time validated matching.
     /// Never use string literals for action IDs.
@@ -31,24 +31,51 @@ namespace LSDE.Demo
         [SerializeField]
         [Tooltip(
             "The character registry that maps LSDE character IDs to scene GameObjects. "
-                + "Required for moveCameraToLabel to find character positions."
+                + "Required for moveCameraToLabel and moveCharacterAt."
         )]
         private DialogueCharacterRegistry _characterRegistry;
+
+        [Header("Camera Settings")]
+        [SerializeField]
+        [Tooltip(
+            "The LSDE character ID of the player character. When moveCameraToLabel targets "
+                + "this character, the camera resumes following after arriving. "
+                + "For other targets, the camera stays on the target until the next command."
+        )]
+        private string _playerCharacterId = lsdeCharacter.l4;
+
+        [SerializeField]
+        [Tooltip(
+            "Scaling factor that converts blueprint shake intensity values "
+                + "(designed for 2D pixel space) to Unity 3D world units. "
+                + "Blueprint uses values like 5, 8, 16 — in 3D these need to be smaller."
+        )]
+        private float _shakeIntensityWorldScaleFactor = 0.02f;
+
+        [Header("Character Movement Settings")]
+        [SerializeField]
+        [Tooltip(
+            "Scaling factor that converts blueprint pixel offsets to Unity 3D world units. "
+                + "Blueprint uses pixel values (e.g. 800px). Multiply by this factor "
+                + "to get 3D distances. Example: 800px * 0.01 = 8 world units."
+        )]
+        private float _pixelToWorldScaleFactor = 0.01f;
+
+        [SerializeField]
+        [Tooltip(
+            "World-space origin point for absolute character positioning. "
+                + "When moveCharacterAt uses isAbsolute=true, offsets are relative to this point. "
+                + "Default (0,0,0) means the center of the scene."
+        )]
+        private Vector3 _absolutePositionOrigin = Vector3.zero;
 
         private const string LogPrefix = "[LSDE Action]";
 
         /// <summary>
-        /// Default simulated duration in seconds for actions that don't have
-        /// an explicit duration parameter (e.g. <c>moveCharacterAt</c>).
+        /// Default duration in seconds for actions that don't have
+        /// an explicit duration parameter.
         /// </summary>
         private const float DefaultDurationInSeconds = 0.5f;
-
-        /// <summary>
-        /// Intensity scaling factor that converts blueprint intensity values
-        /// (designed for 2D pixel space) to Unity 3D world units.
-        /// Blueprint uses values like 5, 8, 16 — in 3D these need to be much smaller.
-        /// </summary>
-        private const float ShakeIntensityWorldScaleFactor = 0.02f;
 
         /// <inheritdoc />
         public IEnumerator ExecuteAction(ExportAction action)
@@ -73,6 +100,22 @@ namespace LSDE.Demo
                     );
                     yield break;
             }
+        }
+
+        /// <summary>
+        /// Reset camera state to normal follow mode. Clears any active shake offset
+        /// and resumes the follow controller. Called by the presenter during scene exit
+        /// to ensure the camera returns to its default behavior.
+        /// </summary>
+        public void ResetCameraState()
+        {
+            if (_cameraFollowController == null)
+            {
+                return;
+            }
+
+            _cameraFollowController.SetShakeOffset(Vector3.zero);
+            _cameraFollowController.ResumeFollow();
         }
 
         /// <summary>
@@ -106,13 +149,11 @@ namespace LSDE.Demo
                 yield break;
             }
 
-            // Scale intensity from blueprint 2D values to 3D world units
-            float worldIntensity = intensity * ShakeIntensityWorldScaleFactor;
+            float worldIntensity = intensity * _shakeIntensityWorldScaleFactor;
             float elapsedTime = 0f;
 
             while (elapsedTime < durationInSeconds)
             {
-                // Random offset on X and Y axes (Z stays 0 to avoid depth shift)
                 var shakeOffset = new Vector3(
                     UnityEngine.Random.Range(-1f, 1f) * worldIntensity,
                     UnityEngine.Random.Range(-1f, 1f) * worldIntensity,
@@ -124,7 +165,6 @@ namespace LSDE.Demo
                 yield return null;
             }
 
-            // Reset shake offset when done
             _cameraFollowController.SetShakeOffset(Vector3.zero);
 
             Debug.Log($"{LogPrefix} shakeCamera — complete");
@@ -132,12 +172,12 @@ namespace LSDE.Demo
 
         /// <summary>
         /// Smoothly move the camera to focus on a character identified by label.
-        /// Pauses the camera follow, lerps to the character's position (+ camera offset),
-        /// then leaves follow paused so the camera stays on the target until the engine
-        /// naturally resumes (e.g. next block focuses on another character, or scene exits).
-        ///
-        /// Uses ease-in-out cubic easing for smooth cinematic movement,
-        /// matching the TS <c>moveCameraToPosition</c> with time-based mode.
+        /// Pauses the camera follow, lerps to the character's position (+ camera offset)
+        /// with ease-in-out cubic easing, then:
+        /// - If the target is the player character (<see cref="_playerCharacterId"/>):
+        ///   resumes follow so the camera tracks the player again.
+        /// - Otherwise: leaves follow paused so the camera stays on the target
+        ///   until the next camera command or scene exit.
         ///
         /// Params: [0] label (string, character ID), [1] duration in seconds (number).
         /// </summary>
@@ -167,7 +207,6 @@ namespace LSDE.Demo
                 yield break;
             }
 
-            // Find the character's position in the scene
             var characterMarker = _characterRegistry.FindMarkerByCharacterId(label);
             if (characterMarker == null)
             {
@@ -179,7 +218,6 @@ namespace LSDE.Demo
             }
 
             // Target position = character ground position + camera offset
-            // Use Y=0 (ground level) to match the follow controller's behavior
             Vector3 characterGroundPosition = new Vector3(
                 characterMarker.transform.position.x,
                 0f,
@@ -188,7 +226,6 @@ namespace LSDE.Demo
             Vector3 targetCameraPosition =
                 characterGroundPosition + _cameraFollowController.CameraOffset;
 
-            // Pause follow so the follow controller doesn't fight our position changes
             _cameraFollowController.PauseFollow();
 
             Vector3 startCameraPosition = _cameraFollowController.transform.position;
@@ -198,10 +235,6 @@ namespace LSDE.Demo
             {
                 elapsedTime += Time.deltaTime;
                 float linearProgress = Mathf.Clamp01(elapsedTime / durationInSeconds);
-
-                // Ease-in-out cubic: smooth acceleration and deceleration
-                // t < 0.5: 4t^3 (ease in)
-                // t >= 0.5: 1 - (-2t+2)^3/2 (ease out)
                 float easedProgress = EaseInOutCubic(linearProgress);
 
                 _cameraFollowController.transform.position = Vector3.Lerp(
@@ -213,20 +246,40 @@ namespace LSDE.Demo
                 yield return null;
             }
 
-            // Snap to final position
             _cameraFollowController.transform.position = targetCameraPosition;
 
-            // Resume follow so the camera smoothly catches back to the player
-            _cameraFollowController.ResumeFollow();
+            // Resume follow only when returning to the player character.
+            // For other targets, the camera stays on the target until the next
+            // camera command or scene exit (which calls ResetCameraState).
+            bool isTargetingPlayerCharacter = string.Equals(
+                label,
+                _playerCharacterId,
+                StringComparison.OrdinalIgnoreCase
+            );
+
+            if (isTargetingPlayerCharacter)
+            {
+                _cameraFollowController.ResumeFollow();
+            }
 
             Debug.Log($"{LogPrefix} moveCameraToLabel — complete");
         }
 
         /// <summary>
-        /// Simulate moving a character to a position.
+        /// Move a character to a target position using <see cref="CharacterMovementController"/>.
+        /// The character walks to the target with hop animation and collision handling.
+        ///
+        /// Two positioning modes:
+        /// - <b>Relative</b> (<c>isAbsolute=false</c>): offset from the character's current position.
+        ///   Example: character at X=500, offsetX=-100 → target = 400.
+        /// - <b>Absolute</b> (<c>isAbsolute=true</c>): offset from <see cref="_absolutePositionOrigin"/>.
+        ///   The dev configures the origin point (default: scene center at 0,0,0).
+        ///
+        /// Blueprint offsets are in 2D pixel space. <see cref="_pixelToWorldScaleFactor"/>
+        /// converts them to 3D world units (e.g. 800px * 0.01 = 8 units).
+        ///
         /// Params: [0] characterId (string), [1] offsetX (number),
         ///         [2] offsetY (number, optional), [3] isAbsolute (boolean, optional).
-        /// Currently logs and waits — real character movement is a future enhancement.
         /// </summary>
         /// <param name="parameters">Ordered parameter values from the blueprint action.</param>
         private IEnumerator ExecuteMoveCharacterAt(List<object> parameters)
@@ -241,7 +294,69 @@ namespace LSDE.Demo
                     + $"offsetX={offsetX}, offsetY={offsetY}, absolute={isAbsolute}"
             );
 
-            yield return new WaitForSeconds(DefaultDurationInSeconds);
+            if (_characterRegistry == null)
+            {
+                Debug.LogWarning(
+                    $"{LogPrefix} No CharacterRegistry assigned — cannot move character."
+                );
+                yield return new WaitForSeconds(DefaultDurationInSeconds);
+                yield break;
+            }
+
+            var characterMarker = _characterRegistry.FindMarkerByCharacterId(characterId);
+            if (characterMarker == null)
+            {
+                Debug.LogWarning($"{LogPrefix} Character '{characterId}' not found in scene.");
+                yield return new WaitForSeconds(DefaultDurationInSeconds);
+                yield break;
+            }
+
+            var movementController = characterMarker.GetComponent<CharacterMovementController>();
+            if (movementController == null)
+            {
+                Debug.LogWarning(
+                    $"{LogPrefix} No CharacterMovementController on character '{characterId}'."
+                );
+                yield return new WaitForSeconds(DefaultDurationInSeconds);
+                yield break;
+            }
+
+            // Convert 2D pixel offsets to 3D world units
+            // Blueprint X axis → Unity X axis (left/right)
+            // Blueprint Y axis → Unity Z axis (forward/back)
+            float worldOffsetX = offsetX * _pixelToWorldScaleFactor;
+            float worldOffsetZ = offsetY * _pixelToWorldScaleFactor;
+
+            Vector3 targetPosition;
+
+            if (isAbsolute)
+            {
+                // Absolute: offset from the configurable origin point
+                targetPosition = new Vector3(
+                    _absolutePositionOrigin.x + worldOffsetX,
+                    characterMarker.transform.position.y,
+                    _absolutePositionOrigin.z + worldOffsetZ
+                );
+            }
+            else
+            {
+                // Relative: offset from the character's current position
+                targetPosition = new Vector3(
+                    characterMarker.transform.position.x + worldOffsetX,
+                    characterMarker.transform.position.y,
+                    characterMarker.transform.position.z + worldOffsetZ
+                );
+            }
+
+            Debug.Log($"{LogPrefix} moveCharacterAt — target world position: {targetPosition}");
+
+            movementController.SetMovementTarget(targetPosition);
+
+            // Wait for the character to arrive (or stop moving due to stuck detection)
+            while (movementController.IsCharacterMoving)
+            {
+                yield return null;
+            }
 
             Debug.Log($"{LogPrefix} moveCharacterAt — complete");
         }
