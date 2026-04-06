@@ -99,6 +99,58 @@ namespace LSDE.Demo
         private Vector3 _previousTargetGroundPosition;
 
         /// <summary>
+        /// When true, the follow logic in LateUpdate is skipped entirely.
+        /// Used by camera commands (e.g. <c>moveCameraToLabel</c>) to take full control
+        /// of the camera position without fighting the follow lerp.
+        /// Matches the TS <c>pauseCameraFollow</c> / <c>resumeCameraFollow</c> pattern.
+        /// </summary>
+        private bool _isFollowPaused;
+
+        /// <summary>
+        /// Additive position offset applied after all other camera logic in LateUpdate.
+        /// Set each frame by a camera shake coroutine, reset to zero when shake ends.
+        /// Works both during normal follow and when follow is paused.
+        /// </summary>
+        private Vector3 _shakeOffset;
+
+        /// <summary>
+        /// The camera position offset in world space (height, distance behind, etc.).
+        /// Exposed so action executors can compute the correct target position
+        /// for camera commands (character position + this offset = desired camera position).
+        /// </summary>
+        public Vector3 CameraOffset => _cameraOffset;
+
+        /// <summary>
+        /// Pause the follow logic. The camera will stay at its current position
+        /// until <see cref="ResumeFollow"/> is called. Camera commands and shake
+        /// can still modify the position while follow is paused.
+        /// </summary>
+        public void PauseFollow()
+        {
+            _isFollowPaused = true;
+        }
+
+        /// <summary>
+        /// Resume the follow logic after a pause. The camera will smoothly
+        /// catch up to the target position from wherever it currently is.
+        /// </summary>
+        public void ResumeFollow()
+        {
+            _isFollowPaused = false;
+        }
+
+        /// <summary>
+        /// Set the additive shake offset for this frame. Must be called every frame
+        /// during a shake effect. Set to <see cref="Vector3.zero"/> when the shake ends.
+        /// The offset is applied in LateUpdate after the follow position is computed.
+        /// </summary>
+        /// <param name="offset">The shake displacement to add to the camera position.</param>
+        public void SetShakeOffset(Vector3 offset)
+        {
+            _shakeOffset = offset;
+        }
+
+        /// <summary>
         /// Set a fixed base rotation and snap to the initial position.
         /// The TS camera never rotates — it only translates the world pivot.
         /// We replicate this by computing the rotation once from the offset direction.
@@ -134,6 +186,15 @@ namespace LSDE.Demo
         {
             if (_targetToFollow == null)
             {
+                ApplyShakeOffset();
+                return;
+            }
+
+            if (_isFollowPaused)
+            {
+                // Follow is paused — camera position is controlled externally
+                // (e.g. by a moveCameraToLabel coroutine). Only apply shake.
+                ApplyShakeOffset();
                 return;
             }
 
@@ -212,6 +273,22 @@ namespace LSDE.Demo
                 _baseRotation
                 * Quaternion.Euler(_rotationOffset)
                 * Quaternion.Euler(0f, _currentDynamicYaw, _currentDynamicRoll);
+
+            // Apply shake after follow position is fully computed
+            ApplyShakeOffset();
+        }
+
+        /// <summary>
+        /// Apply the additive shake offset to the camera position.
+        /// Called at the end of LateUpdate so shake works both during
+        /// normal follow and when follow is paused by a camera command.
+        /// </summary>
+        private void ApplyShakeOffset()
+        {
+            if (_shakeOffset != Vector3.zero)
+            {
+                transform.position += _shakeOffset;
+            }
         }
     }
 }
