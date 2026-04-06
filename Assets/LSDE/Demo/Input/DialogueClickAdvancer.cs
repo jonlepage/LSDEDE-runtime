@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -6,24 +7,47 @@ namespace LSDE.Demo
 {
     /// <summary>
     /// Listens for mouse clicks and manages dialogue flow advancement with typewriter support.
+    /// Supports multiple simultaneous dialogue blocks (multi-track parallel dialogue).
     ///
     /// Click behavior depends on the current state:
     /// <list type="bullet">
-    ///   <item>If the typewriter is playing → first click skips the typewriter (reveals all text)</item>
-    ///   <item>If text is fully revealed → click advances the engine to the next block</item>
+    ///   <item>If any typewriter is playing → first click skips ALL typewriters (reveals all text)</item>
+    ///   <item>If all text is fully revealed → click advances ALL waiting blocks (broadcast)</item>
     /// </list>
     ///
-    /// The <see cref="BubbleDialoguePresenter"/> stores the pending advance callback here
-    /// when a DIALOG block is displayed. It also provides a reference to the active
-    /// <see cref="SpeechBubbleController"/> so we can check typewriter state and skip it.
+    /// The <see cref="BubbleDialoguePresenter"/> registers pending advance callbacks here
+    /// when DIALOG blocks are displayed. It also provides references to the active
+    /// <see cref="SpeechBubbleController"/> instances so we can check typewriter state and skip them.
+    ///
+    /// In single-track mode (e.g. simpleDialogFlow), only one entry exists in the dictionary
+    /// at a time — behavior is identical to a single-callback model.
+    ///
+    /// In multi-track mode (e.g. multiTracks), multiple entries coexist. A single click
+    /// broadcasts to ALL waiting blocks: every track that needs acknowledgement reacts
+    /// to the same player interaction at once.
     ///
     /// Clicking does NOT block other interactions (e.g. player movement).
     /// The click simply also advances dialogue if one is pending.
     /// </summary>
     public class DialogueClickAdvancer : MonoBehaviour
     {
-        private Action _pendingAdvanceCallback;
-        private SpeechBubbleController _activeBubbleController;
+        /// <summary>
+        /// Holds the advance callback and bubble controller for a single block
+        /// that is waiting for player input to proceed.
+        /// </summary>
+        private struct PendingAdvanceEntry
+        {
+            public Action AdvanceCallback;
+            public SpeechBubbleController BubbleController;
+        }
+
+        /// <summary>
+        /// All blocks currently waiting for a player click to advance.
+        /// Keyed by block UUID so that individual entries can be added/removed
+        /// independently when parallel dialogue tracks are active.
+        /// </summary>
+        private readonly Dictionary<string, PendingAdvanceEntry> _pendingAdvancesByBlockUuid =
+            new Dictionary<string, PendingAdvanceEntry>();
 
         /// <summary>
         /// The frame number on which <see cref="SetPendingAdvance"/> was last called.
@@ -36,51 +60,69 @@ namespace LSDE.Demo
         private int _armedOnFrame = -1;
 
         /// <summary>
-        /// Whether there is a pending dialogue advance waiting for a click.
+        /// Whether there are any pending dialogue advances waiting for a click.
         /// </summary>
-        public bool HasPendingAdvance => _pendingAdvanceCallback != null;
+        public bool HasPendingAdvance => _pendingAdvancesByBlockUuid.Count > 0;
 
         /// <summary>
-        /// Store the advance callback and active bubble controller.
-        /// Called by the presenter when a DIALOG block is shown to the player.
+        /// Store the advance callback and active bubble controller for a specific block.
+        /// Called by the presenter when a DIALOG block is shown and needs player input to advance.
         /// </summary>
+        /// <param name="blockUuid">The UUID of the dialogue block, used as dictionary key.</param>
         /// <param name="advanceCallback">The engine's Next callback that advances to the next block.</param>
         /// <param name="activeBubbleController">
         /// The currently visible bubble controller, used to check typewriter state
         /// and skip it on first click. Can be null if no typewriter support is needed.
         /// </param>
         public void SetPendingAdvance(
+            string blockUuid,
             Action advanceCallback,
             SpeechBubbleController activeBubbleController = null
         )
         {
-            _pendingAdvanceCallback = advanceCallback;
-            _activeBubbleController = activeBubbleController;
+            _pendingAdvancesByBlockUuid[blockUuid] = new PendingAdvanceEntry
+            {
+                AdvanceCallback = advanceCallback,
+                BubbleController = activeBubbleController,
+            };
             _armedOnFrame = Time.frameCount;
         }
 
         /// <summary>
-        /// Clear any pending advance callback and active bubble reference.
-        /// Called during block cleanup or when switching to a CHOICE block
+        /// Clear the pending advance callback for a specific block.
+        /// Called during individual block cleanup when the engine moves past this block,
+        /// or when a timeout coroutine auto-advances the block.
+        /// </summary>
+        /// <param name="blockUuid">The UUID of the block to clear.</param>
+        public void ClearPendingAdvanceForBlock(string blockUuid)
+        {
+            _pendingAdvancesByBlockUuid.Remove(blockUuid);
+        }
+
+        /// <summary>
+        /// Clear all pending advance callbacks.
+        /// Called during scene exit or when switching to a CHOICE block
         /// (choices use their own selection buttons, not click-anywhere).
         /// </summary>
-        public void ClearPendingAdvance()
+        public void ClearAllPendingAdvances()
         {
-            _pendingAdvanceCallback = null;
-            _activeBubbleController = null;
+            _pendingAdvancesByBlockUuid.Clear();
         }
 
         /// <summary>
         /// Unity calls Update every frame. We check for left mouse button press
         /// using the new Input System (UnityEngine.InputSystem).
         ///
-        /// Two-phase click behavior:
-        /// 1. If typewriter is playing → skip it (reveal all text), do NOT advance yet
-        /// 2. If text is fully visible → invoke advance callback to go to next block
+        /// Two-phase broadcast click behavior:
+        /// 1. If any typewriter is playing → skip ALL typewriters (reveal all text), do NOT advance yet
+        /// 2. If all text is fully visible → invoke ALL advance callbacks (broadcast to all waiting blocks)
+        ///
+        /// The broadcast pattern models "press to continue" — every track that needs
+        /// acknowledgement reacts to the same player interaction at once.
         /// </summary>
         private void Update()
         {
-            if (_pendingAdvanceCallback == null)
+            if (_pendingAdvancesByBlockUuid.Count == 0)
             {
                 return;
             }
@@ -105,19 +147,50 @@ namespace LSDE.Demo
                 return;
             }
 
-            // Phase 1: If typewriter is still playing, skip it (reveal all text)
-            // but do NOT advance to the next block yet — let the player read.
-            if (_activeBubbleController != null && _activeBubbleController.IsTypewriterPlaying)
+            // Phase 1: If ANY typewriter is still playing, skip ALL typewriters.
+            // Do NOT advance yet — let the player read the fully revealed text.
+            bool anyTypewriterIsPlaying = false;
+            foreach (var entry in _pendingAdvancesByBlockUuid.Values)
             {
-                _activeBubbleController.SkipTypewriter();
+                if (entry.BubbleController != null && entry.BubbleController.IsTypewriterPlaying)
+                {
+                    anyTypewriterIsPlaying = true;
+                    break;
+                }
+            }
+
+            if (anyTypewriterIsPlaying)
+            {
+                foreach (var entry in _pendingAdvancesByBlockUuid.Values)
+                {
+                    if (
+                        entry.BubbleController != null
+                        && entry.BubbleController.IsTypewriterPlaying
+                    )
+                    {
+                        entry.BubbleController.SkipTypewriter();
+                    }
+                }
                 return;
             }
 
-            // Phase 2: Text is fully visible — advance to the next block
-            var callbackToInvoke = _pendingAdvanceCallback;
-            _pendingAdvanceCallback = null;
-            _activeBubbleController = null;
-            callbackToInvoke();
+            // Phase 2: All text is fully visible — advance ALL waiting blocks.
+            // Snapshot callbacks before clearing to avoid mutation during invocation.
+            // Each next() call may synchronously trigger PresentBlockCleanup which calls
+            // ClearPendingAdvanceForBlock, modifying the dictionary while we iterate.
+            // By clearing first and invoking from the snapshot, cleanup re-entry calls
+            // Remove on an already-empty dictionary — safe no-op.
+            var callbacksToInvoke = new List<Action>(_pendingAdvancesByBlockUuid.Count);
+            foreach (var entry in _pendingAdvancesByBlockUuid.Values)
+            {
+                callbacksToInvoke.Add(entry.AdvanceCallback);
+            }
+            _pendingAdvancesByBlockUuid.Clear();
+
+            foreach (var advanceCallback in callbacksToInvoke)
+            {
+                advanceCallback();
+            }
         }
     }
 }

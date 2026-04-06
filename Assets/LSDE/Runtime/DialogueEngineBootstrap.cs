@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using LsdeDialogEngine;
 using UnityEngine;
 
@@ -156,14 +157,34 @@ namespace LSDE.Runtime
             _dialogueEngine.OnAction(actionHandler.HandleActionBlock);
         }
 
+        /// <summary>
+        /// Conversion factor from blueprint delay values (milliseconds) to seconds.
+        /// Blueprint JSON stores durations in milliseconds (e.g. 1000 for 1 second).
+        /// Unity's WaitForSeconds expects seconds.
+        /// </summary>
+        private const double MillisecondsToSeconds = 1000.0;
+
         private void RegisterLifecycleHandlers()
         {
             // OnBeforeBlock: MUST call Resolve() or the flow blocks permanently.
             // Resolve is a property on BeforeBlockArgs (not on Context).
+            // If the block has a delay (NativeProperties.Delay), we wait that duration
+            // before resolving — this defers the block's execution as intended by the
+            // narrative designer. The engine does NOT enforce delay automatically.
             _dialogueEngine.OnBeforeBlock(arguments =>
             {
                 DialoguePresenter.PresentBeforeBlock(arguments.Block);
-                arguments.Resolve();
+
+                var delayMilliseconds = arguments.Block.NativeProperties?.Delay;
+                if (delayMilliseconds.HasValue && delayMilliseconds.Value > 0)
+                {
+                    var delayInSeconds = (float)(delayMilliseconds.Value / MillisecondsToSeconds);
+                    StartCoroutine(DelayedResolveCoroutine(delayInSeconds, arguments.Resolve));
+                }
+                else
+                {
+                    arguments.Resolve();
+                }
             });
 
             _dialogueEngine.OnSceneEnter(arguments =>
@@ -186,6 +207,19 @@ namespace LSDE.Runtime
                 Debug.LogError($"[LSDE] Block invalidated: {arguments.Reason}");
                 arguments.Scene.Cancel();
             });
+        }
+
+        /// <summary>
+        /// Coroutine that waits for the specified delay then calls the resolve callback.
+        /// Used by OnBeforeBlock to defer block execution when a delay is specified
+        /// in the block's <see cref="NativeProperties.Delay"/>.
+        /// </summary>
+        /// <param name="delayInSeconds">How long to wait before resolving.</param>
+        /// <param name="resolve">The resolve callback that unblocks the engine flow.</param>
+        private IEnumerator DelayedResolveCoroutine(float delayInSeconds, Action resolve)
+        {
+            yield return new WaitForSeconds(delayInSeconds);
+            resolve();
         }
 
         private static void LogDiagnosticReport(DiagnosticReport report)
