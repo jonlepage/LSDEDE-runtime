@@ -33,6 +33,26 @@ namespace LSDE.Demo
         /// </summary>
         private SpeechBubbleController _activeBubbleController;
 
+        /// <summary>
+        /// Warm up all speech bubbles at startup so TextMeshPro initializes
+        /// its font atlas during scene load. This avoids the lag spike that occurs
+        /// when the first bubble is shown via SetActive for the first time.
+        /// Bubbles can stay disabled in the Editor (less visual clutter) —
+        /// they are activated and hidden (alpha=0) here at runtime.
+        /// </summary>
+        private void Start()
+        {
+            var allBubbleControllers = FindObjectsByType<SpeechBubbleController>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+
+            foreach (var bubbleController in allBubbleControllers)
+            {
+                bubbleController.WarmUp();
+            }
+        }
+
         /// <inheritdoc />
         public void PresentDialogueBlock(
             DialogBlock dialogBlock,

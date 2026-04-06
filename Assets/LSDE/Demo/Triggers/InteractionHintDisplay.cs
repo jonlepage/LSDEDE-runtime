@@ -8,6 +8,10 @@ namespace LSDE.Demo
     /// to indicate that the player can interact with them.
     /// The hint automatically faces the camera (billboard) each frame.
     ///
+    /// Visibility uses <see cref="TextMeshPro.enabled"/> instead of <c>SetActive</c>
+    /// to avoid the TMP first-activation lag spike. The GameObject stays active
+    /// so TMP initializes during scene load.
+    ///
     /// This component is controlled by <see cref="DialogueProximityTrigger"/>
     /// which calls <see cref="ShowHint"/> and <see cref="HideHint"/> based on
     /// proximity and dialogue state.
@@ -39,18 +43,21 @@ namespace LSDE.Demo
         private Camera _cachedMainCamera;
         private Vector3 _initialLocalPosition;
         private bool _isHintVisible;
+        private MeshRenderer _meshRenderer;
 
         private void Awake()
         {
             _initialLocalPosition = transform.localPosition;
+            _meshRenderer = GetComponent<MeshRenderer>();
 
             if (_hintText != null)
             {
                 _hintText.text = _displayText;
             }
 
-            // Start hidden — the trigger controls visibility
-            gameObject.SetActive(false);
+            // Start hidden via renderer — the GameObject stays active
+            // so TMP initializes its font atlas during scene load (no lag spike later).
+            SetHintRendererVisible(false);
         }
 
         /// <summary>
@@ -65,7 +72,7 @@ namespace LSDE.Demo
             }
 
             _isHintVisible = true;
-            gameObject.SetActive(true);
+            SetHintRendererVisible(true);
         }
 
         /// <summary>
@@ -80,7 +87,7 @@ namespace LSDE.Demo
             }
 
             _isHintVisible = false;
-            gameObject.SetActive(false);
+            SetHintRendererVisible(false);
 
             // Reset position so it doesn't resume mid-float
             transform.localPosition = _initialLocalPosition;
@@ -88,6 +95,11 @@ namespace LSDE.Demo
 
         private void LateUpdate()
         {
+            if (!_isHintVisible)
+            {
+                return;
+            }
+
             // Billboard — always face the camera
             if (_cachedMainCamera == null)
             {
@@ -104,6 +116,14 @@ namespace LSDE.Demo
             float floatingOffset =
                 Mathf.Sin(Time.time * _floatingSpeed * Mathf.PI * 2f) * _floatingAmplitude;
             transform.localPosition = _initialLocalPosition + new Vector3(0f, floatingOffset, 0f);
+        }
+
+        private void SetHintRendererVisible(bool visible)
+        {
+            if (_meshRenderer != null)
+            {
+                _meshRenderer.enabled = visible;
+            }
         }
     }
 }
