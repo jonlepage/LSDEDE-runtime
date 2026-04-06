@@ -129,6 +129,7 @@ namespace LSDE.Demo.Editor
             canvasGameObject.AddComponent<GraphicRaycaster>();
 
             var canvasRectTransform = canvasGameObject.GetComponent<RectTransform>();
+            // Initial size — will be driven dynamically by BubbleSizeFitter at runtime
             canvasRectTransform.sizeDelta = new Vector2(CanvasWidthInPixels, CanvasHeightInPixels);
             canvasRectTransform.localScale = new Vector3(
                 WorldScaleFactor,
@@ -138,6 +139,10 @@ namespace LSDE.Demo.Editor
             canvasRectTransform.localPosition = Vector3.zero;
             // Pivot at bottom-center so the bubble grows upward from the anchor
             canvasRectTransform.pivot = new Vector2(0.5f, 0f);
+
+            // BubbleSizeFitter syncs the canvas size with the text content
+            // so the procedural bubble always wraps tightly around the text.
+            var bubbleSizeFitter = canvasGameObject.AddComponent<BubbleSizeFitter>();
 
             // --- ProceduralSpeechBubble (draws rounded rect + outline + tail with geometry) ---
             // No sprite needed — the shape is resolution-independent, never pixelates.
@@ -233,6 +238,12 @@ namespace LSDE.Demo.Editor
             serializedBubbleController.FindProperty("_dialogueContentText").objectReferenceValue =
                 dialogueContentText;
             serializedBubbleController.ApplyModifiedProperties();
+
+            // --- Wire BubbleSizeFitter to the TextPanel ---
+            var serializedSizeFitter = new SerializedObject(bubbleSizeFitter);
+            serializedSizeFitter.FindProperty("_textPanelRectTransform").objectReferenceValue =
+                textPanelRectTransform;
+            serializedSizeFitter.ApplyModifiedProperties();
 
             // Start hidden — the presenter will show it when a DIALOG block fires
             speechBubbleRoot.SetActive(false);
