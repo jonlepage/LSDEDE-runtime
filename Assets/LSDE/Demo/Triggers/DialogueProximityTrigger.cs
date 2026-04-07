@@ -202,6 +202,9 @@ namespace LSDE.Demo
         /// </summary>
         private void OnDrawGizmos()
         {
+            if (!enabled)
+                return;
+
             Gizmos.color = _isPlayerInZone
                 ? new Color(0f, 1f, 0f, 0.4f)
                 : new Color(1f, 1f, 0f, 0.3f);

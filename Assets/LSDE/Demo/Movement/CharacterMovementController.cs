@@ -49,8 +49,11 @@ namespace LSDE.Demo
         private float _hopMaxHeight = 0.35f;
 
         [SerializeField]
-        [Tooltip("Frame distance below which the hop decays instead of advancing.")]
-        private float _hopSpeedFloor = 0.001f;
+        [Tooltip(
+            "Duration in seconds for the character to land when decelerating mid-hop. "
+                + "Uses Mathf.MoveTowards for frame-rate independent smooth landing."
+        )]
+        private float _hopLandingDuration = 0.15f;
 
         [Header("Inertia Tilt")]
         [SerializeField]
@@ -100,8 +103,14 @@ namespace LSDE.Demo
             _stuckTimer = 0f;
             _previousDistanceToTarget = float.MaxValue;
 
-            // Start the first hop immediately so the character doesn't glide
-            if (_hopProgress < 0f)
+            // Only start a hop if the distance is at least one full stride —
+            // micro-movements (a few frames) glide naturally without bouncing.
+            float distanceToTarget = Vector3.Distance(
+                _currentTarget.Value,
+                new Vector3(transform.position.x, _groundLevelY, transform.position.z)
+            );
+
+            if (_hopProgress < 0f && distanceToTarget >= _hopStrideDistance)
             {
                 _hopProgress = 0f;
                 _distanceSinceLastHop = 0f;
@@ -217,32 +226,55 @@ namespace LSDE.Demo
                 _distanceSinceLastHop = 0f;
             }
 
-            // Advance active hop — always advance regardless of speed,
-            // so SmoothDamp's slow ramp-up doesn't cancel the hop.
+            // Advance active hop — switch to smooth landing when horizontal
+            // speed is too low to sustain the parabolic arc.
+            // This prevents the character from freezing mid-air and clipping
+            // to the ground when SmoothDamp decelerates near the target.
             if (_hopProgress >= 0f)
             {
-                _hopProgress += frameDistance / _hopStrideDistance;
+                // Adaptive threshold: 5% of full-speed frame distance —
+                // scales automatically with _movementSpeed and framerate.
+                float adaptiveSpeedFloor = _movementSpeed * Time.deltaTime * 0.05f;
 
-                if (_hopProgress >= 1f)
+                if (frameDistance < adaptiveSpeedFloor)
                 {
-                    _hopProgress = -1f;
-                    _currentHopHeight = 0f;
+                    // Speed too low to sustain hop — smooth frame-rate independent
+                    // landing using MoveTowards. Duration adapts to _hopMaxHeight.
+                    float landingSpeed =
+                        (_hopMaxHeight / _hopLandingDuration) * Time.deltaTime;
+                    _currentHopHeight = Mathf.MoveTowards(
+                        _currentHopHeight,
+                        0f,
+                        landingSpeed
+                    );
+                    if (_currentHopHeight == 0f)
+                    {
+                        _hopProgress = -1f;
+                    }
                 }
                 else
                 {
-                    // Parabolic arc: 4*p*(1-p) peaks at 1.0 when p=0.5
-                    float arc = 4f * _hopProgress * (1f - _hopProgress);
-                    _currentHopHeight = arc * _hopMaxHeight;
+                    _hopProgress += frameDistance / _hopStrideDistance;
+
+                    if (_hopProgress >= 1f)
+                    {
+                        _hopProgress = -1f;
+                        _currentHopHeight = 0f;
+                    }
+                    else
+                    {
+                        // Parabolic arc: 4*p*(1-p) peaks at 1.0 when p=0.5
+                        float arc = 4f * _hopProgress * (1f - _hopProgress);
+                        _currentHopHeight = arc * _hopMaxHeight;
+                    }
                 }
             }
-            else if (frameDistance < _hopSpeedFloor)
+            else if (_currentHopHeight > 0f)
             {
-                // No active hop AND speed too low: decay residual height
-                _currentHopHeight *= 0.85f;
-                if (_currentHopHeight < 0.001f)
-                {
-                    _currentHopHeight = 0f;
-                }
+                // No active hop but residual height — smooth landing
+                float landingSpeed =
+                    (_hopMaxHeight / _hopLandingDuration) * Time.deltaTime;
+                _currentHopHeight = Mathf.MoveTowards(_currentHopHeight, 0f, landingSpeed);
             }
 
             // ------------------------------------------------------------------
@@ -287,14 +319,12 @@ namespace LSDE.Demo
         /// </summary>
         private void HandleIdleDecay()
         {
-            // Decay residual hop height smoothly
-            if (_currentHopHeight > 0.001f)
+            // Decay residual hop height with frame-rate independent landing
+            if (_currentHopHeight > 0f)
             {
-                _currentHopHeight *= 0.85f;
-                if (_currentHopHeight < 0.001f)
-                {
-                    _currentHopHeight = 0f;
-                }
+                float landingSpeed =
+                    (_hopMaxHeight / _hopLandingDuration) * Time.deltaTime;
+                _currentHopHeight = Mathf.MoveTowards(_currentHopHeight, 0f, landingSpeed);
 
                 ApplyPosition(
                     new Vector3(

@@ -151,6 +151,9 @@ namespace LSDE.Demo
         /// </summary>
         private void OnDrawGizmos()
         {
+            if (!enabled)
+                return;
+
             Gizmos.color = _hasTriggered
                 ? new Color(0.5f, 0.5f, 0.5f, 0.2f)
                 : new Color(1f, 0f, 1f, 0.3f);

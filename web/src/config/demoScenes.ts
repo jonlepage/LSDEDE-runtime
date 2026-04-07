@@ -73,10 +73,4 @@ export const DEMO_SCENES: DemoScene[] = [
       full: `${BLUEPRINT_BASE}lsde-blueprint-6.webp`,
     },
   },
-  {
-    sceneName: "advanceFullDemo",
-    label: "advance-full-demo",
-    description: "Tous les types de blocs combinés",
-    blueprint: null,
-  },
 ];

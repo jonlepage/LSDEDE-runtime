@@ -234,11 +234,14 @@ namespace LSDE.Demo
                 yield break;
             }
 
-            // Target position = character ground position + camera offset
+            // Target position = camera anchor ground position + camera offset.
+            // Uses CameraAnchorPoint instead of transform directly — this allows
+            // per-character camera framing by placing the anchor further away.
+            Vector3 anchorPosition = characterMarker.CameraAnchorPoint.position;
             Vector3 characterGroundPosition = new Vector3(
-                characterMarker.transform.position.x,
+                anchorPosition.x,
                 0f,
-                characterMarker.transform.position.z
+                anchorPosition.z
             );
             Vector3 targetCameraPosition =
                 characterGroundPosition + _cameraFollowController.CameraOffset;

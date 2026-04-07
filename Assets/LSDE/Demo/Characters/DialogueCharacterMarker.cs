@@ -27,6 +27,14 @@ namespace LSDE.Demo
         )]
         private Transform _bubbleAnchorPoint;
 
+        [SerializeField]
+        [Tooltip(
+            "Optional child Transform that the camera targets during moveCameraToLabel actions. "
+                + "Place it further from the character to get a wider camera shot. "
+                + "If not assigned, defaults to this GameObject's own Transform."
+        )]
+        private Transform _cameraAnchorPoint;
+
         /// <summary>
         /// The LSDE character ID this marker represents (e.g. "l1", "boss").
         /// Corresponds to constants in <see cref="lsdeCharacter"/>.
@@ -39,5 +47,13 @@ namespace LSDE.Demo
         /// </summary>
         public Transform BubbleAnchorPoint =>
             _bubbleAnchorPoint != null ? _bubbleAnchorPoint : transform;
+
+        /// <summary>
+        /// The world-space Transform the camera should target for this character.
+        /// Used by moveCameraToLabel actions. If not assigned, defaults to
+        /// this GameObject's own Transform.
+        /// </summary>
+        public Transform CameraAnchorPoint =>
+            _cameraAnchorPoint != null ? _cameraAnchorPoint : transform;
     }
 }
