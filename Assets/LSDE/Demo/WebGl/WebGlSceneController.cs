@@ -55,6 +55,14 @@ namespace LSDE.Demo
         [Tooltip("The dialogue engine bootstrap for accessing the engine API.")]
         private DialogueEngineBootstrap _dialogueEngineBootstrap;
 
+        [Header("Editor Testing")]
+        [SerializeField]
+        [Tooltip(
+            "Select a scene here, then right-click this component → 'Test: Switch Scene' "
+                + "to test scene switching directly in Play mode (no React needed)."
+        )]
+        private DemoSceneSelection _editorTestScene = DemoSceneSelection.SimpleDialogFlow;
+
         /// <summary>
         /// Maps friendly scene names (used by React sidebar) to LSDE_SCENES UUID constants.
         /// Populated in <see cref="Awake"/>.
@@ -152,10 +160,13 @@ namespace LSDE.Demo
             // Update visibility of scene-filtered GameObjects
             SceneVisibilityFilter.NotifySceneChanged(sceneName);
 
-            // Launch the new scene
+            // Assign the selected scene UUID to all dialogue proximity triggers
+            // so the same NPC (e.g. l1) launches the correct scene when clicked
+            AssignSceneUuidToTriggers(sceneUuid);
+
+            // Notify React — the scene environment is ready, waiting for player interaction
             _currentSceneName = sceneName;
             NotifySceneStarted(sceneName);
-            _demoSceneTrigger.LaunchDialogueScene(sceneUuid);
         }
 
         /// <summary>
@@ -261,6 +272,67 @@ namespace LSDE.Demo
             {
                 trigger.ResetTrigger();
             }
+        }
+
+        /// <summary>
+        /// Maps each <see cref="DemoSceneSelection"/> value to its friendly scene name.
+        /// Used by the editor test button.
+        /// </summary>
+        private static readonly Dictionary<DemoSceneSelection, string> SelectionToSceneName = new()
+        {
+            { DemoSceneSelection.SimpleDialogFlow, "simpleDialogFlow" },
+            { DemoSceneSelection.MultiTracks, "multiTracks" },
+            { DemoSceneSelection.SimpleChoices, "simpleChoices" },
+            { DemoSceneSelection.SimpleAction, "simpleAction" },
+            { DemoSceneSelection.SimpleCondition, "simpleCondition" },
+            { DemoSceneSelection.ConditionDispatch, "conditionDispatch" },
+            { DemoSceneSelection.AdvanceFullDemo, "advanceFullDemo" },
+        };
+
+        /// <summary>
+        /// Editor test: switch to the scene selected in <see cref="_editorTestScene"/>.
+        /// Right-click this component in the Inspector → "Test: Switch Scene".
+        /// Only works in Play mode.
+        /// </summary>
+        [ContextMenu("Test: Switch Scene")]
+        private void EditorTestSwitchScene()
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogWarning("[LSDE WebGL] Test only works in Play mode.");
+                return;
+            }
+
+            if (SelectionToSceneName.TryGetValue(_editorTestScene, out string sceneName))
+            {
+                SelectScene(sceneName);
+            }
+        }
+
+        /// <summary>
+        /// Assign the selected scene UUID to all <see cref="DialogueProximityTrigger"/>
+        /// instances in the scene. This allows the same NPC (e.g. l1) to launch different
+        /// LSDE scenes depending on which demo the user selected from the React sidebar.
+        ///
+        /// Triggers on hidden GameObjects (via <see cref="SceneVisibilityFilter"/>) are
+        /// not interactable, so assigning the UUID to all triggers is safe.
+        /// Walk-in triggers keep their fixed UUIDs from the Inspector.
+        /// </summary>
+        /// <param name="sceneUuid">The LSDE scene UUID to assign.</param>
+        private void AssignSceneUuidToTriggers(string sceneUuid)
+        {
+            var dialogueTriggers = FindObjectsByType<DialogueProximityTrigger>(
+                FindObjectsSortMode.None
+            );
+
+            foreach (var trigger in dialogueTriggers)
+            {
+                trigger.SetSceneUuid(sceneUuid);
+            }
+
+            Debug.Log(
+                $"[LSDE WebGL] Assigned scene UUID to {dialogueTriggers.Length} dialogue triggers."
+            );
         }
 
         /// <summary>

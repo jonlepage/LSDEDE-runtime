@@ -1249,6 +1249,7 @@ MonoBehaviour:
   _partyFollowController: {fileID: 93071360}
   _characterRegistry: {fileID: 1959115875}
   _dialogueEngineBootstrap: {fileID: 1922017197}
+  _editorTestScene: 1
 --- !u!4 &312765951
 Transform:
   m_ObjectHideFlags: 0
@@ -1257,12 +1258,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 312765949}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -31.92309, y: 0, z: -73.87531}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -6.76725, y: 0, z: 1.8820419}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1211640200}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &330585543
 GameObject:
@@ -1352,7 +1353,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: -0.0038833194, y: 0.970727, z: -0.23963885, w: -0.015723394}
-  m_LocalPosition: {x: -27.743322, y: 2.795578, z: -66.080696}
+  m_LocalPosition: {x: -27.8, y: 6.31, z: -67.93}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2679,12 +2680,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 818428472}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -87.020004, y: 15.200001, z: 184.5}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -59.767254, y: 15.200001, z: 259.64703}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1211640200}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &832575517
 GameObject:
@@ -4025,6 +4026,8 @@ Transform:
   - {fileID: 120999130}
   - {fileID: 1914617371}
   - {fileID: 66443152}
+  - {fileID: 312765951}
+  - {fileID: 818428475}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1231309149
@@ -4501,7 +4504,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8f93f377f2b561644b941ce1ec0f7c1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.WalkInSceneTrigger
-  _triggerRadius: 0.5
+  _triggerRadius: 0.69
   _demoSceneTrigger: {fileID: 1361365180}
   _sceneUuidToLaunch: c2e75db2-85c7-421b-91ab-f7ea1ea45284
 --- !u!4 &1343309501
@@ -4512,12 +4515,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1343309499}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -30.06, y: 0.114, z: -73.378}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.010000229, y: 0.11400006, z: -0.13399506}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1758230158}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1360042252
 GameObject:
@@ -4682,7 +4685,7 @@ MonoBehaviour:
   _characterRegistry: {fileID: 1959115875}
   _dialogueClickAdvancer: {fileID: 796626529}
   _bubbleDialoguePresenter: {fileID: 912666324}
-  _autoLaunchSceneUuid: 
+  _autoLaunchSceneUuid: 511c0cba-f9c8-4b9b-a0d1-91a36241a920
 --- !u!1 &1371324973
 GameObject:
   m_ObjectHideFlags: 0
@@ -6189,11 +6192,20 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 2581226205637218566, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1343309501}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 2581226205637218567, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1758230156}
+    - targetCorrespondingSourceObject: {fileID: 2581226205637218567, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1758230160}
+    - targetCorrespondingSourceObject: {fileID: 2581226205637218567, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1758230159}
   m_SourcePrefab: {fileID: 100100000, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
 --- !u!1 &1758230153 stripped
 GameObject:
@@ -6221,6 +6233,37 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.8125, y: 1.96875, z: 0.2}
   m_Center: {x: -0.078380585, y: 0.984375, z: 0}
+--- !u!4 &1758230158 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2581226205637218566, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
+  m_PrefabInstance: {fileID: 1739892202}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1758230159
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1758230153}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
+  _visibleInScenes: 32
+--- !u!114 &1758230160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1758230153}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
+  _visibleInScenes: 32
 --- !u!1001 &1802940514
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6352,7 +6395,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueProximityTrigger
   _interactionRadius: 0.62
   _demoSceneTrigger: {fileID: 1361365180}
-  _sceneUuidToLaunch: 
+  _sceneUuidToLaunch: a037a98b-ffec-40d3-8092-4eedb9857501
   _interactionHintDisplay: {fileID: 883980583}
 --- !u!65 &1802940520
 BoxCollider:
@@ -7575,7 +7618,6 @@ SceneRoots:
   - {fileID: 385250615}
   - {fileID: 202376353}
   - {fileID: 711457360}
-  - {fileID: 1739892202}
   - {fileID: 1486376088}
   - {fileID: 247792263}
   - {fileID: 762419407}
@@ -7583,10 +7625,8 @@ SceneRoots:
   - {fileID: 1445471865}
   - {fileID: 1112343049}
   - {fileID: 539599114}
-  - {fileID: 818428475}
   - {fileID: 343175779}
   - {fileID: 2052960230}
   - {fileID: 1707113549}
   - {fileID: 753734358}
-  - {fileID: 1343309501}
-  - {fileID: 312765951}
+  - {fileID: 1739892202}

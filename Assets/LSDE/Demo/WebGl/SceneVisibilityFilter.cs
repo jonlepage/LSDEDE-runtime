@@ -66,12 +66,12 @@ namespace LSDE.Demo
             OnActiveSceneChanged?.Invoke(sceneName);
         }
 
-        private void OnEnable()
+        private void Awake()
         {
             OnActiveSceneChanged += HandleSceneChanged;
         }
 
-        private void OnDisable()
+        private void OnDestroy()
         {
             OnActiveSceneChanged -= HandleSceneChanged;
         }

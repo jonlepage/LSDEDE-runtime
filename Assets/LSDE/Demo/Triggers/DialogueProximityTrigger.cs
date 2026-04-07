@@ -181,6 +181,21 @@ namespace LSDE.Demo
         }
 
         /// <summary>
+        /// Override the scene UUID that this trigger will launch.
+        /// Called by <see cref="WebGlSceneController"/> when the user selects a demo
+        /// from the React sidebar — the same NPC (e.g. l1) can trigger different
+        /// LSDE scenes depending on which demo is active.
+        /// </summary>
+        /// <param name="sceneUuid">
+        /// The LSDE scene UUID to launch when the player clicks this NPC.
+        /// Use <c>LSDE_SCENES.*</c> constants.
+        /// </param>
+        public void SetSceneUuid(string sceneUuid)
+        {
+            _sceneUuidToLaunch = sceneUuid;
+        }
+
+        /// <summary>
         /// Draw interaction radius as a wire sphere in the Scene view.
         /// Yellow when not triggered, green when the player is in zone.
         /// Visible even when the object is not selected (OnDrawGizmos).
