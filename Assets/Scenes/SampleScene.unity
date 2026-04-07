@@ -1311,6 +1311,7 @@ MonoBehaviour:
   _characterRegistry: {fileID: 1959115875}
   _dialogueEngineBootstrap: {fileID: 1922017197}
   _editorTestScene: 0
+  _editorTestLocale: 2
 --- !u!4 &312765951
 Transform:
   m_ObjectHideFlags: 0

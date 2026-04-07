@@ -64,6 +64,13 @@ namespace LSDE.Demo
         )]
         private DemoSceneSelection _editorTestScene = DemoSceneSelection.SimpleDialogFlow;
 
+        [SerializeField]
+        [Tooltip(
+            "Select a locale here, then right-click this component → 'Test: Change Locale' "
+                + "to switch language in Play mode (no React needed)."
+        )]
+        private DemoLocale _editorTestLocale = DemoLocale.French;
+
         /// <summary>
         /// Maps friendly scene names (used by React sidebar) to LSDE_SCENES UUID constants.
         /// Populated in <see cref="Awake"/>.
@@ -322,6 +329,18 @@ namespace LSDE.Demo
         };
 
         /// <summary>
+        /// Maps each <see cref="DemoLocale"/> value to its LSDE locale code string.
+        /// Used by the editor test button.
+        /// </summary>
+        private static readonly Dictionary<DemoLocale, string> LocaleToCode = new()
+        {
+            { DemoLocale.French, "fr" },
+            { DemoLocale.English, "en" },
+            { DemoLocale.Japanese, "ja" },
+            { DemoLocale.Chinese, "zh" },
+        };
+
+        /// <summary>
         /// Editor test: switch to the scene selected in <see cref="_editorTestScene"/>.
         /// Right-click this component in the Inspector → "Test: Switch Scene".
         /// Only works in Play mode.
@@ -338,6 +357,26 @@ namespace LSDE.Demo
             if (SelectionToSceneName.TryGetValue(_editorTestScene, out string sceneName))
             {
                 SelectScene(sceneName);
+            }
+        }
+
+        /// <summary>
+        /// Editor test: change locale to the one selected in <see cref="_editorTestLocale"/>.
+        /// Right-click this component in the Inspector → "Test: Change Locale".
+        /// Only works in Play mode.
+        /// </summary>
+        [ContextMenu("Test: Change Locale")]
+        private void EditorTestChangeLocale()
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogWarning("[LSDE WebGL] Test only works in Play mode.");
+                return;
+            }
+
+            if (LocaleToCode.TryGetValue(_editorTestLocale, out string localeCode))
+            {
+                SetLocale(localeCode);
             }
         }
 
