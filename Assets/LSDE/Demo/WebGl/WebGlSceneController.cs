@@ -134,6 +134,27 @@ namespace LSDE.Demo
         }
 
         /// <summary>
+        /// Called from JavaScript via <c>sendMessage("WebGlSceneController", "SetLocale", locale)</c>.
+        /// Changes the engine locale at runtime so dialogue text switches language immediately.
+        /// Supported locales: "fr", "en", "ja", "zh".
+        ///
+        /// Must be <c>public void</c> with a single <c>string</c> parameter
+        /// (Unity <c>sendMessage</c> constraint).
+        /// </summary>
+        /// <param name="locale">The locale code (e.g. "fr", "en", "ja", "zh").</param>
+        public void SetLocale(string locale)
+        {
+            if (_dialogueEngineBootstrap?.Engine == null)
+            {
+                Debug.LogWarning("[LSDE WebGL] Cannot set locale — engine not initialized.");
+                return;
+            }
+
+            _dialogueEngineBootstrap.Engine.SetLocale(locale);
+            Debug.Log($"[LSDE WebGL] Locale changed to: {locale}");
+        }
+
+        /// <summary>
         /// Called from JavaScript via <c>sendMessage("WebGlSceneController", "SelectScene", sceneName)</c>.
         /// Receives the friendly scene name, maps it to a UUID, resets all state,
         /// and launches the corresponding LSDE dialogue scene.

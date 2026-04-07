@@ -1,10 +1,19 @@
 import { DEMO_SCENES } from "../config/demoScenes";
 
+const SUPPORTED_LOCALES = [
+  { code: "fr", label: "FR" },
+  { code: "en", label: "EN" },
+  { code: "ja", label: "JA" },
+  { code: "zh", label: "ZH" },
+] as const;
+
 interface UnitySidebarProps {
   activeScene: string | null;
   isUnityReady: boolean;
   isSceneComplete: boolean;
+  activeLocale: string;
   onSelectScene: (sceneName: string) => void;
+  onSetLocale: (locale: string) => void;
 }
 
 const EXTERNAL_LINKS = [
@@ -34,7 +43,9 @@ export function UnitySidebar({
   activeScene,
   isUnityReady,
   isSceneComplete,
+  activeLocale,
   onSelectScene,
+  onSetLocale,
 }: UnitySidebarProps) {
   return (
     <aside className="demo-sidebar">
@@ -53,6 +64,20 @@ export function UnitySidebar({
           />
           <span className="sidebar-brand">LSDE Playground</span>
         </a>
+      </div>
+
+      {/* Locale selector */}
+      <div className="sidebar-locale">
+        {SUPPORTED_LOCALES.map(({ code, label }) => (
+          <button
+            key={code}
+            className={`locale-button ${activeLocale === code ? "active" : ""}`}
+            disabled={!isUnityReady}
+            onClick={() => onSetLocale(code)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* External links */}
@@ -91,7 +116,7 @@ export function UnitySidebar({
 
       {!isUnityReady && (
         <div className="sidebar-status">
-          <p>En attente du chargement Unity...</p>
+          <p>Loading Unity...</p>
         </div>
       )}
     </aside>

@@ -63,6 +63,15 @@ export function useUnityInstance() {
     [sendMessage, isLoaded],
   );
 
+  const setLocale = useCallback(
+    (locale: string) => {
+      if (isLoaded) {
+        sendMessage("WebGlSceneController", "SetLocale", locale);
+      }
+    },
+    [sendMessage, isLoaded],
+  );
+
   return {
     unityProvider,
     isLoaded,
@@ -71,5 +80,6 @@ export function useUnityInstance() {
     activeScene,
     isSceneComplete,
     selectScene,
+    setLocale,
   };
 }

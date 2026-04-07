@@ -14,9 +14,11 @@ export default function App() {
     activeScene,
     isSceneComplete,
     selectScene,
+    setLocale,
   } = useUnityInstance();
 
   const [selectedScene, setSelectedScene] = useState<string | null>(null);
+  const [activeLocale, setActiveLocale] = useState("fr");
 
   const handleSelectScene = useCallback(
     (sceneName: string) => {
@@ -24,6 +26,14 @@ export default function App() {
       selectScene(sceneName);
     },
     [selectScene],
+  );
+
+  const handleSetLocale = useCallback(
+    (locale: string) => {
+      setActiveLocale(locale);
+      setLocale(locale);
+    },
+    [setLocale],
   );
 
   // When Unity is ready, select the first scene
@@ -46,7 +56,9 @@ export default function App() {
         activeScene={displayScene}
         isUnityReady={isUnityReady}
         isSceneComplete={isSceneComplete}
+        activeLocale={activeLocale}
         onSelectScene={handleSelectScene}
+        onSetLocale={handleSetLocale}
       />
       <main className="unity-main">
         <BlueprintPreview blueprint={activeBlueprint} />
