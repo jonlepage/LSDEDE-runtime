@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using LSDE.Runtime;
@@ -116,10 +117,20 @@ namespace LSDE.Demo
             BuildSceneNameMapping();
         }
 
-        private void Start()
+        private IEnumerator Start()
         {
             StoreInitialCharacterPositions();
             NotifyUnityReady();
+
+            // Wait for the first physics step to complete.
+            // SphereColliders created in Awake() trigger OnTriggerEnter if the player
+            // is already overlapping. We let that happen, THEN reset everything clean.
+            yield return new WaitForFixedUpdate();
+
+            if (SelectionToSceneName.TryGetValue(_editorTestScene, out string initialSceneName))
+            {
+                SelectScene(initialSceneName);
+            }
         }
 
         /// <summary>

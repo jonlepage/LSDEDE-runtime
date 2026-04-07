@@ -430,6 +430,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 93071360}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 93071362}
   m_SourcePrefab: {fileID: 100100000, guid: 9770b590bf458494da2ac5a3697c387a, type: 3}
 --- !u!1 &93071353 stripped
 GameObject:
@@ -539,6 +542,21 @@ MonoBehaviour:
   _gameState: {fileID: 1914617372}
   _characterRegistry: {fileID: 1959115875}
   _demoSceneTrigger: {fileID: 1361365180}
+--- !u!114 &93071362
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 93071353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 176903acf2adbc7458e73fbbc54e787f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CharacterBounceAnimation
+  _bounceDuration: 0.39
+  _bounceIntensity: 0.25
+  _bounceCycles: 3
 --- !u!1 &120999129
 GameObject:
   m_ObjectHideFlags: 0
@@ -884,6 +902,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 185364919}
   m_CullTransparentMesh: 1
+--- !u!1 &192067717 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8183758440019976681, guid: c759bb922e42eda4eb6f7e6e4e2fbe63, type: 3}
+  m_PrefabInstance: {fileID: 2052960230}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &192067720
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 192067717}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
+  _visibleInScenes: 8
 --- !u!1001 &202376353
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1249,7 +1285,7 @@ MonoBehaviour:
   _partyFollowController: {fileID: 93071360}
   _characterRegistry: {fileID: 1959115875}
   _dialogueEngineBootstrap: {fileID: 1922017197}
-  _editorTestScene: 1
+  _editorTestScene: 0
 --- !u!4 &312765951
 Transform:
   m_ObjectHideFlags: 0
@@ -1416,11 +1452,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CameraFollowController
   _targetToFollow: {fileID: 93071354}
-  _cameraOffset: {x: -0.02, y: 6.05, z: -8.71}
-  _rotationOffset: {x: -4.1, y: -0.13, z: -1.21}
+  _cameraOffset: {x: 0.01, y: 3.2, z: -4.87}
+  _rotationOffset: {x: -13.58, y: -0.24, z: -2.18}
   _deadZone: {x: 1.64, y: 0.83, z: 0.26}
   _fullFollowRadius: {x: 12.53, y: 1.46, z: 1.68}
   _followLerpSpeed: 0.1
+  _enableScrollZoom: 1
+  _scrollZoomStep: 3
+  _minimumZoomMultiplier: 1
+  _maximumZoomMultiplier: 2
+  _zoomSmoothSpeed: 6
   _maxDynamicYawAngle: 7.7
   _maxDynamicRollAngle: -3.32
   _dynamicTiltSmoothSpeed: 0.4
@@ -1772,6 +1813,90 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &416999297
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 416999298}
+  - component: {fileID: 416999301}
+  - component: {fileID: 416999300}
+  - component: {fileID: 416999299}
+  m_Layer: 7
+  m_Name: DialogueTriggerZone
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &416999298
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 416999297}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.014, y: -0.59, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1802940516}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &416999299
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 416999297}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4c0689469e049d46a3dddc8dcf3f30c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueProximityTrigger
+  _interactionRadius: 0.94
+  _demoSceneTrigger: {fileID: 1361365180}
+  _sceneUuidToLaunch: c2e75db2-85c7-421b-91ab-f7ea1ea45284
+  _interactionHintDisplay: {fileID: 883980583}
+--- !u!114 &416999300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 416999297}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
+  _visibleInScenes: 95
+--- !u!65 &416999301
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 416999297}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1.05, z: 0.34}
+  m_Center: {x: -0.06, y: -0.31, z: -0.05}
 --- !u!1001 &430351679
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2192,6 +2317,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
       insertIndex: -1
       addedObject: {fileID: 695945935}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 695945939}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 695945940}
   m_SourcePrefab: {fileID: 100100000, guid: da47f9b5ff160434483d6e33e9c06aba, type: 3}
 --- !u!1 &695945930 stripped
 GameObject:
@@ -2298,6 +2429,34 @@ MonoBehaviour:
   _interactionRadius: 0.51
   _gameState: {fileID: 1914617372}
   _interactionHintDisplay: {fileID: 883980583}
+--- !u!114 &695945939
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 695945930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
+  _visibleInScenes: 35
+--- !u!114 &695945940
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 695945930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 176903acf2adbc7458e73fbbc54e787f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CharacterBounceAnimation
+  _bounceDuration: 0.39
+  _bounceIntensity: 0.25
+  _bounceCycles: 3
 --- !u!1001 &711457360
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2506,6 +2665,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7478189960424040071, guid: d732c433f052247478d37fac6cedfe30, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2018916278}
+    - targetCorrespondingSourceObject: {fileID: 7478189960424040071, guid: d732c433f052247478d37fac6cedfe30, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2018916283}
   m_SourcePrefab: {fileID: 100100000, guid: d732c433f052247478d37fac6cedfe30, type: 3}
 --- !u!1001 &762419407
 PrefabInstance:
@@ -4369,6 +4531,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1307401952}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1307401956}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1307401957}
   m_SourcePrefab: {fileID: 100100000, guid: c4b77ed62153f4b4a8e52a981d88913e, type: 3}
 --- !u!1 &1307401947 stripped
 GameObject:
@@ -4475,6 +4643,34 @@ MonoBehaviour:
   _interactionRadius: 0.61
   _gameState: {fileID: 1914617372}
   _interactionHintDisplay: {fileID: 883980583}
+--- !u!114 &1307401956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1307401947}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
+  _visibleInScenes: 35
+--- !u!114 &1307401957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1307401947}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 176903acf2adbc7458e73fbbc54e787f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CharacterBounceAnimation
+  _bounceDuration: 0.39
+  _bounceIntensity: 0.25
+  _bounceCycles: 3
 --- !u!1 &1343309499
 GameObject:
   m_ObjectHideFlags: 0
@@ -4685,7 +4881,7 @@ MonoBehaviour:
   _characterRegistry: {fileID: 1959115875}
   _dialogueClickAdvancer: {fileID: 796626529}
   _bubbleDialoguePresenter: {fileID: 912666324}
-  _autoLaunchSceneUuid: 511c0cba-f9c8-4b9b-a0d1-91a36241a920
+  _autoLaunchSceneUuid: 
 --- !u!1 &1371324973
 GameObject:
   m_ObjectHideFlags: 0
@@ -5425,6 +5621,89 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1559684929}
   m_CullTransparentMesh: 1
+--- !u!1 &1566626850
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1566626851}
+  - component: {fileID: 1566626854}
+  - component: {fileID: 1566626853}
+  - component: {fileID: 1566626852}
+  m_Layer: 7
+  m_Name: DialogueTriggerZonerecrut
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1566626851
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1566626850}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.59, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1802940516}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1566626852
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1566626850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cddf279edf5d16498cb9db04bff07e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.PartyRecruitmentTrigger
+  _interactionRadius: 0.42
+  _gameState: {fileID: 1914617372}
+  _interactionHintDisplay: {fileID: 883980583}
+--- !u!114 &1566626853
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1566626850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
+  _visibleInScenes: 32
+--- !u!65 &1566626854
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1566626850}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1001 &1587247548
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6202,9 +6481,6 @@ PrefabInstance:
       addedObject: {fileID: 1758230156}
     - targetCorrespondingSourceObject: {fileID: 2581226205637218567, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1758230160}
-    - targetCorrespondingSourceObject: {fileID: 2581226205637218567, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 1758230159}
   m_SourcePrefab: {fileID: 100100000, guid: d5f7066e247357149b9a778fcd53e819, type: 3}
 --- !u!1 &1758230153 stripped
@@ -6251,19 +6527,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
   _visibleInScenes: 32
---- !u!114 &1758230160
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1758230153}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
-  _visibleInScenes: 32
 --- !u!1001 &1802940514
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6286,7 +6549,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -23.634
+      value: -23.72
       objectReference: {fileID: 0}
     - target: {fileID: 4815857750074534, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       propertyPath: m_LocalPosition.y
@@ -6337,6 +6600,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4815857750074534, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       insertIndex: -1
       addedObject: {fileID: 883980582}
+    - targetCorrespondingSourceObject: {fileID: 4815857750074534, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 416999298}
+    - targetCorrespondingSourceObject: {fileID: 4815857750074534, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1566626851}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       insertIndex: -1
@@ -6346,16 +6615,13 @@ PrefabInstance:
       addedObject: {fileID: 1802940520}
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1802940519}
-    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 1802940522}
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1802940521}
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1802940523}
+      addedObject: {fileID: 1802940525}
   m_SourcePrefab: {fileID: 100100000, guid: 8cba555f00519c445a67f37df6a732cf, type: 3}
 --- !u!1 &1802940515 stripped
 GameObject:
@@ -6381,22 +6647,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueCharacterMarker
   _lsdeCharacterId: l1
   _bubbleAnchorPoint: {fileID: 92375939}
---- !u!114 &1802940519
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1802940515}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4c0689469e049d46a3dddc8dcf3f30c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueProximityTrigger
-  _interactionRadius: 0.62
-  _demoSceneTrigger: {fileID: 1361365180}
-  _sceneUuidToLaunch: a037a98b-ffec-40d3-8092-4eedb9857501
-  _interactionHintDisplay: {fileID: 883980583}
 --- !u!65 &1802940520
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -6463,7 +6713,7 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &1802940523
+--- !u!114 &1802940525
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -6472,12 +6722,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1802940515}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9cddf279edf5d16498cb9db04bff07e1, type: 3}
+  m_Script: {fileID: 11500000, guid: 176903acf2adbc7458e73fbbc54e787f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.PartyRecruitmentTrigger
-  _interactionRadius: 0.42
-  _gameState: {fileID: 1914617372}
-  _interactionHintDisplay: {fileID: 883980583}
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CharacterBounceAnimation
+  _bounceDuration: 0.39
+  _bounceIntensity: 0.25
+  _bounceCycles: 3
 --- !u!1 &1821645363
 GameObject:
   m_ObjectHideFlags: 0
@@ -7275,6 +7525,19 @@ MonoBehaviour:
   _quantity: 1
   _tintColor: {r: 1, g: 0.6615062, b: 0, a: 1}
   _gameState: {fileID: 1914617372}
+--- !u!114 &2018916283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2018916277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
+  _visibleInScenes: 16
 --- !u!1 &2045726999
 GameObject:
   m_ObjectHideFlags: 0
@@ -7363,15 +7626,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8183758440019976683, guid: c759bb922e42eda4eb6f7e6e4e2fbe63, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -32.05
+      value: -16.08
       objectReference: {fileID: 0}
     - target: {fileID: 8183758440019976683, guid: c759bb922e42eda4eb6f7e6e4e2fbe63, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.00000006235655
+      value: 0.42
       objectReference: {fileID: 0}
     - target: {fileID: 8183758440019976683, guid: c759bb922e42eda4eb6f7e6e4e2fbe63, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -69.55
+      value: -72.87
       objectReference: {fileID: 0}
     - target: {fileID: 8183758440019976683, guid: c759bb922e42eda4eb6f7e6e4e2fbe63, type: 3}
       propertyPath: m_LocalRotation.w
@@ -7404,7 +7667,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8183758440019976681, guid: c759bb922e42eda4eb6f7e6e4e2fbe63, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 192067720}
   m_SourcePrefab: {fileID: 100100000, guid: c759bb922e42eda4eb6f7e6e4e2fbe63, type: 3}
 --- !u!1001 &2074849999
 PrefabInstance:
@@ -7495,6 +7761,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: fef1cf2afab8c8e48b0819ae608ecdcb, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2074850004}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: fef1cf2afab8c8e48b0819ae608ecdcb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2074850006}
+    - targetCorrespondingSourceObject: {fileID: 1450178541376546, guid: fef1cf2afab8c8e48b0819ae608ecdcb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2074850007}
   m_SourcePrefab: {fileID: 100100000, guid: fef1cf2afab8c8e48b0819ae608ecdcb, type: 3}
 --- !u!1 &2074850000 stripped
 GameObject:
@@ -7541,6 +7813,34 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.93, y: 1.05, z: 0.32}
   m_Center: {x: 0, y: -0.795, z: 0}
+--- !u!114 &2074850006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2074850000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be802dbeb6ecb134cba3e10043e6b798, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
+  _visibleInScenes: 8
+--- !u!114 &2074850007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2074850000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 176903acf2adbc7458e73fbbc54e787f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.CharacterBounceAnimation
+  _bounceDuration: 0.39
+  _bounceIntensity: 0.25
+  _bounceCycles: 3
 --- !u!1 &2096941937 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 843293217905692331, guid: 337bf7fb32e777b41a8411ca5d35e56f, type: 3}

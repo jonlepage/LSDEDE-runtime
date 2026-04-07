@@ -71,14 +71,16 @@ namespace LSDE.Demo
 
         private void Awake()
         {
-            // Get the character marker to know which LSDE character this NPC represents
-            _characterMarker = GetComponent<DialogueCharacterMarker>();
+            // Get the character marker to know which LSDE character this NPC represents.
+            // Uses GetComponentInParent so the trigger can live on a child GameObject
+            // (e.g. when using SceneVisibilityFilter to toggle trigger types per scene).
+            _characterMarker = GetComponentInParent<DialogueCharacterMarker>();
 
             if (_characterMarker == null)
             {
                 Debug.LogError(
                     $"[LSDE Demo] PartyRecruitmentTrigger on '{gameObject.name}' "
-                        + "requires a DialogueCharacterMarker component."
+                        + "requires a DialogueCharacterMarker on this object or a parent."
                 );
             }
 

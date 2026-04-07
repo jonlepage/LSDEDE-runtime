@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace LSDE.Demo
 {
@@ -84,6 +85,42 @@ namespace LSDE.Demo
         )]
         private float _followLerpSpeed = 0.003f;
 
+        [Header("Scroll Zoom")]
+        [SerializeField]
+        [Tooltip(
+            "Enable zooming in/out with the mouse scroll wheel. "
+                + "Adjusts the camera offset smoothly."
+        )]
+        private bool _enableScrollZoom = true;
+
+        [SerializeField]
+        [Tooltip(
+            "How much each scroll step changes the zoom level. "
+                + "Higher = faster zoom per scroll tick."
+        )]
+        private float _scrollZoomStep = 1.5f;
+
+        [SerializeField]
+        [Tooltip(
+            "Minimum zoom multiplier (closest to the scene). Default 0.5 = half the original distance."
+        )]
+        private float _minimumZoomMultiplier = 0.5f;
+
+        [SerializeField]
+        [Tooltip(
+            "Maximum zoom multiplier (farthest from the scene). Default 2.0 = double the original distance."
+        )]
+        private float _maximumZoomMultiplier = 2.0f;
+
+        [SerializeField]
+        [Tooltip(
+            "How smoothly the zoom interpolates to the target level. "
+                + "Higher = snappier, lower = smoother.\n\n"
+                + "3–5 = smooth, cinematic.\n"
+                + "8–12 = responsive."
+        )]
+        private float _zoomSmoothSpeed = 15f;
+
         [Header("Dynamic Tilt")]
         [SerializeField]
         [Tooltip(
@@ -128,6 +165,12 @@ namespace LSDE.Demo
         private float _movementSpeedReference = 4f;
 
         // --- Internal state ---
+        /// <summary>Target zoom multiplier driven by scroll input. Lerped toward smoothly.</summary>
+        private float _targetZoomMultiplier = 1f;
+
+        /// <summary>Current zoom multiplier (smoothly interpolated toward target).</summary>
+        private float _currentZoomMultiplier = 1f;
+
         private Quaternion _baseRotation;
         private float _currentDynamicYaw;
         private float _currentDynamicRoll;
@@ -240,6 +283,33 @@ namespace LSDE.Demo
                 return;
             }
 
+            // --- Scroll zoom ---
+            if (_enableScrollZoom && Mouse.current != null)
+            {
+                float rawScrollValue = Mouse.current.scroll.ReadValue().y;
+                float scrollDelta = rawScrollValue / 120f;
+
+                if (Mathf.Abs(rawScrollValue) > 0.1f)
+                {
+                    Debug.Log(
+                        $"[LSDE Zoom] raw={rawScrollValue} delta={scrollDelta} target={_targetZoomMultiplier}"
+                    );
+                    // Scroll up = zoom in (smaller multiplier), scroll down = zoom out
+                    _targetZoomMultiplier -= scrollDelta * _scrollZoomStep;
+                    _targetZoomMultiplier = Mathf.Clamp(
+                        _targetZoomMultiplier,
+                        _minimumZoomMultiplier,
+                        _maximumZoomMultiplier
+                    );
+                }
+
+                _currentZoomMultiplier = Mathf.Lerp(
+                    _currentZoomMultiplier,
+                    _targetZoomMultiplier,
+                    Time.deltaTime * _zoomSmoothSpeed
+                );
+            }
+
             // Use ground-level position (Y=0) to ignore hop bouncing
             Vector3 targetGroundPosition = new Vector3(
                 _targetToFollow.position.x,
@@ -256,7 +326,8 @@ namespace LSDE.Demo
                 / Mathf.Max(Time.deltaTime, 0.001f);
             _previousTargetGroundPosition = targetGroundPosition;
 
-            Vector3 desiredCameraPosition = targetGroundPosition + _cameraOffset;
+            Vector3 desiredCameraPosition =
+                targetGroundPosition + _cameraOffset * _currentZoomMultiplier;
             Vector3 currentCameraPosition = transform.position;
 
             // Per-axis delta between current camera and desired position
@@ -297,26 +368,24 @@ namespace LSDE.Demo
             float followStrengthY = 1f;
             if (_deadZone.y > 0f && _fullFollowRadius.y > _deadZone.y)
             {
-                followStrengthY = absoluteDeltaY > _deadZone.y
-                    ? Mathf.Clamp01(
-                        (absoluteDeltaY - _deadZone.y) / (_fullFollowRadius.y - _deadZone.y)
-                    )
-                    : 0f;
+                followStrengthY =
+                    absoluteDeltaY > _deadZone.y
+                        ? Mathf.Clamp01(
+                            (absoluteDeltaY - _deadZone.y) / (_fullFollowRadius.y - _deadZone.y)
+                        )
+                        : 0f;
             }
 
             // Exponential lerp per axis — same formula as the original port
             // of camera.ts:359 but applied independently per component.
             float frameMultiplier = Time.deltaTime * 60f;
 
-            float lerpAmountX = 1f - Mathf.Pow(
-                1f - _followLerpSpeed * followStrengthX, frameMultiplier
-            );
-            float lerpAmountZ = 1f - Mathf.Pow(
-                1f - _followLerpSpeed * followStrengthZ, frameMultiplier
-            );
-            float lerpAmountY = 1f - Mathf.Pow(
-                1f - _followLerpSpeed * followStrengthY, frameMultiplier
-            );
+            float lerpAmountX =
+                1f - Mathf.Pow(1f - _followLerpSpeed * followStrengthX, frameMultiplier);
+            float lerpAmountZ =
+                1f - Mathf.Pow(1f - _followLerpSpeed * followStrengthZ, frameMultiplier);
+            float lerpAmountY =
+                1f - Mathf.Pow(1f - _followLerpSpeed * followStrengthY, frameMultiplier);
 
             transform.position = new Vector3(
                 currentCameraPosition.x + deltaX * lerpAmountX,
@@ -334,9 +403,8 @@ namespace LSDE.Demo
             // Roll: subtle lean in the direction of lateral movement, like a
             //       camera operator tilting their body while tracking a subject.
             // ------------------------------------------------------------------
-            float normalizedOffsetX = _fullFollowRadius.x > 0f
-                ? Mathf.Clamp(deltaX / _fullFollowRadius.x, -1f, 1f)
-                : 0f;
+            float normalizedOffsetX =
+                _fullFollowRadius.x > 0f ? Mathf.Clamp(deltaX / _fullFollowRadius.x, -1f, 1f) : 0f;
             float targetYawAngle = normalizedOffsetX * _maxDynamicYawAngle;
 
             float normalizedLateralVelocity = Mathf.Clamp(

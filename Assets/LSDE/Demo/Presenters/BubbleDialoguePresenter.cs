@@ -148,6 +148,13 @@ namespace LSDE.Demo
             // Track this bubble in the active dictionary
             _activeBubblesByBlockUuid[blockUuid] = bubbleController;
 
+            // Play bounce animation on the character when they start speaking
+            var bounceAnimation = characterMarker.GetComponent<CharacterBounceAnimation>();
+            if (bounceAnimation != null)
+            {
+                bounceAnimation.PlayBounce();
+            }
+
             // Show the bubble — fade-in and typewriter play in parallel
             bubbleController.ShowDialogue(characterName, localizedText);
 

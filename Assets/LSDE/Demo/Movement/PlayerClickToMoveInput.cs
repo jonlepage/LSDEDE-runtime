@@ -88,8 +88,11 @@ namespace LSDE.Demo
                 foreach (var hitInfo in interactableHits)
                 {
                     // Priority 1a: Dialogue trigger (launching an LSDE scene)
+                    // Uses GetComponentInChildren because triggers may live on child
+                    // GameObjects (e.g. when using SceneVisibilityFilter to toggle
+                    // different trigger types per demo scene).
                     var proximityTrigger =
-                        hitInfo.collider.GetComponentInParent<DialogueProximityTrigger>();
+                        hitInfo.collider.GetComponentInChildren<DialogueProximityTrigger>();
 
                     if (proximityTrigger != null && proximityTrigger.TryTriggerDialogue())
                     {
@@ -98,7 +101,7 @@ namespace LSDE.Demo
 
                     // Priority 1b: Party recruitment trigger (adding NPC to party)
                     var recruitmentTrigger =
-                        hitInfo.collider.GetComponentInParent<PartyRecruitmentTrigger>();
+                        hitInfo.collider.GetComponentInChildren<PartyRecruitmentTrigger>();
 
                     if (recruitmentTrigger != null && recruitmentTrigger.TryRecruit())
                     {
