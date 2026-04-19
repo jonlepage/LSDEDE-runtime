@@ -53,3 +53,4 @@ web/node_modules/
 !web/public/unity-build/Build/
 !web/public/unity-build/Build/**
 guide.md
+MCP-SETUP.md
