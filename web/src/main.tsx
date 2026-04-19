@@ -10,8 +10,10 @@ posthog.init("phc_ytWJv3iJS9BKoXoFAac8P7MGGfUppdxxojecAXsr8aFY", {
   autocapture: true,
   capture_pageview: true,
   capture_pageleave: true,
+  disable_session_recording: false,
+  person_profiles: 'always',
   session_recording: {
-    maskAllInputs: false,
+    maskAllInputs: true,
     maskTextSelector: "",
     recordCrossOriginIframes: false,
     captureCanvas: {
