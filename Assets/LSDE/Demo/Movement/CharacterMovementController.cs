@@ -70,6 +70,15 @@ namespace LSDE.Demo
         )]
         private float _inertiaVelocityLerp = 0.1f;
 
+        [Header("Terrain Following")]
+        [SerializeField]
+        [Tooltip(
+            "Layer mask for ground surfaces (terrain, planes). Sampled each frame "
+                + "via downward raycast so the character follows hills and dips automatically. "
+                + "Leave empty to keep the legacy flat-ground behavior."
+        )]
+        private LayerMask _groundLayerMask;
+
         // --- Internal state ---
         private Vector3? _currentTarget;
         private float _groundLevelY;
@@ -91,6 +100,29 @@ namespace LSDE.Demo
         {
             _groundLevelY = transform.position.y;
             _characterController = GetComponent<CharacterController>();
+        }
+
+        /// <summary>
+        /// Raycast downward at the given XZ position to find the actual ground surface Y.
+        /// Lets the character follow terrain elevation (hills and dips) instead of staying
+        /// frozen on the initial ground level captured at <see cref="Awake"/>.
+        /// Falls back to <see cref="_groundLevelY"/> if no ground collider is hit, or if
+        /// <see cref="_groundLayerMask"/> is empty (legacy flat-ground behavior).
+        /// </summary>
+        private float SampleGroundHeightAt(float worldX, float worldZ)
+        {
+            if (_groundLayerMask.value == 0)
+            {
+                return _groundLevelY;
+            }
+
+            Vector3 rayOrigin = new Vector3(worldX, transform.position.y + 50f, worldZ);
+            if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hitInfo, 200f, _groundLayerMask))
+            {
+                return hitInfo.point.y;
+            }
+
+            return _groundLevelY;
         }
 
         /// <summary>
@@ -164,7 +196,8 @@ namespace LSDE.Demo
                 && _currentHopHeight < 0.01f
             )
             {
-                ApplyPosition(new Vector3(targetPosition.x, _groundLevelY, targetPosition.z));
+                float arrivalGroundY = SampleGroundHeightAt(targetPosition.x, targetPosition.z);
+                ApplyPosition(new Vector3(targetPosition.x, arrivalGroundY, targetPosition.z));
                 _smoothDampVelocity = Vector3.zero;
                 _distanceSinceLastHop = 0f;
                 _hopProgress = -1f;
@@ -282,7 +315,8 @@ namespace LSDE.Demo
             // Unity handles all collision resolution natively — the character
             // slides along walls, stops at obstacles, no manual overlap code needed.
             // ------------------------------------------------------------------
-            Vector3 desiredPosition = new Vector3(newX, _groundLevelY + _currentHopHeight, newZ);
+            float currentGroundY = SampleGroundHeightAt(newX, newZ);
+            Vector3 desiredPosition = new Vector3(newX, currentGroundY + _currentHopHeight, newZ);
             ApplyPosition(desiredPosition);
 
             // ------------------------------------------------------------------
@@ -319,6 +353,8 @@ namespace LSDE.Demo
         /// </summary>
         private void HandleIdleDecay()
         {
+            float idleGroundY = SampleGroundHeightAt(transform.position.x, transform.position.z);
+
             // Decay residual hop height with frame-rate independent landing
             if (_currentHopHeight > 0f)
             {
@@ -329,15 +365,15 @@ namespace LSDE.Demo
                 ApplyPosition(
                     new Vector3(
                         transform.position.x,
-                        _groundLevelY + _currentHopHeight,
+                        idleGroundY + _currentHopHeight,
                         transform.position.z
                     )
                 );
             }
-            else if (transform.position.y != _groundLevelY)
+            else if (Mathf.Abs(transform.position.y - idleGroundY) > 0.001f)
             {
                 ApplyPosition(
-                    new Vector3(transform.position.x, _groundLevelY, transform.position.z)
+                    new Vector3(transform.position.x, idleGroundY, transform.position.z)
                 );
             }
 
