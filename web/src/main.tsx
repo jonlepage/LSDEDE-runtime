@@ -14,8 +14,10 @@ posthog.init("phc_ytWJv3iJS9BKoXoFAac8P7MGGfUppdxxojecAXsr8aFY", {
     maskAllInputs: false,
     maskTextSelector: "",
     recordCrossOriginIframes: false,
-    canvasFps: 4,
-    canvasQuality: 0.4,
+    captureCanvas: {
+      canvasFps: 4,
+      canvasQuality: "0.4",
+    },
   },
 });
 
