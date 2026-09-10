@@ -5,86 +5,96 @@ using System.Linq;
 using LSDE.Runtime;
 using LsdeDialogEngine;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace LSDE.Demo
 {
     /// <summary>
-    /// Visual implementation of <see cref="IDialoguePresenter"/> that displays
-    /// speech bubbles above characters in the 3D scene.
-    /// Supports multiple simultaneous bubbles for multi-track parallel dialogue.
+    /// Visual implementation of <see cref="IDialoguePresenter"/> that displays speech bubbles
+    /// above characters in the 3D scene. Several bubbles can be on screen at once, which is what
+    /// parallel tracks look like.
     ///
-    /// Uses <see cref="DialogueCharacterRegistry"/> to locate characters and
-    /// <see cref="DialogueClickAdvancer"/> to wait for player clicks before advancing.
+    /// <para><b>The presenter owns the timing.</b> The engine has no timers and no game loop: it
+    /// only advances when <c>Next()</c> is called. Three native properties say WHEN that should
+    /// happen, and this class implements all three:</para>
     ///
-    /// For async blocks (<c>NativeProperties.IsAsync == true</c>), the presenter
-    /// auto-advances without waiting for a click. If a timeout is specified,
-    /// a coroutine handles the delayed auto-advance.
+    /// <list type="bullet">
+    ///   <item><c>timeout</c> — the milliseconds the block STAYS <b>once its line has been
+    ///     said</b>. The countdown is armed when the typewriter finishes, never when the block
+    ///     arrives: a 2500 ms timeout on a 120-character line would otherwise cut it
+    ///     mid-sentence. It outranks <c>waitInput</c> and outranks leaving at once, so while a
+    ///     timeout is running a click may only HURRY the reveal — it can never dismiss the
+    ///     bubble.</item>
+    ///   <item><c>waitInput</c> — wait for the player. Used when no timeout is set.</item>
+    ///   <item><c>skipIfMissingActor</c> — when nobody can carry the line, walk THROUGH the block
+    ///     instead of drawing it. Walking through is what marks it finished, which is what
+    ///     releases a <c>waitForBlocks</c> that names it; refusing it in the validation gate would
+    ///     hang that other branch for good.</item>
+    /// </list>
     ///
-    /// For block types that don't need visual rendering (CONDITION, ACTION),
-    /// this presenter falls back to console logging.
+    /// <para><c>isAsync</c> is read here for ONE thing only: a line playing on a parallel track
+    /// must not stop the player, so it does not wait for a click unless <c>waitInput</c> says so.
+    /// Everything else about it belongs to the engine, which reads it on the WIRE to decide
+    /// whether the target opens its own track — it says nothing about how long a bubble stays.
+    /// Same reading as the reference demo (<c>src/demos/advance-full-demo/index.ts</c>).</para>
     /// </summary>
     public class BubbleDialoguePresenter : MonoBehaviour, IDialoguePresenter
     {
         [SerializeField]
-        [Tooltip("The character registry that maps LSDE character IDs to scene GameObjects.")]
+        [Tooltip("The character registry that maps LSDE card names to scene GameObjects.")]
         private DialogueCharacterRegistry _characterRegistry;
 
         [SerializeField]
-        [Tooltip("The click advancer that stores the pending Next callback.")]
+        [Tooltip("The click advancer that stores the pending Next callbacks.")]
         private DialogueClickAdvancer _dialogueClickAdvancer;
 
         [SerializeField]
         [Tooltip(
-            "The action executor that maps action IDs to game effects "
+            "The action executor that maps function ids to game effects "
                 + "(camera shake, movement, etc.)."
         )]
         private DemoActionExecutor _actionExecutor;
 
+        [FormerlySerializedAs("_fallbackChoiceCharacterId")]
         [SerializeField]
         [Tooltip(
-            "Character ID used as fallback when a CHOICE block has no assigned character. "
-                + "The choice bubble will appear on this character. "
-                + "Leave empty to auto-select the first choice without displaying UI."
+            "Card NAME the bubble is anchored on when a block cites nobody — a CHOICE, which "
+                + "belongs to the player, or a DIALOG with no cast. The reference demo uses l4 as "
+                + "this narrator anchor. Leave empty to auto-select the first option instead."
         )]
-        private string _fallbackChoiceCharacterId = lsdeCharacter.l4;
+        private string _fallbackChoiceCharacterName = "l4";
 
         private const string LogPrefix = "[LSDE]";
 
         /// <summary>
-        /// Conversion factor from blueprint timeout/delay values (milliseconds) to seconds.
-        /// Blueprint JSON stores durations in milliseconds (e.g. 2000 for 2 seconds).
-        /// Unity's WaitForSeconds expects seconds.
+        /// Conversion factor from blueprint durations (MILLISECONDS in v2) to seconds.
         /// </summary>
         private const double MillisecondsToSeconds = 1000.0;
 
         /// <summary>
-        /// All currently visible speech bubbles, keyed by their dialogue block UUID.
-        /// Multiple bubbles can be active simultaneously during parallel multi-track dialogue.
-        /// In single-track mode, only one entry exists at a time.
+        /// All currently visible speech bubbles, keyed by PRESENTATION key — not by block id.
+        /// With <c>inPortPerCharacter</c> the same block is dispatched once per incoming wire, in
+        /// parallel, each pass standing for a different actor: three bubbles, one block id.
         /// </summary>
-        private readonly Dictionary<string, SpeechBubbleController> _activeBubblesByBlockUuid =
+        private readonly Dictionary<string, SpeechBubbleController> _activeBubblesByKey =
             new Dictionary<string, SpeechBubbleController>();
 
         /// <summary>
-        /// Active timeout coroutines keyed by block UUID.
-        /// Stored so they can be cancelled if the block is cleaned up before the timeout fires
-        /// (e.g. player clicks to advance before the timeout, or scene exits).
+        /// Running timeout coroutines, keyed by presentation key. Stored so they can be cancelled
+        /// when the block is cleaned up before the countdown fires (scene exit, cancel).
         /// </summary>
-        private readonly Dictionary<string, Coroutine> _activeTimeoutCoroutinesByBlockUuid =
+        private readonly Dictionary<string, Coroutine> _activeTimeoutCoroutinesByKey =
             new Dictionary<string, Coroutine>();
 
         /// <summary>
         /// Warm up all speech bubbles at startup so TextMeshPro initializes
         /// its font atlas during scene load. This avoids the lag spike that occurs
         /// when the first bubble is shown via SetActive for the first time.
-        /// Bubbles can stay disabled in the Editor (less visual clutter) —
-        /// they are activated and hidden (alpha=0) here at runtime.
         /// </summary>
         private void Start()
         {
             var allBubbleControllers = FindObjectsByType<SpeechBubbleController>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None
+                FindObjectsInactive.Include
             );
 
             foreach (var bubbleController in allBubbleControllers)
@@ -95,210 +105,247 @@ namespace LSDE.Demo
 
         /// <inheritdoc />
         public void PresentDialogueBlock(
-            DialogBlock dialogBlock,
-            BlockCharacter resolvedCharacter,
+            string presentationKey,
+            BlueprintBlock block,
+            Card resolvedCharacter,
             string localizedText,
             Action advanceToNextBlock
         )
         {
-            // Do NOT hide previously active bubbles — in multi-track mode,
-            // multiple bubbles must coexist. Cleanup is per-block via PresentBlockCleanup.
+            // Do NOT hide the other bubbles — parallel tracks must coexist.
+            // Cleanup is per dispatch, in PresentBlockCleanup.
 
-            if (resolvedCharacter == null)
+            var nativeProperties = LsdeUtils.GetNativeProperties(block);
+            var blockLabel = LsdeUtils.GetBlockLabel(block);
+
+            // The actor the game picked, or the anchor character when the block cites nobody —
+            // a line still has to come from somewhere on screen.
+            var speakerName =
+                resolvedCharacter != null ? resolvedCharacter.Name : _fallbackChoiceCharacterName;
+
+            var characterMarker = _characterRegistry.FindMarkerByCharacterName(speakerName);
+
+            // `skipIfMissingActor`: the game is the only one that knows whether that actor is on
+            // stage right now. Walking THROUGH the block is what marks it finished, which is what
+            // releases a `waitForBlocks` naming it — refusing it in the validation gate would hang
+            // that branch for good.
+            if (nativeProperties.SkipIfMissingActor == true && characterMarker == null)
             {
-                Debug.LogWarning(
-                    $"{LogPrefix} No character resolved for block '{dialogBlock.Label}'. "
-                        + "Advancing immediately."
+                Debug.Log(
+                    $"{LogPrefix} DIALOG  {blockLabel} — '{speakerName}' is not on stage, "
+                        + "skipped (skipIfMissingActor)."
                 );
                 advanceToNextBlock();
                 return;
             }
 
-            var characterMarker = _characterRegistry.FindMarkerByCharacterId(resolvedCharacter.Id);
-
-            if (characterMarker == null)
+            // Nothing to show. Either the writer deliberately emptied the line — a beat with no
+            // dialogue, which is legitimate — or no locale carries it at all. Either way an empty
+            // bubble is worse than none, and walking through the block is what marks it finished.
+            if (string.IsNullOrWhiteSpace(localizedText))
             {
-                Debug.LogWarning(
-                    $"{LogPrefix} Character '{resolvedCharacter.Id}' not found in scene. "
-                        + "Advancing immediately."
+                Debug.Log(
+                    $"{LogPrefix} DIALOG  {blockLabel} — no line to say. Walking through it."
                 );
                 advanceToNextBlock();
                 return;
             }
 
-            // Find the SpeechBubbleController on this character's bubble anchor
+            // How the line LEAVES. `timeout` comes first because it wins over the other two: all
+            // three answer WHEN the block is left, and the one written on the card is the most
+            // specific answer.
+            //
+            //   timeout                   → stay N ms AFTER the reveal, then leave, and refuse a
+            //                               click that would close it early
+            //   waitInput, or not isAsync → wait for a click
+            //   isAsync, no waitInput     → leave on its own, in the frame it arrived
+            //
+            // `isAsync` appears here for one reason only: a line playing on a parallel track must
+            // not stop the player. It is the ENGINE that reads it on the wire to open that track.
+            var timeoutMilliseconds = nativeProperties.Timeout;
+            bool hasTimeout = timeoutMilliseconds.HasValue && timeoutMilliseconds.Value > 0;
+            bool waitsForClick =
+                nativeProperties.WaitInput == true || nativeProperties.IsAsync != true;
+
             var bubbleController =
-                characterMarker.BubbleAnchorPoint.GetComponentInChildren<SpeechBubbleController>(
-                    true
-                );
+                characterMarker != null
+                    ? characterMarker.BubbleAnchorPoint.GetComponentInChildren<SpeechBubbleController>(
+                        true
+                    )
+                    : null;
 
-            if (bubbleController == null)
-            {
-                Debug.LogWarning(
-                    $"{LogPrefix} No SpeechBubbleController found on character '{resolvedCharacter.Id}'. "
-                        + "Advancing immediately."
-                );
-                advanceToNextBlock();
-                return;
-            }
-
-            var characterName = resolvedCharacter.Name ?? resolvedCharacter.Id;
-            var blockUuid = dialogBlock.Uuid;
-
-            // Track this bubble in the active dictionary
-            _activeBubblesByBlockUuid[blockUuid] = bubbleController;
-
-            // Play bounce animation on the character when they start speaking
-            var bounceAnimation = characterMarker.GetComponent<CharacterBounceAnimation>();
-            if (bounceAnimation != null)
-            {
-                bounceAnimation.PlayBounce();
-            }
-
-            // Show the bubble — fade-in and typewriter play in parallel
-            bubbleController.ShowDialogue(characterName, localizedText);
+            var entryNote =
+                nativeProperties.InPortPerCharacter == true
+                    ? "  (speaker named by the wire — inPortPerCharacter)"
+                    : "";
 
             Debug.Log(
-                $"{LogPrefix} DIALOG  {dialogBlock.Label} — {characterName}: \"{TruncateText(localizedText, 50)}\""
+                $"{LogPrefix} DIALOG  {blockLabel} — {speakerName}: "
+                    + $"\"{TruncateText(localizedText, 50)}\"{entryNote}"
             );
 
-            // Determine flow control based on NativeProperties.
-            // Async blocks without waitInput auto-advance (immediately or after timeout).
-            // Sync blocks and async blocks with waitInput wait for player click.
-            bool isAsyncBlock = dialogBlock.NativeProperties?.IsAsync == true;
-            bool needsPlayerInput =
-                dialogBlock.NativeProperties?.WaitInput == true || !isAsyncBlock;
-            double? timeoutMilliseconds = dialogBlock.NativeProperties?.Timeout;
+            // Armed at the END of the reveal, never on arrival: `timeout` is how long the line
+            // STAYS once it has been said. Counting from arrival cuts a line whose text takes
+            // longer to type than the timeout allows — 2500 ms on a 120-character line.
+            Action armTimeout = hasTimeout
+                ? () =>
+                    ArmTimeout(
+                        presentationKey,
+                        blockLabel,
+                        advanceToNextBlock,
+                        timeoutMilliseconds.Value
+                    )
+                : (Action)null;
 
-            if (needsPlayerInput)
+            if (bubbleController != null)
             {
-                // Sync block, or async block with waitInput: wait for player click.
-                _dialogueClickAdvancer.SetPendingAdvance(
-                    blockUuid,
-                    advanceToNextBlock,
-                    bubbleController
-                );
+                _activeBubblesByKey[presentationKey] = bubbleController;
 
-                // If a timeout is also specified, start a timeout coroutine as fallback.
-                // Whichever fires first (click or timeout) advances the block.
-                // The other is cleaned up in PresentBlockCleanup.
-                if (timeoutMilliseconds.HasValue && timeoutMilliseconds.Value > 0)
+                var bounceAnimation = characterMarker.GetComponent<CharacterBounceAnimation>();
+                if (bounceAnimation != null)
                 {
-                    var timeoutInSeconds = (float)(
-                        timeoutMilliseconds.Value / MillisecondsToSeconds
-                    );
-                    var timeoutCoroutine = StartCoroutine(
-                        AutoAdvanceAfterTimeoutCoroutine(
-                            blockUuid,
-                            advanceToNextBlock,
-                            timeoutInSeconds
-                        )
-                    );
-                    _activeTimeoutCoroutinesByBlockUuid[blockUuid] = timeoutCoroutine;
+                    bounceAnimation.PlayBounce();
                 }
-            }
-            else
-            {
-                // Async block without waitInput: auto-advance.
-                // The bubble remains on screen until the engine calls PresentBlockCleanup.
-                if (timeoutMilliseconds.HasValue && timeoutMilliseconds.Value > 0)
+
+                // Registered BEFORE the reveal starts, so the very first click can hurry it.
+                // With a timeout, that is all a click may ever do.
+                if (hasTimeout || !waitsForClick)
                 {
-                    // Timeout specified: wait that duration before calling next().
-                    var timeoutInSeconds = (float)(
-                        timeoutMilliseconds.Value / MillisecondsToSeconds
-                    );
-                    var timeoutCoroutine = StartCoroutine(
-                        AutoAdvanceAfterTimeoutCoroutine(
-                            blockUuid,
-                            advanceToNextBlock,
-                            timeoutInSeconds
-                        )
-                    );
-                    _activeTimeoutCoroutinesByBlockUuid[blockUuid] = timeoutCoroutine;
+                    _dialogueClickAdvancer.SetRevealOnly(presentationKey, bubbleController);
                 }
                 else
                 {
-                    // No timeout: advance immediately.
-                    advanceToNextBlock();
+                    _dialogueClickAdvancer.SetPendingAdvance(
+                        presentationKey,
+                        advanceToNextBlock,
+                        bubbleController
+                    );
                 }
+
+                // Fade-in and typewriter run in parallel; the callback fires when the last
+                // character has been revealed — naturally, or because a click hurried it.
+                bubbleController.ShowDialogue(speakerName, localizedText, armTimeout);
+            }
+            else
+            {
+                Debug.LogWarning(
+                    $"{LogPrefix} DIALOG  {blockLabel} — nothing on stage can show this line. "
+                        + "It keeps its timing and shows nothing."
+                );
+
+                if (waitsForClick && !hasTimeout)
+                {
+                    _dialogueClickAdvancer.SetPendingAdvance(presentationKey, advanceToNextBlock);
+                }
+
+                // No reveal to wait for, so the countdown starts at once.
+                if (armTimeout != null)
+                {
+                    armTimeout();
+                }
+            }
+
+            if (!hasTimeout && !waitsForClick)
+            {
+                // Neither timing: the block leaves in the frame it arrived, so the bubble flashes
+                // and is gone. That is the drawing, not a fault — a writer who wants the line read
+                // gives it a `timeout`.
+                advanceToNextBlock();
             }
         }
 
         /// <summary>
-        /// Coroutine that waits for the specified duration then auto-advances the block.
-        /// Used for async blocks without waitInput (auto-advance after display time)
-        /// and as a fallback timeout for sync/waitInput blocks (player can still click earlier).
+        /// Start the block's <c>timeout</c> countdown. Called when the reveal ends — or at once
+        /// when there was no bubble to reveal.
         /// </summary>
-        /// <param name="blockUuid">The UUID of the block being timed.</param>
+        /// <param name="presentationKey">The dispatch this countdown belongs to.</param>
+        /// <param name="blockLabel">Readable block label, for logs.</param>
         /// <param name="advanceToNextBlock">The engine's Next callback.</param>
-        /// <param name="timeoutInSeconds">How long to wait before auto-advancing.</param>
-        private IEnumerator AutoAdvanceAfterTimeoutCoroutine(
-            string blockUuid,
+        /// <param name="timeoutMilliseconds">How long the line stays, in milliseconds.</param>
+        private void ArmTimeout(
+            string presentationKey,
+            string blockLabel,
+            Action advanceToNextBlock,
+            double timeoutMilliseconds
+        )
+        {
+            var timeoutInSeconds = (float)(timeoutMilliseconds / MillisecondsToSeconds);
+
+            Debug.Log(
+                $"{LogPrefix}   {blockLabel} — line said, staying {timeoutInSeconds}s "
+                    + "(timeout armed at the END of the reveal)"
+            );
+
+            _activeTimeoutCoroutinesByKey[presentationKey] = StartCoroutine(
+                LeaveAfterTimeoutCoroutine(presentationKey, advanceToNextBlock, timeoutInSeconds)
+            );
+        }
+
+        /// <summary>
+        /// Wait out the block's <c>timeout</c>, then leave. Started when the reveal ends.
+        /// </summary>
+        private IEnumerator LeaveAfterTimeoutCoroutine(
+            string presentationKey,
             Action advanceToNextBlock,
             float timeoutInSeconds
         )
         {
             yield return new WaitForSeconds(timeoutInSeconds);
 
-            // Remove the timeout tracking entry since this coroutine completed naturally
-            _activeTimeoutCoroutinesByBlockUuid.Remove(blockUuid);
-
-            // Clear this block from the click advancer if it was registered there.
-            // This prevents a stale entry from being invoked by a later click.
-            _dialogueClickAdvancer.ClearPendingAdvanceForBlock(blockUuid);
+            _activeTimeoutCoroutinesByKey.Remove(presentationKey);
+            _dialogueClickAdvancer.ClearPendingAdvanceForBlock(presentationKey);
 
             advanceToNextBlock();
         }
 
         /// <inheritdoc />
         public void PresentChoiceBlock(
-            ChoiceBlock choiceBlock,
-            BlockCharacter resolvedCharacter,
-            IReadOnlyList<RuntimeChoiceItem> visibleChoices,
+            string presentationKey,
+            BlueprintBlock block,
+            Card resolvedCharacter,
+            IReadOnlyList<Card> cast,
+            IReadOnlyList<RuntimeChoiceItem> offeredOptions,
             Action<string> selectChoiceAndAdvance
         )
         {
-            // Clear click advancer — choices use their own buttons, not click-anywhere
+            // Clear the click advancer — options have their own buttons, not click-anywhere.
             _dialogueClickAdvancer.ClearAllPendingAdvances();
 
-            if (visibleChoices.Count == 0)
+            var blockLabel = LsdeUtils.GetBlockLabel(block);
+
+            if (offeredOptions.Count == 0)
             {
                 Debug.LogWarning(
-                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — no visible choices. Skipping."
+                    $"{LogPrefix} CHOICE  {blockLabel} — nothing to offer. The flow stops here."
                 );
                 return;
             }
 
-            // Resolve the character to display choices on.
-            // Priority: 1) resolvedCharacter from engine (context.Character)
-            //           2) static metadata from blueprint editor (Metadata.Characters)
-            //           3) configurable fallback character (_fallbackChoiceCharacterId)
-            // The fallback handles scenes like simpleAction where the CHOICE block
-            // follows an ACTION block and neither the engine nor the metadata provide
-            // a character. The dev configures which character hosts "unattached" choices.
+            // Who hosts the bubble: the actor the game picked, else the first of the cast, else
+            // the configured fallback. A choice block often follows an ACTION and cites nobody.
             var choiceCharacter =
-                resolvedCharacter ?? choiceBlock.Metadata?.Characters?.FirstOrDefault();
+                resolvedCharacter ?? (cast != null ? cast.FirstOrDefault() : null);
 
-            // Find the character marker in the scene
             DialogueCharacterMarker characterMarker = null;
 
             if (choiceCharacter != null)
             {
-                characterMarker = _characterRegistry.FindMarkerByCharacterId(choiceCharacter.Id);
+                characterMarker = _characterRegistry.FindMarkerByCharacterName(
+                    choiceCharacter.Name
+                );
             }
 
-            // Fallback: use the configurable default character for unattached choice blocks
-            if (characterMarker == null && !string.IsNullOrEmpty(_fallbackChoiceCharacterId))
+            if (characterMarker == null && !string.IsNullOrEmpty(_fallbackChoiceCharacterName))
             {
-                characterMarker = _characterRegistry.FindMarkerByCharacterId(
-                    _fallbackChoiceCharacterId
+                characterMarker = _characterRegistry.FindMarkerByCharacterName(
+                    _fallbackChoiceCharacterName
                 );
 
                 if (characterMarker != null)
                 {
                     Debug.Log(
-                        $"{LogPrefix} CHOICE  {choiceBlock.Label} — using fallback character "
-                            + $"'{_fallbackChoiceCharacterId}' for choice display."
+                        $"{LogPrefix} CHOICE  {blockLabel} — hosted by the fallback character "
+                            + $"'{_fallbackChoiceCharacterName}'."
                     );
                 }
             }
@@ -306,10 +353,10 @@ namespace LSDE.Demo
             if (characterMarker == null)
             {
                 Debug.LogWarning(
-                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — no character found in scene. "
-                        + "Auto-selecting first choice."
+                    $"{LogPrefix} CHOICE  {blockLabel} — nobody to host the options. "
+                        + "Auto-selecting the first one."
                 );
-                selectChoiceAndAdvance(visibleChoices[0].Uuid);
+                selectChoiceAndAdvance(offeredOptions[0].Id);
                 return;
             }
 
@@ -321,136 +368,150 @@ namespace LSDE.Demo
             if (bubbleController == null)
             {
                 Debug.LogWarning(
-                    $"{LogPrefix} CHOICE  {choiceBlock.Label} — no SpeechBubbleController on "
-                        + $"character '{characterMarker.LsdeCharacterId}'. Auto-selecting first choice."
+                    $"{LogPrefix} CHOICE  {blockLabel} — no SpeechBubbleController on "
+                        + $"'{characterMarker.LsdeCharacterName}'. Auto-selecting the first option."
                 );
-                selectChoiceAndAdvance(visibleChoices[0].Uuid);
+                selectChoiceAndAdvance(offeredOptions[0].Id);
                 return;
             }
 
-            var blockUuid = choiceBlock.Uuid;
-            var characterName =
-                choiceCharacter?.Name ?? choiceCharacter?.Id ?? characterMarker.LsdeCharacterId;
+            var speakerName =
+                choiceCharacter != null ? choiceCharacter.Name : characterMarker.LsdeCharacterName;
 
-            // Track this bubble for cleanup in PresentBlockCleanup
-            _activeBubblesByBlockUuid[blockUuid] = bubbleController;
+            _activeBubblesByKey[presentationKey] = bubbleController;
 
-            // Build the localized choice list for the bubble
-            var choiceDisplayItems = new List<(string uuid, string localizedText)>();
-            foreach (var choice in visibleChoices)
+            // The option id IS the exit port, so it is what the button carries.
+            var optionDisplayItems = new List<(string uuid, string localizedText)>();
+            foreach (var option in offeredOptions)
             {
-                var localizedText = LsdeUtils.GetLocalizedText(choice.DialogueText);
-                choiceDisplayItems.Add((choice.Uuid, localizedText ?? choice.Label ?? "???"));
+                var optionText = LsdeText.Localized(option.Text);
+                optionDisplayItems.Add(
+                    (option.Id, string.IsNullOrEmpty(optionText) ? option.Id : optionText)
+                );
             }
 
-            // Show choice buttons in the bubble — the bubble handles layout and interaction
-            bubbleController.ShowChoices(characterName, choiceDisplayItems, selectChoiceAndAdvance);
+            bubbleController.ShowChoices(speakerName, optionDisplayItems, selectChoiceAndAdvance);
 
             Debug.Log(
-                $"{LogPrefix} CHOICE  {choiceBlock.Label} — {characterName}: "
-                    + $"{visibleChoices.Count} choices displayed"
+                $"{LogPrefix} CHOICE  {blockLabel} — {speakerName}: "
+                    + $"{offeredOptions.Count} option(s) offered"
             );
         }
 
         /// <inheritdoc />
         public void PresentConditionBlock(
-            ConditionBlock conditionBlock,
-            IReadOnlyList<RuntimeConditionGroup> conditionGroups,
-            object resolvedResult
+            BlueprintBlock block,
+            IReadOnlyList<RuntimeConditionCase> cases
         )
         {
-            // Conditions are invisible routing — console log only
-            Debug.Log($"{LogPrefix} CONDITION  {conditionBlock.Label} — result: {resolvedResult}");
+            // A condition is invisible routing — the engine already picked the port from these
+            // pre-evaluated cases. Log only.
+            var caseReport = string.Join(
+                " ",
+                cases.Select(conditionCase => $"{conditionCase.Port}={conditionCase.Result}")
+            );
+
+            Debug.Log($"{LogPrefix} CONDITION  {LsdeUtils.GetBlockLabel(block)} — {caseReport}");
+        }
+
+        /// <inheritdoc />
+        public void PresentRouterBlock(
+            BlueprintBlock block,
+            IReadOnlyList<RuntimeConditionCase> cases,
+            IReadOnlyList<string> launchedPorts
+        )
+        {
+            // A tally, not a choice: every case ran, each true one launches its port, and the
+            // continuation (`then` if they all held, `catch` otherwise) comes LAST.
+            var caseReport = string.Join(
+                " ",
+                cases.Select(conditionCase => $"{conditionCase.Port}={conditionCase.Result}")
+            );
+
+            Debug.Log(
+                $"{LogPrefix} ROUTER  {LsdeUtils.GetBlockLabel(block)} — cases: {caseReport}\n"
+                    + $"{LogPrefix}   launching: {string.Join(" → ", launchedPorts)}"
+            );
         }
 
         /// <inheritdoc />
         public void PresentActionBlock(
-            ActionBlock actionBlock,
+            string presentationKey,
+            BlueprintBlock block,
+            IReadOnlyList<ActionCall> calls,
             Action resolveAndAdvance,
             Action<object> rejectAndAdvance
         )
         {
-            var actions = actionBlock.Actions;
-            var actionCount = actions?.Count ?? 0;
+            var callCount = calls?.Count ?? 0;
 
-            Debug.Log($"{LogPrefix} ACTION  {actionBlock.Label} — {actionCount} actions");
+            Debug.Log(
+                $"{LogPrefix} ACTION  {LsdeUtils.GetBlockLabel(block)} — {callCount} call(s)"
+            );
 
-            // No actions or no executor: resolve immediately (nothing to execute)
-            if (actions == null || actionCount == 0 || _actionExecutor == null)
+            if (calls == null || callCount == 0 || _actionExecutor == null)
             {
-                if (_actionExecutor == null && actionCount > 0)
+                if (_actionExecutor == null && callCount > 0)
                 {
                     Debug.LogWarning(
                         $"{LogPrefix} No IActionExecutor assigned on BubbleDialoguePresenter — "
-                            + "resolving action block immediately without execution."
+                            + "resolving the action block without running anything."
                     );
                 }
                 resolveAndAdvance();
                 return;
             }
 
-            // Start parallel execution of all actions (Unity equivalent of Promise.all).
-            // Each action runs as an independent coroutine. When all complete,
-            // we resolve (success) or reject (failure) and advance the engine.
+            // Run every call in parallel (the Unity equivalent of Promise.all), then resolve or
+            // reject once they are all done.
             StartCoroutine(
-                ExecuteAllActionsInParallelCoroutine(actions, resolveAndAdvance, rejectAndAdvance)
+                ExecuteAllCallsInParallelCoroutine(calls, resolveAndAdvance, rejectAndAdvance)
             );
         }
 
         /// <summary>
-        /// Execute all actions from an ACTION block in parallel and wait for all to complete.
-        /// Unity equivalent of <c>Promise.all</c> from the TypeScript reference.
-        ///
-        /// Each action is started as an independent coroutine via <see cref="_actionExecutor"/>.
-        /// A shared completion counter tracks progress. When all actions complete successfully,
-        /// <paramref name="resolveAndAdvance"/> is called. If any action throws an exception,
-        /// <paramref name="rejectAndAdvance"/> is called with the first error encountered.
+        /// Execute all calls of an ACTION block in parallel and wait for all to complete.
+        /// A shared counter tracks progress; the first error wins and routes to <c>catch</c>.
         /// </summary>
-        /// <param name="actions">The list of actions to execute in parallel.</param>
-        /// <param name="resolveAndAdvance">Called when all actions complete successfully.</param>
-        /// <param name="rejectAndAdvance">Called if any action fails.</param>
-        private IEnumerator ExecuteAllActionsInParallelCoroutine(
-            List<ExportAction> actions,
+        private IEnumerator ExecuteAllCallsInParallelCoroutine(
+            IReadOnlyList<ActionCall> calls,
             Action resolveAndAdvance,
             Action<object> rejectAndAdvance
         )
         {
-            int totalActionCount = actions.Count;
-            int completedActionCount = 0;
-            bool hasAnyActionFailed = false;
+            int totalCallCount = calls.Count;
+            int completedCallCount = 0;
+            bool hasAnyCallFailed = false;
             object firstEncounteredError = null;
 
-            // Start all action coroutines in parallel — they run concurrently
-            foreach (var action in actions)
+            foreach (var call in calls)
             {
                 StartCoroutine(
-                    ExecuteSingleActionWithCompletionTracking(
-                        action,
-                        onActionCompleted: () =>
+                    ExecuteSingleCallWithCompletionTracking(
+                        call,
+                        onCallCompleted: () =>
                         {
-                            completedActionCount++;
+                            completedCallCount++;
                         },
-                        onActionFailed: (error) =>
+                        onCallFailed: error =>
                         {
-                            if (!hasAnyActionFailed)
+                            if (!hasAnyCallFailed)
                             {
-                                hasAnyActionFailed = true;
+                                hasAnyCallFailed = true;
                                 firstEncounteredError = error;
                             }
-                            completedActionCount++;
+                            completedCallCount++;
                         }
                     )
                 );
             }
 
-            // Yield until all actions have reported completion (success or failure)
-            while (completedActionCount < totalActionCount)
+            while (completedCallCount < totalCallCount)
             {
                 yield return null;
             }
 
-            // All actions finished — resolve or reject based on outcome
-            if (hasAnyActionFailed)
+            if (hasAnyCallFailed)
             {
                 Debug.LogError($"{LogPrefix} Action block failed: {firstEncounteredError}");
                 rejectAndAdvance(firstEncounteredError);
@@ -462,57 +523,48 @@ namespace LSDE.Demo
         }
 
         /// <summary>
-        /// Wrapper coroutine that executes a single action via <see cref="_actionExecutor"/>
-        /// and reports completion or failure through callbacks.
+        /// Execute a single call via <see cref="_actionExecutor"/> and report completion or
+        /// failure through callbacks.
         ///
         /// Unity does not allow <c>try/catch</c> around <c>yield return</c>, so this method
         /// manually advances the <see cref="IEnumerator"/> with <c>MoveNext()</c> inside a
-        /// <c>try/catch</c> block. This is a standard Unity pattern for exception-safe
-        /// coroutine delegation — it prevents one failing action from crashing the
-        /// entire parallel batch.
+        /// <c>try/catch</c> — the standard pattern for exception-safe coroutine delegation.
+        /// It keeps one failing call from taking down the whole parallel batch.
         /// </summary>
-        /// <param name="action">The action to execute.</param>
-        /// <param name="onActionCompleted">Called when the action completes successfully.</param>
-        /// <param name="onActionFailed">Called with the error if the action throws an exception.</param>
-        private IEnumerator ExecuteSingleActionWithCompletionTracking(
-            ExportAction action,
-            Action onActionCompleted,
-            Action<object> onActionFailed
+        private IEnumerator ExecuteSingleCallWithCompletionTracking(
+            ActionCall call,
+            Action onCallCompleted,
+            Action<object> onCallFailed
         )
         {
-            IEnumerator actionCoroutine;
+            IEnumerator callCoroutine;
 
             try
             {
-                actionCoroutine = _actionExecutor.ExecuteAction(action);
+                callCoroutine = _actionExecutor.ExecuteAction(call);
             }
             catch (Exception exception)
             {
                 Debug.LogError(
-                    $"{LogPrefix} Action '{action.ActionId}' threw during setup: "
-                        + exception.Message
+                    $"{LogPrefix} Call '{call.Fn}' threw during setup: " + exception.Message
                 );
-                onActionFailed(exception);
+                onCallFailed(exception);
                 yield break;
             }
 
-            // Manually advance the enumerator with MoveNext() inside try/catch.
-            // Unity forbids try/catch around "yield return", but MoveNext() is a
-            // regular method call that can be wrapped safely.
             while (true)
             {
                 bool hasMoreSteps;
                 try
                 {
-                    hasMoreSteps = actionCoroutine.MoveNext();
+                    hasMoreSteps = callCoroutine.MoveNext();
                 }
                 catch (Exception exception)
                 {
                     Debug.LogError(
-                        $"{LogPrefix} Action '{action.ActionId}' threw during execution: "
-                            + exception.Message
+                        $"{LogPrefix} Call '{call.Fn}' threw during execution: " + exception.Message
                     );
-                    onActionFailed(exception);
+                    onCallFailed(exception);
                     yield break;
                 }
 
@@ -521,10 +573,10 @@ namespace LSDE.Demo
                     break;
                 }
 
-                yield return actionCoroutine.Current;
+                yield return callCoroutine.Current;
             }
 
-            onActionCompleted();
+            onCallCompleted();
         }
 
         /// <inheritdoc />
@@ -540,9 +592,8 @@ namespace LSDE.Demo
             CancelAllActiveTimeoutCoroutines();
             _dialogueClickAdvancer.ClearAllPendingAdvances();
 
-            // Reset camera to normal follow mode (clears shake, resumes follow).
-            // This ensures the camera returns to tracking the player after
-            // a scene that left it paused on a non-player character.
+            // Reset camera to normal follow mode (clears shake, resumes follow) — a scene may have
+            // left it parked on a non-player character.
             if (_actionExecutor != null)
             {
                 _actionExecutor.ResetCameraState();
@@ -552,43 +603,53 @@ namespace LSDE.Demo
         }
 
         /// <inheritdoc />
-        public void PresentBeforeBlock(BlueprintBlock block)
+        public void PresentBeforeBlock(BlueprintBlock block, NativeProperties nativeProperties)
         {
-            // No visual representation needed for before-block
+            // `debug` is the writer asking to see this block in the log while they work on it.
+            if (nativeProperties != null && nativeProperties.Debug == true)
+            {
+                Debug.Log(
+                    $"{LogPrefix}   debug: entering {LsdeUtils.GetBlockLabel(block)} "
+                        + $"({block.Type})"
+                );
+            }
         }
 
         /// <inheritdoc />
-        public void PresentBlockCleanup(BlueprintBlock block)
+        public void PresentBlockCleanup(string presentationKey, BlueprintBlock block)
         {
-            var blockUuid = block.Uuid;
-
-            // Hide only this block's bubble (if it exists and is still visible).
-            // Other parallel tracks' bubbles remain on screen undisturbed.
-            if (_activeBubblesByBlockUuid.TryGetValue(blockUuid, out var bubbleController))
+            // Hide only THIS presentation's bubble. The other tracks' bubbles stay untouched.
+            if (_activeBubblesByKey.TryGetValue(presentationKey, out var bubbleController))
             {
-                if (bubbleController != null && bubbleController.IsVisible)
+                _activeBubblesByKey.Remove(presentationKey);
+
+                // A character owns one bubble, and two parallel tracks can both be speaking
+                // through the same character — multi-tracks does exactly that with l3. Hiding on
+                // the first cleanup would take the other track's line off screen with it, so the
+                // bubble only closes once nothing else is using it.
+                if (
+                    bubbleController != null
+                    && bubbleController.IsVisible
+                    && !IsBubbleStillInUse(bubbleController)
+                )
                 {
                     bubbleController.HideDialogue();
                 }
-                _activeBubblesByBlockUuid.Remove(blockUuid);
             }
 
-            // Cancel any running timeout coroutine for this block.
-            // This prevents a stale timeout from calling advanceToNextBlock a second time
-            // after the block has already been advanced (e.g. by player click).
+            // Cancel a still-running timeout, so it cannot advance a block twice.
             if (
-                _activeTimeoutCoroutinesByBlockUuid.TryGetValue(blockUuid, out var timeoutCoroutine)
+                _activeTimeoutCoroutinesByKey.TryGetValue(presentationKey, out var timeoutCoroutine)
             )
             {
                 if (timeoutCoroutine != null)
                 {
                     StopCoroutine(timeoutCoroutine);
                 }
-                _activeTimeoutCoroutinesByBlockUuid.Remove(blockUuid);
+                _activeTimeoutCoroutinesByKey.Remove(presentationKey);
             }
 
-            // Clear this block's pending advance from the click advancer
-            _dialogueClickAdvancer.ClearPendingAdvanceForBlock(blockUuid);
+            _dialogueClickAdvancer.ClearPendingAdvanceForBlock(presentationKey);
         }
 
         /// <inheritdoc />
@@ -597,40 +658,53 @@ namespace LSDE.Demo
             IReadOnlyDictionary<string, IReadOnlyList<string>> choiceHistory
         )
         {
-            var visitedList = string.Join(", ", visitedBlockLabels);
-            Debug.Log($"{LogPrefix} Visited: {visitedList}");
+            Debug.Log($"{LogPrefix} Visited: {string.Join(", ", visitedBlockLabels)}");
         }
 
         /// <summary>
-        /// Hide all currently active speech bubbles and clear the tracking dictionary.
-        /// Used during scene exit when all dialogue must be dismissed at once.
+        /// Whether another live presentation is still showing through this bubble.
+        /// </summary>
+        /// <param name="bubbleController">The bubble about to be hidden.</param>
+        private bool IsBubbleStillInUse(SpeechBubbleController bubbleController)
+        {
+            foreach (var activeBubble in _activeBubblesByKey.Values)
+            {
+                if (ReferenceEquals(activeBubble, bubbleController))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Hide every visible bubble and clear the tracking dictionary.
         /// </summary>
         private void HideAllActiveBubbles()
         {
-            foreach (var bubbleController in _activeBubblesByBlockUuid.Values)
+            foreach (var bubbleController in _activeBubblesByKey.Values)
             {
                 if (bubbleController != null && bubbleController.IsVisible)
                 {
                     bubbleController.HideDialogue();
                 }
             }
-            _activeBubblesByBlockUuid.Clear();
+            _activeBubblesByKey.Clear();
         }
 
         /// <summary>
-        /// Cancel all running timeout coroutines and clear the tracking dictionary.
-        /// Used during scene exit to prevent stale timeouts from firing after cleanup.
+        /// Cancel every running timeout coroutine and clear the tracking dictionary.
         /// </summary>
         private void CancelAllActiveTimeoutCoroutines()
         {
-            foreach (var timeoutCoroutine in _activeTimeoutCoroutinesByBlockUuid.Values)
+            foreach (var timeoutCoroutine in _activeTimeoutCoroutinesByKey.Values)
             {
                 if (timeoutCoroutine != null)
                 {
                     StopCoroutine(timeoutCoroutine);
                 }
             }
-            _activeTimeoutCoroutinesByBlockUuid.Clear();
+            _activeTimeoutCoroutinesByKey.Clear();
         }
 
         private static string TruncateText(string text, int maximumLength)

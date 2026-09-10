@@ -4,8 +4,8 @@ using LsdeDialogEngine;
 namespace LSDE.Runtime
 {
     /// <summary>
-    /// Global handler for DIALOG blocks. Resolves the active character,
-    /// extracts localized text, and delegates presentation to <see cref="IDialoguePresenter"/>.
+    /// Global handler for DIALOG blocks. Reads the resolved actor and the localized text,
+    /// then delegates presentation to <see cref="IDialoguePresenter"/>.
     /// Never contains rendering logic directly.
     /// </summary>
     public class DialogBlockHandler
@@ -24,34 +24,46 @@ namespace LSDE.Runtime
 
         /// <summary>
         /// Handle a DIALOG block dispatched by the LSDEDE runtime.
-        /// Matches the <see cref="BlockHandler{DialogBlock, IDialogContext}"/> delegate signature.
         /// </summary>
-        /// <param name="arguments">Block handler arguments containing the block, context, and next callback.</param>
-        /// <returns>A cleanup action called when the engine leaves this block, or null.</returns>
-        public Action HandleDialogBlock(BlockHandlerArgs<DialogBlock, IDialogContext> arguments)
+        /// <param name="arguments">Block, context, and the Next callback.</param>
+        /// <returns>A cleanup action called when the engine LEAVES this block.</returns>
+        public Action HandleDialogBlock(BlockHandlerArgs<BlueprintBlock, IDialogContext> arguments)
         {
             var block = arguments.Block;
             var context = arguments.Context;
             var character = context.Character;
-            var localizedText = LsdeUtils.GetLocalizedText(block.DialogueText);
 
-            // When portPerCharacter is enabled, the handler must tell the engine
-            // which character port to follow for routing to the next block.
-            if (block.NativeProperties?.PortPerCharacter == true && character != null)
+            // The engine hands the RAW string over and never looks inside it: {{@l3}} and the
+            // like are the game's own markers, in the game's own keys. LsdeText is where this
+            // game answers both "which language" and "what does {{@l3}} mean".
+            var localizedText = LsdeText.Localized(block.Text);
+
+            // The natives live in block.Props next to the writer's own properties;
+            // GetNativeProperties is what tells them apart.
+            var nativeProperties = LsdeUtils.GetNativeProperties(block);
+
+            // With portPerCharacter the block grows one EXIT port per actor card id, and the game
+            // says which one to take. `out` stays the fallback for an actor with no port drawn.
+            if (nativeProperties.PortPerCharacter == true && character != null)
             {
-                context.ResolveCharacterPort(character.Uuid);
+                context.ResolveCharacterPort(character.Id);
             }
 
-            // Pass Next to the presenter — the presenter decides when to advance.
-            // Console presenter calls it immediately; UI presenter waits for player click.
+            // One block can be on screen twice at once (inPortPerCharacter), so visuals are
+            // keyed by DISPATCH, not by block id. The cleanup below captures the same key.
+            var presentationKey = LsdePresentationKey.Next(block);
+
+            // Pass Next to the presenter — the presenter decides when to advance:
+            // immediately, on a player click, or when a `timeout` runs out after the reveal.
             _dialoguePresenter.PresentDialogueBlock(
+                presentationKey,
                 block,
                 character,
                 localizedText,
                 arguments.Next
             );
 
-            return () => _dialoguePresenter.PresentBlockCleanup(block);
+            return () => _dialoguePresenter.PresentBlockCleanup(presentationKey, block);
         }
     }
 }

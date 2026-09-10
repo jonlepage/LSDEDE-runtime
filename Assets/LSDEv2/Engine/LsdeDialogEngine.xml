@@ -1,0 +1,1829 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LsdeDialogEngine</name>
+    </assembly>
+    <members>
+        <member name="T:LsdeDialogEngine.ResolvedCards">
+            <summary>The cards a block cites, already looked up. Built once per block.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ResolvedCards.Actors">
+            <summary>Every card in Block.Actors, in file order. Ids with no card are dropped.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ResolvedCards.Emotion">
+            <summary>The card in Block.Emotion, when the writer set one.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ResolvedCards.Character">
+            <summary>The one OnResolveCharacter picked out of Actors, when a resolver is installed.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ResolvedCards.Resolve(LsdeDialogEngine.BlueprintBlock,System.Func{System.String,LsdeDialogEngine.Card},System.Func{System.Collections.Generic.List{LsdeDialogEngine.Card},LsdeDialogEngine.Card},System.String)">
+            <summary>
+            Look up a block's Actors and Emotion in the export's card table.
+            <para>An id with no card is dropped rather than reported: a payload citing a card that
+            is not in its own tables is an exporter bug, and the traversal is not where a game
+            should learn about it — Init() is.</para>
+            <para>InPortPerCharacter: when the wire named ONE actor, designatedActorId is that card
+            id and it is the only one offered to pickCharacter. The game is still asked — it may
+            answer null, which says the character does not exist — but it cannot pick a different
+            one, and Actors stays the whole cast either way.</para>
+            </summary>
+        </member>
+        <member name="T:LsdeDialogEngine.InternalBlockContext">
+            <summary>What every context carries, whatever the block type.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.InternalDialogContext.ActorPort">
+            <summary>The card id whose port to take, or null for Out.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.InternalConditionContext.ConditionPort">
+            <summary>The port the handler picked, overriding what the cases said.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.InternalRouterContext">
+            <summary>A ROUTER's context: the same pre-evaluated cases, and nothing to answer with.</summary>
+            <remarks>No Resolve. By the time a handler could speak, every true case has launched its
+            port and the continuation is picked — there is no single exit left to override. The handler
+            is an observation point, which is why the type requires none at all.</remarks>
+        </member>
+        <member name="F:LsdeDialogEngine.InternalRouterContext.RouterPorts">
+            <summary>Every port the block leaves by, the continuation last. See PickRouterPorts.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ConditionEvaluator">
+            <summary>Evaluates condition chains left to right, with NO operator precedence, and picks a block's exit port. Must behave identically in every runtime.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ConditionEvaluator.EvaluateConditionChain(System.Collections.Generic.List{LsdeDialogEngine.ConditionTest},System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>
+            Evaluate a chain of tests left to right, <b>with no operator precedence</b>.
+            <para>"a AND b OR c" reads as "(a AND b) OR c", never as "a AND (b OR c)". That is
+            deliberate: the editor draws a flat list, so the engine evaluates a flat list. A writer
+            who needs grouping uses two condition blocks in a row, which is also what the reader of
+            the graph sees.</para>
+            <para>Join links a test to the one ABOVE it and is absent on the first. Missing means AND.</para>
+            <para><b>Every test is evaluated, even once the answer is settled.</b> No short-circuit:
+            the game's evaluator is also where a project logs, counts or displays what was asked,
+            and skipping calls would make that log depend on the order the writer happened to use.</para>
+            <para>No tests at all = true. That is how "always" is written in v2 — by the ABSENCE of
+            When, never by an empty list.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ConditionEvaluator.EvaluateConditionCases(System.Collections.Generic.List{LsdeDialogEngine.ConditionCase},System.Boolean,System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>
+            Pick the exit port of a condition block. There are two modes and only two.
+            <para>PortPerCase absent: every case must hold — "out" if they all do, "default" otherwise.</para>
+            <para>PortPerCase true: the first case that holds, in order, takes its own port (K1…);
+            "default" when none does.</para>
+            <para>A case with no When is always true, and makes every case below it unreachable in
+            PortPerCase mode. That is the writer's drawing, not an error to report.</para>
+            <para>A block with no cases at all leaves by "out": nothing was asked, so nothing failed.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ConditionEvaluator.PickPortFromResults(System.Collections.Generic.List{LsdeDialogEngine.ConditionCase},System.Boolean,System.Collections.Generic.List{System.Boolean})">
+            <summary>Pick the exit port from case results that were ALREADY computed.</summary>
+            <remarks>Same rules as EvaluateConditionCases, same answer — it just does not ask again.
+            <para>The engine needs both halves for every condition block: a result per case, so the
+            handler is handed answers rather than questions, and the port to leave by. Calling the
+            two in a row asked the game's evaluator about the same test twice, and how many times
+            depended on the mode and on which case matched — which broke the one promise this file
+            makes, that a project can count and log what it was asked.</para>
+            <para>EvaluateConditionCases keeps its short-circuit: a game calling it on its own
+            really does stop at the first case that holds. That saves nothing HERE, because filling
+            Result for every case has already asked about all of them.</para></remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.ConditionEvaluator.PickRouterPorts(System.Collections.Generic.List{LsdeDialogEngine.ConditionCase},System.Collections.Generic.List{System.Boolean})">
+            <summary>A ROUTER's exits: the port of every true case, then "then" or "catch".</summary>
+            <remarks>The opposite reading of the same Cases a condition carries. A condition asks
+            <i>which one</i> and leaves by a single port; a router asks <i>which ones</i>, launches
+            each of them, and continues besides — by "then" when every case held, by "catch" when
+            any did not.
+            <para>Three rules this encodes, all of them from the format's own contract:</para>
+            <para><b>No break.</b> Every case is counted, so a false one in the middle does not hide
+            the true ones after it. That is the whole difference with a condition.</para>
+            <para><b>The tally is over CASES, not over ports.</b> A port carrying several wires
+            launches several tracks and still counts as one case — and two cases wired to the same
+            block dispatch it twice.</para>
+            <para><b>No cases at all → "then"</b>, the way Promise.all([]) resolves.</para>
+            <para>The continuation is LAST in the list on purpose: the traversal keeps the first
+            non-async target as the main flow, so then/catch stays the main flow as long as the case
+            routes are async. "catch" cancels nothing: the tracks of the true cases are already
+            running by the time the tally is read.</para></remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.ConditionEvaluator.EvaluateEachCase(System.Collections.Generic.List{LsdeDialogEngine.ConditionCase},System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>Evaluate every case on its own, without picking a port.</summary>
+            <remarks>Handed to a game that wants to show what matched without changing where the
+            flow goes. The engine fills Cases[i].Result with the same rule, then reads the exit port
+            off those results with PickPortFromResults — never by calling this and deciding for
+            itself.</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.ConditionEvaluator.TagOptionVisibility(System.Collections.Generic.List{LsdeDialogEngine.Option},System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>
+            Tag every option of a choice with whether its When holds.
+            <para>The engine hands over <b>all</b> the options, tagged — never a shortened list. A
+            game that wants only the offered ones filters on Visible != false; a game that wants to
+            grey out the others, or show "[locked]", still has them. Filtering here would take that
+            away.</para>
+            <para>Visible is left null when no evaluator is installed: unknown, not hidden.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ConditionEvaluator.IsChoiceTest(LsdeDialogEngine.ConditionTest)">
+            <summary>
+            Is this test about what the player already answered, rather than about game state?
+            <para>"choice" is a reserved dictionary id — no project dictionary may take it. Entry is
+            a CHOICE block id of this scene and Value an option id of that block. The engine answers
+            these from the history it kept during the scene, so they never reach the game's
+            evaluator: a game does not have to remember what it already told the engine.</para>
+            </summary>
+        </member>
+        <member name="T:LsdeDialogEngine.DialogueEngine">
+            <summary>LSDE Dialog Engine — callback-driven graph dispatcher.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.DialogueEngine._activeScenes">
+            <summary>The scenes currently playing, in the order they started.</summary>
+            <remarks>Keyed by the HANDLE, not by the reference Scene() was called with. Nothing
+            stops a game from opening the same scene twice — a hub revisited while a first pass is
+            parked on a handler — and keying by the reference meant the second one EVICTED the
+            first: the engine reported one scene when two were playing, and Stop() could no longer
+            reach the one it had dropped, which then ran for the rest of the process.</remarks>
+        </member>
+        <member name="F:LsdeDialogEngine.DialogueEngine._resolveCharacter">
+            <summary>
+            Which actor of a block is the one speaking. Defaults to the first.
+            <para>LSDE deliberately refuses to say what the order of Actors means — whether it is
+            who speaks or who is present is a decision each game makes. The default picks the first
+            because a default has to pick something, not because the format says so.</para>
+            </summary>
+        </member>
+        <member name="F:LsdeDialogEngine.DialogueEngine._conditionResolver">
+            <summary>Unified condition resolver for choice visibility and condition block pre-evaluation.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.Init(LsdeDialogEngine.InitOptions)">
+            <summary>
+            Load a payload and report what is wrong with it.
+            <para>Takes one export in Data, or the several files of a per-scene one in Files — each
+            of those carries the whole header, so they are folded into a single payload after
+            checking they come from one export.</para>
+            <para>The engine is initialized only when there are no errors: a payload it cannot read
+            leaves it unusable rather than half-loaded.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.SetLocale(System.String)">
+            <summary>Set the active locale for text resolution.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnResolveCharacter(System.Func{System.Collections.Generic.List{LsdeDialogEngine.Card},LsdeDialogEngine.Card})">
+            <summary>Set the character resolution callback used to pick which character is active on a block.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnResolveCondition(System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>Install a unified condition evaluator for both choice visibility and condition block pre-evaluation.
+            The engine handles choice: conditions internally via choice history — this callback evaluates game-state conditions only.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnValidateNextBlock(LsdeDialogEngine.ValidateNextBlockHandler)">
+            <summary>Register a handler called before each block to validate it.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnInvalidateBlock(LsdeDialogEngine.InvalidateBlockHandler)">
+            <summary>Register a handler called when a block fails validation.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnBeforeBlock(LsdeDialogEngine.BeforeBlockHandler)">
+            <summary>Register a handler called before every block. Must call resolve() to continue.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnDialog(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IDialogContext})">
+            <summary>Register a global handler for DIALOG blocks (with optional cleanup).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnDialog(System.Action{LsdeDialogEngine.BlockHandlerArgs{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IDialogContext}})">
+            <summary>Register a global handler for DIALOG blocks (no cleanup).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnChoice(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IChoiceContext})">
+            <summary>Register a global handler for CHOICE blocks (with optional cleanup).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnChoice(System.Action{LsdeDialogEngine.BlockHandlerArgs{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IChoiceContext}})">
+            <summary>Register a global handler for CHOICE blocks (no cleanup).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnCondition(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IConditionContext})">
+            <summary>Register a global handler for CONDITION blocks (with optional cleanup).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnCondition(System.Action{LsdeDialogEngine.BlockHandlerArgs{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IConditionContext}})">
+            <summary>Register a global handler for CONDITION blocks (no cleanup).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnAction(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IActionContext})">
+            <summary>Register a global handler for ACTION blocks (with optional cleanup).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnAction(System.Action{LsdeDialogEngine.BlockHandlerArgs{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IActionContext}})">
+            <summary>Register a global handler for ACTION blocks (no cleanup).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnSceneEnter(LsdeDialogEngine.SceneLifecycleHandler)">
+            <summary>Register a handler called when any scene starts.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.OnSceneExit(LsdeDialogEngine.SceneLifecycleHandler)">
+            <summary>Register a handler called when any scene ends.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.Scene(System.String)">
+            <summary>
+            Open a scene by its path (reactor_breach) or by its stable id (sc_u0vqg2g8).
+            <para>Take the id wherever the reference is stored OUTSIDE the payload — a Unity asset, a
+            save file, a database row. The path is what a writer reads and what builds the i18n
+            keys, but it changes the day someone renames the scene, and a serialized path then stops
+            resolving with no compiler to catch it. The id survives a rename.</para>
+            <para>Does NOT start the flow — call handle.Start().</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.Stop">
+            <summary>Cancel every running scene.</summary>
+            <remarks>Every one of them, even if a cleanup throws on the way. A scene left running
+            after Stop() is a dialogue the game can no longer see or reach, and one handler's
+            failure must not do that to the scenes after it — the same rule a scene already applies
+            to its own tracks. The first fault surfaces once there is nothing left to close.</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.IsRunning">
+            <summary>True if at least one scene is active.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.GetActiveScenes">
+            <summary>Get all currently active scene handles.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.GetCurrentBlocks">
+            <summary>Get the current block of every active scene.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.DialogueEngine.GetSceneConnections(System.String)">
+            <summary>Every wire INSIDE a scene, flattened so each carries the block it leaves.</summary>
+            <remarks>Graph inspection, for a debug view that wants to see the wiring without playing
+            it. It has never had anything to do with going from one scene to another: a wire has
+            never crossed a scene in any version of the format, and chaining two scenes is the
+            game's own business.</remarks>
+        </member>
+        <member name="T:LsdeDialogEngine.SceneGraph">
+            <summary>
+            Indexed representation of a single scene for O(1) block lookups.
+            Built once during Init(), used throughout traversal.
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneGraph.#ctor(LsdeDialogEngine.BlueprintScene)">
+            <summary>Index one scene by block id. Built once during Init().</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneGraph.GetBlock(System.String)">
+            <summary>A block by its id, which is unique WITHIN this scene only.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneGraph.GetOutgoingLinks(System.String)">
+            <summary>
+            The wires leaving a block, in the order the file lists them.
+            <para>Returned as-is: a Link knows its port and its target, and the caller already knows
+            which block it asked about. Use GetConnections when the source id has to travel with the
+            wire.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneGraph.GetConnections">
+            <summary>
+            Every wire of the scene, flattened so each one carries the block it leaves.
+            <para>Graph inspection only — a debug tool that wants to see how a scene is wired without
+            playing it. Traversal never needs this: it walks from a block, so it uses
+            GetOutgoingLinks.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneGraph.GetStartBlock">
+            <summary>
+            The block the scene starts on, named by Scene.Start.
+            <para>There is no per-block start flag in v2 — the scene names its entry, so a scene
+            cannot declare two of them. Null means the scene has no entry and cannot play.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneGraph.GetScene">
+            <summary>The scene this graph indexes, as the payload declares it.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneGraph.GetAllBlocks">
+            <summary>Every block of the scene, in payload order. NOTE blocks included.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.BlueprintGraph">
+            <summary>
+            Indexed representation of an entire blueprint export.
+            Provides O(1) access to scenes, functions, dictionaries and cards.
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.#ctor(LsdeDialogEngine.BlueprintExport)">
+            <summary>Index a whole export: scenes, functions, dictionaries and cards. Built once during Init().</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.GetSceneGraph(System.String)">
+            <summary>A scene by its path (reactor_breach) or by its stable id (sc_u0vqg2g8).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.GetFunction(System.String)">
+            <summary>A declared engine function, as an action call's Fn names it.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.GetDictionary(System.String)">
+            <summary>A declared dictionary, as a condition test's Dict cites it.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.GetCard(System.String)">
+            <summary>A card by its editor id (var1), the other end of a block's Actors and Emotion.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.GetCardsByRole(System.String)">
+            <summary>Every card holding a given role — Cards mixes characters, emotions, places and none.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.GetAllScenePaths">
+            <summary>The path of every scene in the export — what engine.Scene() takes.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.GetSceneConnections(System.String)">
+            <summary>Every wire INSIDE a scene, flattened. Inspection only.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.GetLocales">
+            <summary>The locales the export carries, reference locale first.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlueprintGraph.GetReferenceLocale">
+            <summary>The locale written first in the export. Empty when the project declares none.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.HandlerRegistry">
+            <summary>Stores global (Tier 1) handlers. Last-write-wins per slot.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.SceneHandlerRegistry">
+            <summary>Stores per-scene (Tier 2) handlers.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ResolvedHandlers">
+            <summary>Resolved handler pair (scene + global).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.HandlerResolver.ResolveHandler(System.String,System.String,LsdeDialogEngine.SceneHandlerRegistry,LsdeDialogEngine.HandlerRegistry)">
+            <summary>
+            Resolve which handlers to call for a given block.
+            Priority: OnBlock(blockId) > scene.OnType > engine.OnType
+            </summary>
+        </member>
+        <member name="T:LsdeDialogEngine.LsdeUtils">
+            <summary>Public helpers for game developers integrating the LSDE engine.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.LsdeUtils.Locale">
+            <summary>Active locale code, synced by engine.SetLocale().</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.IsDialogBlock(LsdeDialogEngine.BlueprintBlock)">
+            <summary>True when the block is a dialog. Block types are LOWERCASE in v2.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.IsChoiceBlock(LsdeDialogEngine.BlueprintBlock)">
+            <summary>True when the block is a choice.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.IsConditionBlock(LsdeDialogEngine.BlueprintBlock)">
+            <summary>True when the block is a condition.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.IsRouterBlock(LsdeDialogEngine.BlueprintBlock)">
+            <summary>True when the block is a router.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.IsActionBlock(LsdeDialogEngine.BlueprintBlock)">
+            <summary>True when the block is an action.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.IsNoteBlock(LsdeDialogEngine.BlueprintBlock)">
+            <summary>True when the block is a note.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.GetBlockLabel(LsdeDialogEngine.BlueprintBlock)">
+            <summary>
+            How to name a block on screen or in a log.
+            <para>There is no mandatory block name in v2, and none is needed: DIALOG-007 already
+            reads better than the uuid it replaced. A writer's note says far more than a three-word
+            label would, so it comes next; a Label wins when an export carries one.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.GetLocalizedText(System.Collections.Generic.Dictionary{System.String,System.String},System.String)">
+            <summary>
+            Pick a locale out of an inline Text map — Block.Text, or an option's.
+            <para>Only works when texts were exported INSIDE the payload. With the separate mode the
+            blocks carry no Text at all and GetTextFromTable is the one to use.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.GetTextFromTable(System.Collections.Generic.Dictionary{System.String,System.Collections.Generic.Dictionary{System.String,System.Object}},System.String,System.String,System.String)">
+            <summary>
+            Read a line out of a loaded localization/&lt;locale&gt;/__blueprints__.json, for the
+            separate text mode — which is what most integrations want: keeping every locale inline
+            forces a game to load twenty languages to play one.
+            <para>The game loads the file; the engine does no IO, ever. Pass the block's scene and
+            id, plus an option id for one answer of a choice.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.GetTextKey(LsdeDialogEngine.BlueprintBlock,System.String)">
+            <summary>
+            The i18n key of a block, or of one option of a choice.
+            <para>The key is already in the payload (Block.Key), so this only builds the option
+            variant — useful for a voice file, whose name is derived from the key.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.GetNativeProperties(LsdeDialogEngine.BlueprintBlock)">
+            <summary>
+            The properties the ENGINE acts on, pulled out of a block's Props.
+            <para>v2 puts natives and the writer's own properties in one bag, keyed by bare id, and
+            ids cannot collide — LSDE refuses a project property that takes a native name. So this
+            is a lookup against NativePropertyIds, not a guess.</para>
+            <para><b>Delay and Timeout are MILLISECONDS.</b> They were seconds in v1 and nothing
+            reports the change at runtime: a migrated project turns a 3-second pause into 3 ms.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.GetCustomProperties(LsdeDialogEngine.BlueprintBlock)">
+            <summary>
+            The properties the WRITER declared, with the natives taken out — everything the game is
+            free to give its own meaning to.
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.IsChoiceCondition(LsdeDialogEngine.ConditionTest)">
+            <summary>
+            Does this test read a past answer of the player rather than game state?
+            <para>"choice" is a reserved dictionary id that no project dictionary may take: Entry is
+            a CHOICE block id of this scene, Value an option id of that block. The engine answers
+            these from its own history, so a game never has to remember what it already told it.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.GetChoiceConditionBlockId(LsdeDialogEngine.ConditionTest)">
+            <summary>The CHOICE block a "choice" test reads, or null for any other test.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.EvaluateConditionChain(System.Collections.Generic.List{LsdeDialogEngine.ConditionTest},System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>Evaluate a chain of tests left to right, with NO operator precedence.
+            Absent or empty means true — which is how "always" is written in v2.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.EvaluateConditionCases(System.Collections.Generic.List{LsdeDialogEngine.ConditionCase},System.Boolean,System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>The exit port of a condition block: "out"/"default" in if mode, K1… with
+            PortPerCase. Replaces the v1 EvaluateConditionGroups, which returned an index and had a
+            third, dispatcher mode that no longer exists.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.EvaluateEachCase(System.Collections.Generic.List{LsdeDialogEngine.ConditionCase},System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>Each case on its own, in order — to show what matched without changing the flow.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.PickRouterPorts(System.Collections.Generic.List{LsdeDialogEngine.ConditionCase},System.Collections.Generic.List{System.Boolean})">
+            <summary>The exits of a ROUTER, from case results already computed: the port of every
+            true case, then "then" when they all held or "catch" when one did not — always last. The
+            router's reading of the same Cases a condition carries.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.LsdeUtils.TagOptionVisibility(System.Collections.Generic.List{LsdeDialogEngine.Option},System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>Tag every option of a choice with whether its When holds, returning them ALL.
+            Replaces the v1 FilterVisibleChoices, which shortened the list and took away the ability
+            to show a locked answer.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.PortResolver">
+            <summary>Resolves a PORT NAME to the wires leaving it. The one algorithm that must be equivalent byte for byte across every runtime: a divergence here does not crash, it sends a player down a branch the writer never drew.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.PortResolver.ResolvePort(LsdeDialogEngine.PortResolutionInput)">
+            <summary>
+            Pick the outgoing links to follow, given a block and what happened while it ran.
+            <para>Returns EVERY matching link. Deciding which one is the main track and which run in
+            parallel belongs to the traversal, not here — this function is pure and knows nothing
+            about tracks.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.PortResolver.ResolveDialogPort(System.Collections.Generic.List{LsdeDialogEngine.Link},System.String)">
+            <summary>
+            A dialog leaves by "out".
+            <para>With PortPerCharacter it grows one port per actor instead, named by the actor's
+            CARD ID (var1, var2) — the same id Block.Actors lists. "out" stays as the "else" exit:
+            a dialog whose actor has no port of its own still goes somewhere.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.PortResolver.ResolveChoicePort(System.Collections.Generic.List{LsdeDialogEngine.Link},System.String)">
+            <summary>
+            A choice leaves by the id of the option the player picked — C1, C2. That id IS the port.
+            <para>There is no "out" and no fallback: until an option is picked there is nowhere to
+            go, and an option the writer left unwired ends the flow. Both are the drawing.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.PortResolver.ResolveConditionPort(System.Collections.Generic.List{LsdeDialogEngine.Link},System.String)">
+            <summary>
+            A condition leaves by the port its cases picked — "out" or "default" in if mode, K1… or
+            "default" with PortPerCase.
+            <para>Which port that is was decided before we got here, by the condition evaluator: it
+            is the only thing that knows the two modes and the game's answers. This function does
+            not re-derive it. Null means nothing was decided, so nowhere to go.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.PortResolver.ResolveRouterPorts(System.Collections.Generic.List{LsdeDialogEngine.Link},System.Collections.Generic.List{System.String})">
+            <summary>
+            A router leaves by SEVERAL ports at once: the K* of each true case, then "then" or "catch".
+            <para>Which ports those are was decided before we got here, by the condition evaluator —
+            the same division of labour as a condition, and for the same reason: only it knows the
+            game's answers.</para>
+            <para>Order is preserved, and the continuation is last. That is what lets the traversal
+            keep then/catch as the main flow: it takes the first non-async target, and in the
+            arrangement LSDE recommends the case routes all carry IsAsync.</para>
+            <para>A port with no wire contributes nothing and is not an error — a writer who launched
+            nothing on a true case simply drew it that way. Null means nothing was decided, so
+            nowhere to go.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.PortResolver.ResolveActionPort(System.Collections.Generic.List{LsdeDialogEngine.Link},System.Nullable{System.Boolean})">
+            <summary>
+            An action leaves by "then" once its calls went through, and by "catch" when one failed.
+            <para>A failure with no "catch" wired falls back to "then": the writer who drew no error
+            branch meant the flow to carry on, and stopping the scene on an unhandled failure would
+            strand the player mid-dialogue.</para>
+            </summary>
+        </member>
+        <member name="F:LsdeDialogEngine.SceneHandleCallbacks.GetCard">
+            <summary>Look a card id (var1) up in the export's Cards table.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.SceneHandleImpl._completed">
+            <summary>Blocks this scene has FINISHED, which is not the same as blocks it reached.</summary>
+            <remarks>A block joins _visited when it is dispatched and _completed when the track
+            leaves it: the game called next(), the exit port was resolved and the cleanup has run.
+            The two sets answer two different questions, and only one of them is WaitForBlocks.
+            It used to be the visited set, which made the property nearly inert -- a join is
+            normally drawn onto blocks dispatched a fraction of a millisecond earlier, so the wait
+            lifted in the very tick it was registered.</remarks>
+        </member>
+        <member name="F:LsdeDialogEngine.SceneHandleImpl._pendingWaits">
+            <summary>Tracks — the main flow included — parked until a set of blocks has been visited.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.SceneHandleImpl._tracks">
+            <summary>Every live track, the main flow first.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.SceneHandleImpl._mainTrack">
+            <summary>The flow the player is watching. Null until Start().</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.SceneHandleImpl._nextTrackId">
+            <summary>Auto-incremented track id. Track.MainTrackId (0) belongs to the main flow.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.GetCurrentBlock">
+            <summary>The block the flow the player is watching is on. Parallel tracks have their own.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.GetActiveTracks">
+            <summary>How many PARALLEL tracks are running. The main flow is not one of them.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.EvaluateCondition(LsdeDialogEngine.ConditionTest)">
+            <summary>Evaluate a condition against the scene's choice history.
+            Uses the unified resolver as fallback for non-choice conditions.
+            Without a resolver, non-choice conditions default to false.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.OnResolveCharacter(System.Func{System.Collections.Generic.List{LsdeDialogEngine.Card},LsdeDialogEngine.Card})">
+            <summary>Set a scene-level character resolution override.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.AddVisited(System.String)">
+            <summary>Mark a block reached. Nothing is released by this.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.AddCompleted(System.String)">
+            <summary>Mark a block finished, and release anything that was waiting on it.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.SpawnTrack(LsdeDialogEngine.BlueprintBlock,System.Nullable{System.Int32},System.String)">
+            <summary>Open a parallel track, entered through entryPort. Returns its id.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.TrackEnded(LsdeDialogEngine.Track)">
+            <summary>A track has nowhere left to go. Retire it, and close the scene once nothing is
+            left that could still move.</summary>
+            <remarks>
+            <para>Every track is retired the same way, the main flow included. What ends the scene
+            is the pool running out of tracks able to advance, not the main flow reaching its
+            end.</para>
+            <para>It used to be the main flow: TrackEnded on track 0 called Shutdown(), which
+            cancels every live track. That contradicted the promise Track.EndFlow makes — child
+            tracks survive, only an explicit Cancel() cascades — for the one track that opens most
+            of them, and it made a whole port silently do nothing: a port whose targets are ALL
+            isAsync leaves the main flow no continuation, so it ends the instant it has spawned
+            them, and shutdown cancelled the branches born three lines earlier. They never got past
+            OnBeforeBlock.</para>
+            <para>A track parked on a waitForBlocks does NOT count as able to advance: it is waiting
+            for another track to visit a block, so once every survivor is parked, nothing will ever
+            visit anything again. Keeping the scene open on those would turn an unreachable wait
+            into a scene that never closes.</para>
+            <para>An explicit Cancel() still tears the whole scene down at once — that is its
+            job.</para>
+            </remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.RegisterWaitForBlocks(LsdeDialogEngine.IWaiter,System.Collections.Generic.List{System.String})">
+            <summary>Park a track (or the main flow) until every listed block has FINISHED.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.RunValidation(LsdeDialogEngine.BlueprintBlock,System.String,LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.Card)">
+            <summary>Run OnValidateNextBlock for a block, and OnInvalidateBlock when it refuses.</summary>
+            <remarks>Called by BOTH the main flow and every parallel track. It used to live inline
+            in the main flow only, so a game using this hook as a gate — "do not enter this block
+            unless the player has the keycard" — was bypassed the moment a branch was marked
+            IsAsync. Nothing in the hook's contract said it only applied to the flow the player was
+            watching, and nothing on screen would have told anyone.</remarks>
+            <para>entryPort is the port the wire arrived on, and it is passed for one reason: under
+            InPortPerCharacter the gate must be asked about the actor the DESIGNER wired, not about
+            whichever one the whole cast would have produced. A gate reading "do not enter unless
+            this character is here" would otherwise be answered about the wrong character.</para>
+            <returns>false when the caller must stop rather than dispatch the block.</returns>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.EvaluateConditionWithHistory(LsdeDialogEngine.ConditionTest,System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>
+            Answer a test, taking the reserved "choice" dictionary on ourselves.
+            <para>{ dict: "choice", entry: "CHOICE-001", value: "C1" } asks whether the player
+            picked C1 at CHOICE-001 earlier IN THIS SCENE. The engine kept that history, so the
+            question never reaches the game: it would otherwise have to mirror a record the engine
+            already holds, and the two would drift. The memory starts and ends with the scene.</para>
+            <para>A block that was never reached answers false for equals, true for notEquals.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.RoutingEvaluator">
+            <summary>
+            The evaluator that ROUTES a condition block. Always present.
+            <para>With no game resolver installed it still answers "choice" tests on its own, and
+            says false to anything about game state — a scene that only asks about its own past
+            answers therefore plays without a single line of game code, and one that asks about the
+            world takes its default branch rather than stalling.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.VisibilityEvaluator">
+            <summary>
+            The evaluator that TAGS option visibility, or null when there is no game resolver.
+            <para>Routing and tagging cannot share one answer here. Routing has to pick a branch, so
+            an unanswerable test has to become false. An option has no such obligation: saying false
+            about a question nobody could answer would HIDE an answer from the player. Null says
+            unknown, and a game reading Visible != false still offers it.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.ResolveCardsFor(LsdeDialogEngine.BlueprintBlock,System.String)">
+            <summary>Look up the cards a block cites, and let the game pick which actor is speaking.</summary>
+            <remarks>With InPortPerCharacter, the wire that reached the block named the actor:
+            entryPort holds a CARD ID instead of "in", and only that actor is offered to
+            OnResolveCharacter. The game is still the one answering — it may say null — it simply
+            cannot pick a different actor than the one the designer wired.
+            <para>Without the property, or when the block was entered through "in", entryPort is
+            ignored and the whole cast is offered, exactly as before. That is what keeps every
+            existing project — and every wire LSDE has ever written with ToPort "in" — behaving
+            identically.</para></remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.SceneHandleImpl.EvaluateCases(LsdeDialogEngine.BlueprintBlock)">
+            <summary>Evaluate every case of a CONDITION or a ROUTER, before its context is built.</summary>
+            <remarks>The handler is then handed RESULTS rather than questions, and the exit port is
+            read off these same results rather than re-asking the game: each test reaches
+            OnResolveCondition exactly ONE time — whatever the block type, whatever the mode,
+            whichever case matches. That is also what makes OnCondition optional: with a resolver
+            installed the engine already knows where it is going, and the handler becomes a place
+            to log or to override.
+            <para>Written ONCE for both block types on purpose. They ask the same question; only the
+            reading of the answer differs, and that belongs to PickPortFromResults and
+            PickRouterPorts.</para></remarks>
+        </member>
+        <member name="T:LsdeDialogEngine.IWaiter">
+            <summary>Anything the engine can park until a set of blocks has been visited.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.Cleanups">
+            <summary>
+            Running the cleanups a handler returned, without letting one break a teardown.
+            </summary>
+            <remarks>A cleanup runs while the engine is tearing something down — leaving a block,
+            ending a track, closing a scene. An exception escaping mid-teardown STOPPED the teardown:
+            the scene stayed running, OnSceneExit never fired, the remaining tracks were never
+            cancelled, and the handle sat in the engine's registry forever. The game got its exception
+            and an engine it could no longer use.
+            <para>So the shutdown always finishes and the fault is re-thrown once there is nothing left
+            to unwind — the same contract as a handler that throws.</para></remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.Cleanups.Run(System.Action)">
+            <summary>Run a cleanup and hand back what it threw instead of letting it escape.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Cleanups.Combine(System.Action,System.Action)">
+            <summary>Combine a scene cleanup and a global one. BOTH always run.</summary>
+            <remarks>They release unrelated things — a scene handler's panel and a global handler's
+            audio voice — so letting the first one's failure skip the second leaked whatever the
+            second owned. The first fault is re-thrown once both have had their turn.</remarks>
+        </member>
+        <member name="T:LsdeDialogEngine.Natives">
+            <summary>
+            The engine-facing properties of a block, read straight out of Props.
+            </summary>
+            <remarks>v2 has one bag: natives and the writer's own properties share Props, keyed by bare
+            id. Ids cannot collide — LSDE refuses a project property that takes a native name — so
+            reading a native is a plain lookup. Only two of them mean anything here: IsAsync opens a
+            track, WaitForBlocks holds one. InPortPerCharacter is read by the scene, when it resolves
+            the cards. The rest are passed through untouched.</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.NoteWalk.SkipNotes(LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.SceneGraph)">
+             <summary>
+             Walk past NOTE blocks to the first block the engine actually dispatches.
+            
+             NOTE blocks are designer-only: they carry no handler and are never executed, so a track
+             steps over them and follows their first outgoing connection.
+            
+             Returns <c>null</c> when the walk runs out of connections — and also when it comes back
+             to a NOTE it already stepped over. A designer can wire a NOTE into a loop, and following
+             it recursively overflowed the stack instead of ending the flow.
+             </summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ITrackHost">
+            <summary>
+            What a track needs from the scene that owns it.
+            </summary>
+            <remarks>Deliberately narrow. Everything here is SHARED between tracks — the visited set,
+            the registries, the pending waits — which is exactly why it lives on the scene and not on a
+            track. A track that could reach the whole SceneHandleImpl would drift back into doing the
+            scene's job.</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.ITrackHost.AsSceneHandle">
+            <summary>The handle handed to handlers as Scene. Always the scene, never the track.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ITrackHost.IsSceneRunning">
+            <summary>Is the scene still playing? A track stops the moment its scene does.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ITrackHost.AddCompleted(System.String)">
+            <summary>The track has LEFT this block: handler returned, port resolved, cleanup run.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ITrackHost.CreateBlockContext(LsdeDialogEngine.BlueprintBlock,System.String)">
+            <summary>Build the context of a block. entryPort is the port the wire arrived on — a CARD
+            ID under InPortPerCharacter, "in" otherwise.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ITrackHost.SpawnTrack(LsdeDialogEngine.BlueprintBlock,System.Nullable{System.Int32},System.String)">
+            <summary>Open a parallel track on startBlock, entered through entryPort. Returns its id.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ITrackHost.TrackEnded(LsdeDialogEngine.Track)">
+            <summary>This track reached the end of its flow. The scene decides what that means.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.Track">
+            <summary>One cursor walking the graph. The main flow is one of these, with id 0.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Track.MainTrackId">
+            <summary>The id of the track the player is watching. Every other track is numbered from 1.</summary>
+            <remarks>A number and not a flag because the main track is not special: it is the first
+            one, and the scene ends when it ends. That is the ONLY thing that sets it apart.</remarks>
+        </member>
+        <member name="F:LsdeDialogEngine.Track._childTrackIds">
+            <summary>Tracks this one opened. Only an explicit Cancel() cascades to them.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Track._previousBlock">
+            <summary>Where this track came from, for OnValidateNextBlock. Its own, not another track's.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Track._pendingAdvance">
+            <summary>What to resume when a WaitForBlocks is satisfied.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Track._queue">
+            <summary>The wires this track still owes, in the order it will walk them.</summary>
+            <remarks>A port may carry several wires. The ones whose target is IsAsync open their
+            own track; the others are THIS track's to walk, one after the other — so they queue
+            here, and the track picks the next one up when the branch it is on runs out of graph.
+            <para>New wires go in at the FRONT. A designer reading their own graph expects a branch
+            to finish before its sibling starts: A then [B, C], and B then [D, E], plays B, D, E,
+            then C — not B, D, C, E. Front insertion is what makes the walk depth-first, which is
+            how the graph reads on screen.</para></remarks>
+        </member>
+        <member name="F:LsdeDialogEngine.Track._startEntryPort">
+            <summary>The entry port of the wire that opened this track. "in" for the flow the player watches.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.Start">
+            <summary>Begin walking. Must be called after the track is in the scene's pool.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.Cancel">
+            <summary>Stop this track and every track it opened.</summary>
+            <remarks>Returns a fault instead of throwing one: the scene cancels the whole pool in a
+            loop, and one badly-behaved cleanup must not leave the tracks after it running.</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.IsWaitingForBlocks">
+            <summary>Parked on a waitForBlocks — alive, but unable to move on its own.</summary>
+            <remarks>It is waiting for ANOTHER track to visit a block, so it cannot be what keeps a
+            scene open: once every remaining track is parked like this, nothing will ever visit
+            anything again. That is the deadlock SceneHandleImpl.TrackEnded closes the scene
+            on.</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.NotifyWaitSatisfied">
+            <summary>Called once every block this track was waiting on has been visited.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.GetTrackInfo">
+            <summary>A read-only snapshot, for a debug view.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.ProcessBlock(LsdeDialogEngine.BlueprintBlock,System.String)">
+            <summary>
+            Take a block, and either park on it or dispatch it.
+            </summary>
+            <remarks>The order matters and each step earns its place:
+            <para>1. Step over NOTEs. They are designer-only and never dispatched.</para>
+            <para>2. Honour WaitForBlocks. BEFORE anything else — see the note inside.</para>
+            <para>3. Ask OnValidateNextBlock. The game's gate; a refusal stops this track.</para>
+            <para>4. Mark it current and visited, which may release another parked track.</para>
+            <para>5. Fire OnBeforeBlock, whose Resolve() releases the type handler.</para></remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.ExecuteBlockHandler(LsdeDialogEngine.BlueprintBlock,System.String)">
+            <summary>
+            Run the handlers for a block, then leave when the game says so.
+            </summary>
+            <remarks>Next() is guarded and deferred: called during the handler it only raises a
+            flag, and the advance happens once both handlers have returned. Otherwise a scene
+            handler calling Next() would move the flow on before the global handler ever ran.</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.AdvanceToNextBlock(LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IBaseBlockContext)">
+            <summary>
+            Leave a block: pick the outgoing links, open a track per parallel target, follow the rest.
+            </summary>
+            <remarks>A port may carry several wires, and each one's TARGET says how it is walked:
+            IsAsync opens its own track and runs beside this one; anything else belongs to THIS
+            track — the first becomes the continuation, the others queue up and are walked when the
+            continuation runs out of graph.
+            <para>That second line is what IsAsync used to be unable to say. Every wire but the
+            first was detached whether the designer had ticked the box or not, so on a secondary
+            wire the property was INERT. MIGRATION-V2.md records the whole decision.</para></remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.EndBranch">
+            <summary>This branch has nowhere left to go — hand over to the queue, or stop.</summary>
+            <remarks>The block's cleanup runs FIRST, before the next wire is picked up: leaving a
+            block is leaving a block, whether the track carries on or not. Hanging on to it until
+            the queue emptied would keep a panel open, or an audio voice alive, through everything
+            that came after it.</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.RunBlockCleanup">
+            <summary>Run the cleanup of the block this track is leaving, once, carrying what it
+            threw.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.EndFlow">
+            <summary>Stop this track for good, DROPPING whatever it still owed.</summary>
+            <remarks>For the ends that are not a branch running out of graph: OnValidateNextBlock
+            refusing a block, a handler throwing, a cleanup throwing. All three say the flow is
+            over — the guide has always read OnInvalidateBlock as "the scene stops" — so the queue
+            goes with it. Playing the next wire after the game refused this one would be answering
+            a no with "then try that".</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.Track.Retire">
+            <summary>The track is done. Its cleanup has already run; the scene decides what its
+            ending means.</summary>
+            <remarks>Child tracks SURVIVE: they live independently in the pool, and only an
+            explicit Cancel() cascades to them.</remarks>
+        </member>
+        <member name="T:LsdeDialogEngine.BlockType">
+            <summary>What a block is. Decides which optional fields it carries.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.BlockType.Dialog">
+            <summary>A line spoken by a cast of actors. Exits by <c>out</c>.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.BlockType.Choice">
+            <summary>A question. Each option exits by its own id — C1, C2…</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.BlockType.Condition">
+            <summary>A test on game state. Exits by <c>out</c>/<c>default</c>, or by K1… with portPerCase.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.BlockType.Router">
+            <summary>A dispatcher. Carries the SAME cases as a condition and reads them the opposite
+            way: every case is evaluated, each true one launches its port, and the flow then always
+            continues — by <c>then</c> when all of them held, by <c>catch</c> when any did not. A
+            router with no case at all leaves by <c>then</c>, the way Promise.all([]) resolves.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.BlockType.Action">
+            <summary>A call into the game. Exits by <c>then</c>, or <c>catch</c> when a call failed.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.BlockType.Note">
+            <summary>A designer-only note. Never dispatched: the traversal steps over it.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ConditionOperator">
+            <summary>How a condition compares a dictionary entry to its value.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ConditionOperator.Equals">
+            <summary>The entry equals the value.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ConditionOperator.NotEquals">
+            <summary>The entry differs from the value.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ConditionOperator.LessThan">
+            <summary>The entry is below the value.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ConditionOperator.LessOrEqual">
+            <summary>The entry is below the value, or equal to it.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ConditionOperator.GreaterThan">
+            <summary>The entry is above the value.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ConditionOperator.GreaterOrEqual">
+            <summary>The entry is above the value, or equal to it.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ConditionJoin">
+            <summary>How a comparison links to the one ABOVE it. The list is flat: precedence is yours.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ConditionJoin.And">
+            <summary>Both this comparison and the one above it must hold.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ConditionJoin.Or">
+            <summary>This comparison or the one above it must hold.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ValueType">
+            <summary>What a function parameter accepts: a literal, or a key picked in a dictionary.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ValueType.Boolean">
+            <summary>A literal true or false.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ValueType.String">
+            <summary>A literal string.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ValueType.Number">
+            <summary>A literal number.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.ValueType.DictionaryKey">
+            <summary>A key picked in one of the blueprint dictionaries, not a literal.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.CardRole">
+            <summary>What a card is used for in the editor.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.CardRole.None">
+            <summary>The card has no assigned role.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.CardRole.Characters">
+            <summary>The card is an actor: what a block's <c>Actors</c> reference.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.CardRole.Emotions">
+            <summary>The card is an emotion: what a block's <c>Emotion</c> references.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.CardRole.Places">
+            <summary>The card is a place.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.Ports">
+            <summary>The ports every runtime must know. Option, case and actor ports are named by the project.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Ports.In">
+            <summary>The single entry port of every block.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Ports.Out">
+            <summary>The default exit of a dialog, and the true exit of an if-style condition.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Ports.Then">
+            <summary>The nominal exit, on two block types: an action whose calls all succeeded, and a
+            router whose cases were ALL true.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Ports.Catch">
+            <summary>The exception exit, on the same two: an action where a call failed, and a router
+            where at least one case was false. On a router it does NOT cancel anything — the tracks of
+            the true cases are already running, exactly like a Promise.all that rejects.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Ports.Default">
+            <summary>The fallback exit of a condition block: no case matched.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Ports.Choice">
+            <summary>NOT a port: the reserved ConditionTest.Dict that reads past answers of THIS scene.
+            Entry is a CHOICE block id, Value an Option.Id of that block. The engine answers it from
+            what it recorded while the scene played; no project dictionary may take this id.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.Generator">
+            <summary>Which software wrote the file, to trace a delivered payload back to its version.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Generator.App">
+            <summary>Always LSDE.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Generator.Version">
+            <summary>The software version, e.g. 2.0.3 — not the format version.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.DictionaryDefinition">
+            <summary>A dictionary the game maintains, as declared in the project. Conditions cite it by id.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DictionaryDefinition.Id">
+            <summary>The dictionary id, as ConditionTest.Dict cites it.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DictionaryDefinition.ValueType">
+            <summary>What its entries are compared to: boolean, string or number.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DictionaryDefinition.Entries">
+            <summary>The entry keys, in declaration order.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.FunctionParameter">
+            <summary>One parameter of an engine function.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.FunctionParameter.Name">
+            <summary>The argument name, as ActionCall.Args keys it.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.FunctionParameter.Type">
+            <summary>What the argument holds.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.FunctionParameter.Dictionary">
+            <summary>Only when Type is dictionaryKey: where the value is picked.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.FunctionDefinition">
+            <summary>A function the game implements, as ActionCall.Fn names it.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.FunctionDefinition.Id">
+            <summary>The function id.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.FunctionDefinition.Params">
+            <summary>Its parameters, in declaration order.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.Card">
+            <summary>A card cited by blocks: the other end of Block.Actors and Block.Emotion.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Card.Id">
+            <summary>The stable editor id (var3) that blocks reference.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Card.Name">
+            <summary>The name the game gives this card, never the editor label.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Card.Role">
+            <summary>What the card is used for: characters, emotions, places or none.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.Link">
+            <summary>An outgoing wire, seen from the block that carries it.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Link.Port">
+            <summary>The exit port: a fixed port (see Ports), an option id, a case port or a card id.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Link.To">
+            <summary>The target block id, relative to the SAME scene. A wire never crosses one.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Link.ToPort">
+            <summary>The target's entry port, always "in" today.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.BlueprintConnection">
+            <summary>A wire seen from OUTSIDE the block that carries it.
+            <para>In the payload a wire is a Link listed in Block.Next, so it only knows where it goes.
+            Graph inspection needs both ends, so the engine flattens every Next into this shape.
+            Nothing in the file has it; it exists only in memory.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintConnection.From">
+            <summary>The id of the block this wire leaves, within its scene.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintConnection.Port">
+            <summary>The exit port it leaves by.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintConnection.To">
+            <summary>The block it goes to, in the same scene.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintConnection.ToPort">
+            <summary>The target's entry port.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ActionCall">
+            <summary>What an action block asks the game to run.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ActionCall.Fn">
+            <summary>The function id. May be empty when the writer has not picked one yet.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ActionCall.Args">
+            <summary>The arguments BY NAME, as declared in FunctionDefinition.Params.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ConditionTest">
+            <summary>One comparison: a dictionary entry against a value.
+            <para>The reserved dict id "choice" is the exception — it reads the answers the player
+            already gave IN THIS SCENE, which the engine tracks on its own.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ConditionTest.Dict">
+            <summary>The dictionary id. "choice" is reserved: see Ports.Choice.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ConditionTest.Entry">
+            <summary>The entry read in that dictionary. With dict "choice", a CHOICE block id.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ConditionTest.Op">
+            <summary>The comparison. See ConditionOperator.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ConditionTest.Value">
+            <summary>The right-hand side; its type follows the dictionary's ValueType.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ConditionTest.Join">
+            <summary>Link with the comparison ABOVE. Absent on the first one; absent means AND.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ConditionCase">
+            <summary>One case of a condition or a router block: the exit port, and what must hold for it.
+            The data is identical on both; only the engine's reading differs — see BlockType.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ConditionCase.Port">
+            <summary>The exit port of this case (K1…), or the block's Out when cases share one exit.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ConditionCase.When">
+            <summary>Absent = always true. Such a case makes every following case unreachable.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.Option">
+            <summary>One answer of a choice block, a translated key in its own right.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Option.Id">
+            <summary>The option id, which is ALSO its exit port (C1…).</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Option.Key">
+            <summary>The full i18n key of its text.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Option.Text">
+            <summary>Its text by locale, when texts are exported inside the payload.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Option.When">
+            <summary>Absent = always offered.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.RuntimeChoiceItem">
+            <summary>An option tagged with what OnResolveCondition said about its When.
+            <para>The engine hands over EVERY option, tagged — never a shortened list. Filter with
+            <c>options.Where(o =&gt; o.Visible != false)</c>, or keep the rest to show them locked.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.RuntimeChoiceItem.Visible">
+            <summary>true = offered, false = hidden, null = no resolver installed (treat as offered).</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.RuntimeConditionCase">
+            <summary>A condition case with its pre-evaluated result.
+            <para>The case carries its own exit port, so there is no index to map back to anything —
+            that is the v1 shape and it is gone. Pass the Port to Resolve() to override the routing.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.RuntimeConditionCase.Port">
+            <summary>The exit port of this case: K1… with PortPerCase, otherwise the block's Out.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.RuntimeConditionCase.When">
+            <summary>Its comparisons, chained left to right with no precedence. Absent = always true.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.RuntimeConditionCase.Result">
+            <summary>true if the case holds, false if not, null if no resolver is installed.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.NativeProperties">
+            <summary>The block properties the ENGINE acts on, read out of Block.Props.
+            <para>In v2 there is no separate bag: natives and the writer's own properties share Props,
+            keyed by bare id. Ids cannot collide — LSDE refuses a project property that takes a native
+            name — so telling them apart is a lookup against NativePropertyIds, not a guess.</para>
+            <para>Most are inert: Delay, Timeout, Debug, WaitInput, PortPerCharacter and
+            SkipIfMissingActor are passed through untouched. Three are not: IsAsync spawns a parallel
+            track, WaitForBlocks parks one until its blocks have FINISHED, and InPortPerCharacter makes
+            the wire name the actor.</para>
+            <para><b>Inert is not the same as free.</b> A writer who fills a field in expects a
+            behaviour, and the doc on each property below says which one. Timeout is the one that is
+            easy to implement backwards, so read it before wiring a timer.</para>
+            <para><b>Delay and Timeout are MILLISECONDS in v2.</b> They were seconds in v1, and nothing
+            reports the difference at runtime: a migrated project turns a 3-second pause into 3 ms.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.IsAsync">
+            <summary>Run this block on a parallel track instead of the main flow.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.Delay">
+            <summary>MILLISECONDS to wait before the block runs. Applied by OnBeforeBlock, not by the engine.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.Timeout">
+            <summary>MILLISECONDS the block STAYS once its line has been said — an auto-advance
+            for blocks.
+            <para><b>The countdown starts at the END of the reveal, not when the block is
+            dispatched.</b> What the writer sets is how long the line remains on screen after its
+            last character has been typed (or its last syllable spoken), and then the block leaves
+            on its own. Counting from arrival instead cuts the line in half whenever the text takes
+            longer to reveal than the timeout allows — a 2500 ms timeout on a 120-character line
+            truncates it mid-sentence.</para>
+            <para><b>It overrides WaitInput and it overrides leaving immediately.</b> All three say
+            WHEN the block is left, and the one the writer put on the card is the most specific
+            answer. So a click no longer dismisses the block: it may only HURRY the reveal to its
+            end, which is what arms the countdown.</para>
+            <para>Leaving the block is also what marks it FINISHED, so on a block listed in a
+            WaitForBlocks elsewhere, this is the property that releases the join.</para>
+            <para>The engine enforces none of it — no timers, no game loop. The game arms the
+            countdown, and this is the behaviour the writer is owed when they fill the field.</para>
+            </summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.WaitInput">
+            <summary>Wait for player input or a game signal instead of leaving on its own. Passed
+            through, never interpreted — and outranked by Timeout, which says the block plays its
+            own time and cannot be dismissed early.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.Debug">
+            <summary>Editor debug flag. Passed through.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.PortPerCharacter">
+            <summary>One exit port per actor CARD ID, with Out as the fallback.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.InPortPerCharacter">
+            <summary>One ENTRY port per actor CARD ID, "in" as the fallback — the mirror of
+            PortPerCharacter.
+            <para>The wire names the speaker: a link's ToPort carries the CARD ID of the actor the
+            block is to be assigned to on that pass. This is what lets several wires reach one block
+            and each stand for a different actor — a block alone cannot tell which path brought it.</para>
+            <para>The engine still ASKS: OnResolveCharacter is handed that one actor rather than the
+            whole cast, and a game that returns null says the character does not exist. Entering
+            through "in" names nobody, and the callback gets the whole list as everywhere else.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.SkipIfMissingActor">
+            <summary>Skip the block when its actor is absent at runtime. Passed through.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.PortPerCase">
+            <summary>Condition blocks: each case exits by its own port instead of sharing Out.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.NativeProperties.WaitForBlocks">
+            <summary>Block ids OF THIS SCENE that must have FINISHED before this block STARTS.</summary>
+            <remarks>The join half of the fork IsAsync opens: a branch runs in parallel, and a block
+            downstream waits for it to be over before it plays.
+            <para><b>Finished, not reached.</b> A listed block counts once the flow has LEFT it:
+            the game called next(), the exit port was resolved, and the cleanup has run. So the
+            bubble is off the screen before the joining line is dispatched. Being reached was the
+            rule in the first v2 releases and it made the property nearly inert: a fork into two
+            blocks, then a join on both, lifted in the very tick it was registered.</para>
+            <para><b>The engine holds the block BEFORE dispatching it.</b> No handler is called, so
+            the game never learns the block exists until the wait lifts — nothing of it can reach
+            the screen early. That is the engine's decision and not a rendering choice a game could
+            make differently: this is a NATIVE property, the designer ticks it in LSDE, and the
+            engine owes them the behaviour.</para>
+            <para>The rule is the same on every track, the one the player is watching included.</para>
+            <para>ALL the listed blocks must have FINISHED, not just one. Finishing a block
+            releases everything waiting on it, in turn. A block that never finishes parks its
+            track for good — and a block waiting on player input forever never finishes. Init()
+            reports UNKNOWN_WAIT_BLOCK when an id is not a block of the scene at all, but it cannot
+            know whether a real one will ever be played. GetVisitedBlocks() is unaffected: it still
+            lists what the player has been SHOWN.</para></remarks>
+        </member>
+        <member name="T:LsdeDialogEngine.NativePropertyIds">
+            <summary>The ten ids of NativeProperties, to sort a Props bag into natives and the writer's
+            own properties. Anything not in here belongs to the game.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.NativePropertyIds.All">
+            <summary>The ten ids LSDE reserves. Everything else in <c>Props</c> is the writer's own.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.NativePropertyIds.Contains(System.String)">
+            <summary>Whether an id in <c>Props</c> is a native rather than one of the writer's properties.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.BlueprintBlock">
+            <summary>A node of the graph. Type decides which optional fields are present.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Id">
+            <summary>Identity RELATIVE to its scene (DIALOG-002): what links and Scene.Start reference.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Key">
+            <summary>The full i18n key, as localization files carry it.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Label">
+            <summary>The readable name, when the writer wrote one. There is no mandatory block name.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.ParentLabels">
+            <summary>Readable names above the block, root first. Empty ones are skipped.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Type">
+            <summary>What the block is. See BlockType — lowercase in v2.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Actors">
+            <summary>Card ids of who speaks. Resolve them through the export's Cards table.
+            <para>The ORDER is significant, but its meaning does not belong to the engine: LSDE
+            deliberately refuses to say whether it is "who speaks" or "who is present". The game
+            decides, through OnResolveCharacter.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Emotion">
+            <summary>Card id of the emotion — the tone of the LINE, not of a speaker.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Intensity">
+            <summary>Only with Emotion.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Text">
+            <summary>The line by locale, dialogs only, when texts are exported inside the payload.
+            <para>The engine never reads what is INSIDE this string. Markers like {{@a1}} are the
+            game's own, in the game's own keys, filled by the game's own system.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Body">
+            <summary>The body of a note block: never translated, only when notes are exported.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Note">
+            <summary>The team note on the block, only when notes are exported.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Props">
+            <summary>Properties SET on the block, native and project-declared alike, by bare id.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Calls">
+            <summary>Action blocks: what to run, in order.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Cases">
+            <summary>Condition AND router blocks: the cases, in evaluation order.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Options">
+            <summary>Choice blocks: the answers, in display order.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintBlock.Next">
+            <summary>Outgoing wires. Absent when nothing leaves the block.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.BlueprintScene">
+            <summary>One scene: its blocks, and where it starts.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintScene.Scene">
+            <summary>The scene path without the reserved namespace (acte1, chap1.acte1).</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintScene.Id">
+            <summary>The scene identity that SURVIVES A RENAME (sc_ then eight chars).
+            <para>Scene is what a writer reads and what builds the i18n keys, but it changes the day
+            someone renames the scene — so an asset that stored it stops resolving, silently, with
+            no compiler to catch it. Store THIS one wherever a scene is referenced from outside the
+            payload, and show Scene as its label.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintScene.Label">
+            <summary>The readable name of the scene, when written.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintScene.Start">
+            <summary>The entry block id. Absent = the scene has no entry and cannot play.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintScene.Blocks">
+            <summary>Every exported block of the scene.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.BlueprintExport">
+            <summary>The whole file. One scene per file or all of them: the only difference between
+            the two split modes.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.Format">
+            <summary>Always "lsde-blueprints". Anything else is refused outright.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.Version">
+            <summary>The FORMAT version. Bumps only when the payload contract changes.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.Generator">
+            <summary>Which software wrote the file.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.ExportedAt">
+            <summary>ISO 8601 instant of the export.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.Project">
+            <summary>The project name.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.Locales">
+            <summary>Every locale of the project.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.ReferenceLocale">
+            <summary>The locale that is written first. Empty when the project declares none.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.Dictionaries">
+            <summary>The declared vocabulary, whole, never trimmed to the exported scenes.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.Functions">
+            <summary>The declared engine functions.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.Cards">
+            <summary>The cards that blocks may cite.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlueprintExport.Scenes">
+            <summary>The scenes carried by this file.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.TrackInfo">
+            <summary>A read-only snapshot of one parallel track, for debug and rendering.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.TrackInfo.Id">
+            <summary>Unique id of this track within the scene.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.TrackInfo.ParentTrackId">
+            <summary>Id of the track that spawned this one, or null when the main flow did.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.TrackInfo.StartBlockId">
+            <summary>The block this track started on.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.TrackInfo.CurrentBlockId">
+            <summary>The block it is on now, or null when it has ended.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.TrackInfo.Running">
+            <summary>Whether it is still running.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.DiagnosticEntry">
+            <summary>Single diagnostic entry (error or warning).</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticEntry.Code">
+            <summary>Machine-readable code, e.g. BROKEN_LINK or UNKNOWN_WAIT_BLOCK.
+            <para>The seventeen the engine emits are listed in the Getting Started guide, split into
+            the eleven that refuse the payload and the six that let it play. It is a string and not
+            an enum on purpose: a runtime is allowed to add one — TypeScript and GDScript read the
+            raw payload and can say WRONG_NAMING_CONVENTION, where this runtime only ever sees a
+            typed object and reports INVALID_FORMAT for the same file.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticEntry.Message">
+            <summary>Human-readable description of the issue.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticEntry.SceneId">
+            <summary>Id of the scene where the issue was found, if applicable.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticEntry.BlockId">
+            <summary>Id of the block where the issue was found, if applicable.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.DiagnosticStats">
+            <summary>Aggregate statistics from blueprint validation.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticStats.SceneCount">
+            <summary>How many scenes the export holds.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticStats.BlockCount">
+            <summary>How many blocks, across every scene.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticStats.ConnectionCount">
+            <summary>How many wires, across every scene.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.DiagnosticReport">
+            <summary>Result of engine.Init() — validation report.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticReport.Errors">
+            <summary>What makes the payload unusable. A non-empty list means the engine did not load it.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticReport.Warnings">
+            <summary>What loaded, but will probably surprise someone at runtime.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.DiagnosticReport.Stats">
+            <summary>What the payload contains, counted.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.CheckOptions">
+            <summary>Options for cross-validating blueprint data against game capabilities.
+            When provided, the engine warns about references that don't match your game.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.CheckOptions.Functions">
+            <summary>Function ids your game implements. A blueprint function outside this list warns.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.CheckOptions.Dictionaries">
+            <summary>Dictionary ids and their entry keys, as your game holds them.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.CheckOptions.Cards">
+            <summary>Card NAMES your game knows — Card.Name, never the editor id (var1).</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.InitOptions">
+            <summary>Options passed to engine.Init().</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.InitOptions.Data">
+            <summary>The blueprint data to load and validate.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.InitOptions.Files">
+            <summary>The several files of a per-scene export, instead of Data.
+            <para>Each file of that mode is self-contained — it carries the whole header, so a scene
+            loads and plays on its own. Pass the list and the engine stacks the scenes behind one
+            header, after checking Project and ExportedAt match across the files.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.InitOptions.Check">
+            <summary>Optional cross-validation options.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ValidationResult">
+            <summary>Result of block validation.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ValidationResult.Valid">
+            <summary>Whether the block passed validation. When false, OnInvalidateBlock is called.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ValidationResult.Reason">
+            <summary>Reason for validation failure.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ValidationResult.Ok">
+            <summary>Let the flow enter the block.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ValidationResult.Fail(System.String)">
+            <summary>Refuse the block: OnInvalidateBlock fires, and the track that was entering it ends.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.IBaseBlockContext">
+            <summary>What every block handler gets, whatever the block type.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.IBaseBlockContext.Character">
+            <summary>The actor OnResolveCharacter picked for this block, or null.
+            <para>A block lists a CAST in Actors — card ids, in an order LSDE deliberately refuses
+            to give a meaning to. The engine hands the whole list to OnResolveCharacter and keeps
+            whatever comes back; it does not elect a first one, the way v1 did.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.IBaseBlockContext.Actors">
+            <summary>Every card the block cites, resolved through the export's Cards table, in file order.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.IBaseBlockContext.Emotion">
+            <summary>The emotion of the BLOCK, resolved through Cards — the tone of the line, not of
+            a speaker. In v1 each character carried its own, which meant writing the same feeling
+            twice for two actors saying one sentence.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.IBaseBlockContext.Intensity">
+            <summary>How strongly, when the writer set an emotion. Passed through untouched.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IBaseBlockContext.PreventGlobalHandler">
+            <summary>Stop the global (Tier 1) handler from running after this scene handler.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.IDialogContext">
+            <summary>What a DIALOG handler gets.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogContext.ResolveCharacterPort(System.String)">
+            <summary>With PortPerCharacter, name the actor whose port the flow should take.
+            <para>Takes a CARD ID (var1) — the same id Block.Actors lists and the same one the port
+            is named after. A card the block does not cite falls back to Out.</para></summary>
+        </member>
+        <member name="T:LsdeDialogEngine.IChoiceContext">
+            <summary>What a CHOICE handler gets.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.IChoiceContext.Options">
+            <summary>EVERY option of the block, tagged. Not a shortened list.
+            <para>With OnResolveCondition installed each carries Visible = true/false; without one it
+            is null — unknown, not hidden. Show the offered ones with
+            <c>options.Where(o =&gt; o.Visible != false)</c>, or keep the rest to grey them out.</para></summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IChoiceContext.SelectChoice(System.String)">
+            <summary>Pick an option by its id (C1). That id is also the port the flow leaves by.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.IConditionContext">
+            <summary>What a CONDITION handler gets.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IConditionContext.Resolve(System.String)">
+            <summary>Override the exit port. Takes a PORT NAME: "out", "default", or a case port (K1).
+            <para>v1 took bool | int | List&lt;int&gt; — three shapes for one method, the third being
+            the dispatcher. Both are gone: a condition picks one path.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.IConditionContext.Cases">
+            <summary>The block's cases, each with its port and its pre-evaluated Result.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.IRouterContext">
+            <summary>What a ROUTER handler gets.
+            <para>The same pre-evaluated Cases as a condition, and <b>no Resolve</b>: a router's exits
+            are a tally, not a choice. Every true case has already launched its port and the
+            continuation is already picked — "then" when they all held, "catch" otherwise — by the time
+            a handler could speak. There is nothing left to override, which is also why no handler is
+            required for the type: the engine dispatches nothing and advances on its own. A game that
+            wants to watch one router still can, through OnBlock(id).</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.IRouterContext.Cases">
+            <summary>The block's cases, each with its port and its pre-evaluated Result. ALL of them ran.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.IActionContext">
+            <summary>What an ACTION handler gets.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.IActionContext.Calls">
+            <summary>The calls the block asks the game to run, in order, with their arguments BY NAME.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IActionContext.Resolve">
+            <summary>The calls went through. The flow leaves by "then".</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IActionContext.Reject(System.Object)">
+            <summary>A call failed. The flow leaves by "catch", or by "then" when no error branch was drawn.</summary>
+            <remarks>The error is OPTIONAL and the engine does nothing with it: routing only needs
+            to know that the call failed. Pass one if it reads better next to your own logging —
+            nothing here reads it, forwards it or logs it.</remarks>
+        </member>
+        <member name="T:LsdeDialogEngine.BeforeBlockContext">
+            <summary>Context passed to OnBeforeBlock handler.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BeforeBlockContext.NativeProperties">
+            <summary>Pointer to the block's native execution properties, or null if none.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.SceneContext">
+            <summary>Context passed to scene lifecycle handlers. Extensible — reserved for future scene-level data.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.BlockHandlerArgs`2">
+            <summary>Arguments passed to any block handler.
+            <para>The engine uses a two-tier handler system:
+            Tier 2 (scene) is called first, Tier 1 (global) after — unless PreventGlobalHandler() is called.
+            A block-specific override via OnBlock(blockId) takes highest priority.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlockHandlerArgs`2.Scene">
+            <summary>The scene handle that owns this block.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlockHandlerArgs`2.Block">
+            <summary>The block being executed.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlockHandlerArgs`2.Context">
+            <summary>Type-specific context providing actions for this block.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BlockHandlerArgs`2.Next">
+            <summary>Advance the flow to the next block. Must be called exactly once.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlockHandlerArgs`2.#ctor(LsdeDialogEngine.ISceneHandle,`0,`1,System.Action)">
+            <summary>Built by the engine before a handler is called. Games never construct one.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.BlockHandlerArgs`2.Deconstruct(LsdeDialogEngine.ISceneHandle@,`0@,`1@,System.Action@)">
+            <summary>Enables deconstruction: var (scene, block, context, next) = args;</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ValidateNextBlockContext">
+            <summary>Context attached to a block inside <see cref="T:LsdeDialogEngine.ValidateNextBlockArgs"/>.
+            The character is resolved by OnResolveCharacter before the validation handler is invoked.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ValidateNextBlockContext.Character">
+            <summary>Character resolved for this block, or null if none.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ValidateNextBlockArgs">
+            <summary>Arguments for OnValidateNextBlock handler.
+            Called before each block is executed. Provides the resolved character for both
+            the upcoming block (NextContext) and the previously executed block (FromContext).</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ValidateNextBlockArgs.NextBlock">
+            <summary>The block about to be executed.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ValidateNextBlockArgs.FromBlock">
+            <summary>The block that was just executed (null for the first block).</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ValidateNextBlockArgs.NextContext">
+            <summary>Context for the upcoming block (character, etc.).</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ValidateNextBlockArgs.FromContext">
+            <summary>Context for the previous block, or null if this is the first block.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.ValidateNextBlockArgs.Port">
+            <summary>The port that was followed to reach NextBlock (reserved for future use).</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.InvalidateBlockArgs">
+            <summary>Arguments for OnInvalidateBlock handler.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.InvalidateBlockArgs.Scene">
+            <summary>The scene handle owning the invalidated block.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.InvalidateBlockArgs.Reason">
+            <summary>Reason for validation failure.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.BeforeBlockArgs">
+            <summary>Arguments for OnBeforeBlock handler.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BeforeBlockArgs.Block">
+            <summary>The block about to be executed.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BeforeBlockArgs.Scene">
+            <summary>The scene handle owning this block.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BeforeBlockArgs.Context">
+            <summary>Context with native properties.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.BeforeBlockArgs.Resolve">
+            <summary>Call Resolve() to continue execution. Must be called exactly once.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.SceneLifecycleArgs">
+            <summary>Arguments for scene lifecycle handlers.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.SceneLifecycleArgs.Scene">
+            <summary>The scene handle for the entering/exiting scene.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.SceneLifecycleArgs.Context">
+            <summary>Scene-level context (extensible).</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.BlockHandler`2">
+            <summary>Block handler delegate. May return a cleanup function called when leaving the block.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ValidateNextBlockHandler">
+            <summary>Handler for block validation. Return Ok() to continue, Fail() to invalidate.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.InvalidateBlockHandler">
+            <summary>Handler called when a block fails validation.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.BeforeBlockHandler">
+            <summary>Handler called before every block. Must call Resolve() to continue.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.SceneLifecycleHandler">
+            <summary>Handler for scene enter/exit events.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.ISceneHandle">
+            <summary>Public interface for controlling a running scene.
+            <para>Obtain an ISceneHandle by calling engine.Scene(sceneRef). Register scene-specific
+            (Tier 2) handlers, then call Start() to begin traversal from the entry block.</para>
+            <para>Lifecycle: Start() → OnSceneEnter → blocks dispatched → scene ends → OnSceneExit.
+            Scene-level handlers are called BEFORE global handlers. Both execute unless PreventGlobalHandler() is called.</para></summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.Start">
+            <summary>Start the scene flow from the entry block. Throws when a type handler the scene needs is missing.
+            <para>OnCondition is optional once OnResolveCondition is installed, and a ROUTER block needs no handler at all.</para></summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.Cancel">
+            <summary>Cancel the scene flow. All async tracks are cancelled, cleanup runs, OnSceneExit fires.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnEnter(LsdeDialogEngine.SceneLifecycleHandler)">
+            <summary>Override the global OnSceneEnter for this scene.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnExit(LsdeDialogEngine.SceneLifecycleHandler)">
+            <summary>Override the global OnSceneExit for this scene.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnBlock(System.String,LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IBaseBlockContext})">
+            <summary>Override a specific block by id. Takes highest priority over type handlers.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnDialogId(System.String,LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IDialogContext})">
+            <summary>Override a specific DIALOG block by id (type-safe).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnChoiceId(System.String,LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IChoiceContext})">
+            <summary>Override a specific CHOICE block by id (type-safe).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnConditionId(System.String,LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IConditionContext})">
+            <summary>Override a specific CONDITION block by id (type-safe).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnActionId(System.String,LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IActionContext})">
+            <summary>Override a specific ACTION block by id (type-safe).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnDialog(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IDialogContext})">
+            <summary>Override all DIALOG blocks for this scene (Tier 2).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnChoice(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IChoiceContext})">
+            <summary>Override all CHOICE blocks for this scene (Tier 2).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnCondition(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IConditionContext})">
+            <summary>Override all CONDITION blocks for this scene (Tier 2).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnAction(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IActionContext})">
+            <summary>Override all ACTION blocks for this scene (Tier 2).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.GetCurrentBlock">
+            <summary>Get the block currently being executed, or null if scene is not running.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.GetVisitedBlocks">
+            <summary>Ids of every block visited so far, in order.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.IsRunning">
+            <summary>Check if the scene flow is currently active.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.GetActiveTracks">
+            <summary>Get the number of async tracks currently running in parallel.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.GetTrackInfos">
+            <summary>Get detailed info for all currently running async tracks.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.GetChoiceHistory">
+            <summary>Get the full choice history. Keys are block ids, values are the option ids picked there.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.GetChoice(System.String)">
+            <summary>Get the choice(s) selected at a specific block. Null when that block was never reached.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.EvaluateCondition(LsdeDialogEngine.ConditionTest)">
+            <summary>Answer one comparison. A test on the reserved "choice" dictionary is answered
+            from this scene's own history; anything else goes to the game's resolver, and is false
+            when none is installed.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.ISceneHandle.OnResolveCharacter(System.Func{System.Collections.Generic.List{LsdeDialogEngine.Card},LsdeDialogEngine.Card})">
+            <summary>Override character resolution for this scene. Defaults to engine-level resolver.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.IDialogueEngine">
+            <summary>Public contract for the LSDE dialogue engine.
+            <para>Top-level entry point managing blueprint loading, global handler registration, and scene creation.</para></summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.Init(LsdeDialogEngine.InitOptions)">
+            <summary>Validate blueprint data, build internal graph, return diagnostic report.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.SetLocale(System.String)">
+            <summary>Set the active locale for text resolution. Validates against blueprint.Locales. Syncs LsdeUtils.Locale.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnResolveCondition(System.Func{LsdeDialogEngine.ConditionTest,System.Boolean})">
+            <summary>Install a unified condition evaluator for both choice visibility and condition block pre-evaluation.
+            The engine handles choice: conditions internally via choice history — this callback evaluates game-state conditions only.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnResolveCharacter(System.Func{System.Collections.Generic.List{LsdeDialogEngine.Card},LsdeDialogEngine.Card})">
+            <summary>Which actor of a block is the one speaking. Called for every block that cites
+            actors; the whole cast is passed, in file order. Defaults to the first — because a
+            default has to pick something, not because the format says the first one speaks.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnValidateNextBlock(LsdeDialogEngine.ValidateNextBlockHandler)">
+            <summary>Register a handler called before each block to validate it.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnInvalidateBlock(LsdeDialogEngine.InvalidateBlockHandler)">
+            <summary>Register a handler called when a block fails validation.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnBeforeBlock(LsdeDialogEngine.BeforeBlockHandler)">
+            <summary>Register a handler called before every block. Must call Resolve() to continue.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnDialog(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IDialogContext})">
+            <summary>Register a global handler for DIALOG blocks. May return a cleanup function.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnChoice(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IChoiceContext})">
+            <summary>Register a global handler for CHOICE blocks. Every option is handed over, tagged with Visible when OnResolveCondition is installed.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnCondition(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IConditionContext})">
+            <summary>Register a global handler for CONDITION blocks. Optional once OnResolveCondition
+            is installed: the engine already knows the exit port, so this becomes a log or override hook.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnAction(LsdeDialogEngine.BlockHandler{LsdeDialogEngine.BlueprintBlock,LsdeDialogEngine.IActionContext})">
+            <summary>Register a global handler for ACTION blocks. The developer MUST handle execution.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnSceneEnter(LsdeDialogEngine.SceneLifecycleHandler)">
+            <summary>Register a handler called when any scene starts.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.OnSceneExit(LsdeDialogEngine.SceneLifecycleHandler)">
+            <summary>Register a handler called when any scene ends (natural or cancelled).</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.Scene(System.String)">
+            <summary>Open a scene by its PATH (reactor_breach) or by the id that survives a rename
+            (sc_u0vqg2g8). Does NOT start the flow — call handle.Start().
+            <para>Take the id wherever the reference is stored outside the payload: a Unity asset, a
+            save file, a database row. The path changes the day someone renames the scene.</para></summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.Stop">
+            <summary>Stop all active scenes.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.IsRunning">
+            <summary>True if at least one scene is active.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.GetActiveScenes">
+            <summary>Get all currently active scene handles.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.GetCurrentBlocks">
+            <summary>Get the current block of every active scene.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.IDialogueEngine.GetSceneConnections(System.String)">
+            <summary>Every wire INSIDE a scene, flattened so each carries the block it leaves.
+            <para>Graph inspection only. It has never had anything to do with going from one scene
+            to another: a wire has never crossed a scene in any version of the format.</para></summary>
+        </member>
+        <member name="T:LsdeDialogEngine.PortResolutionInput">
+            <summary>What ResolvePort needs to pick the wires to follow.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.PortResolutionInput.Block">
+            <summary>The block being left. Its Type picks the routing rule.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.PortResolutionInput.Links">
+            <summary>The wires it carries — Block.Next, straight off the block.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.PortResolutionInput.SelectedOptionId">
+            <summary>CHOICE only: the option the player picked. Its id IS its port (C1…).</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.PortResolutionInput.ConditionPort">
+            <summary>CONDITION only: the port its cases picked — "out", "default", or K1….</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.PortResolutionInput.RouterPorts">
+            <summary>ROUTER only: every port it leaves by, in order — the K* of each true case, then
+            "then" or "catch" LAST.
+            <para>A list and not one port, because a router does not pick an exit: it launches one
+            per true case and continues besides. The continuation comes last so that the traversal,
+            which keeps the first non-async target as the main flow, keeps then/catch when the case
+            routes are async — which is the arrangement LSDE recommends.</para></summary>
+        </member>
+        <member name="P:LsdeDialogEngine.PortResolutionInput.ActionRejected">
+            <summary>ACTION only: true when a call failed, so "catch" is tried before "then".</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.PortResolutionInput.ActorPort">
+            <summary>DIALOG with PortPerCharacter: the CARD ID of the speaking actor, never an index.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.PortResolutionResult">
+            <summary>The wires to follow. The traversal decides which is the main track.</summary>
+        </member>
+        <member name="P:LsdeDialogEngine.PortResolutionResult.Links">
+            <summary>The wires leaving the resolved port, in the order the block declares them.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.PortResolutionResult.#ctor(System.Collections.Generic.List{LsdeDialogEngine.Link})">
+            <summary>Wrap the wires a port resolved to.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.PortResolutionResult.None">
+            <summary>No wire leaves that port: a dead end, which ends the track.</summary>
+        </member>
+        <member name="T:LsdeDialogEngine.Validator">
+            <summary>Turns a payload into the DiagnosticReport that Init() returns. Reads format and version first.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Validator.SupportedFormat">
+            <summary>The only payload this engine reads. A file that says anything else is refused.</summary>
+        </member>
+        <member name="F:LsdeDialogEngine.Validator.SupportedVersion">
+            <summary>The format version this engine reads. Bumps only when the contract changes.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Validator.MergePayloads(System.Collections.Generic.List{LsdeDialogEngine.BlueprintExport},LsdeDialogEngine.DiagnosticEntry@)">
+            <summary>
+            Fold the files of a per-scene export into one payload.
+            <para>Each file carries the whole header, so the first supplies it and the rest only add
+            scenes. Project and ExportedAt are checked first: they are identical across the files of
+            one export and different across two, which is the only way to catch someone passing
+            pieces of two exports. Merging those would produce a payload whose dictionaries do not
+            match its scenes, and nothing downstream would notice.</para>
+            <para>Returns null with an error when the files do not belong together.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Validator.ValidateBlueprint(LsdeDialogEngine.InitOptions)">
+            <summary>
+            Validate a blueprint payload, and optionally cross-check it against what the game declares.
+            <para>Structural checks: the format header, scene paths, block id uniqueness <b>within a
+            scene</b>, the entry block, link targets, and the blocks a WaitForBlocks names. With
+            Check, also warns about functions, dictionaries and cards the game does not know.</para>
+            <para>Errors mean the payload will not play correctly; warnings mean it will, but
+            something looks wrong.</para>
+            </summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Validator.ValidateWaits(LsdeDialogEngine.BlueprintScene,LsdeDialogEngine.BlueprintBlock,System.Collections.Generic.HashSet{System.String},System.Collections.Generic.List{LsdeDialogEngine.DiagnosticEntry})">
+            <summary>WaitForBlocks names blocks OF THIS SCENE that must have FINISHED before this one is dispatched.</summary>
+            <remarks>A name that is not in the scene can never finish, so the block parks for
+            good: on the main flow that is the whole dialogue stopping with no OnSceneExit, and on a
+            parallel track it is a branch that silently never finishes. Neither shows up anywhere at
+            runtime, which is why it is said here — a warning, not an error: the rest still plays.</remarks>
+        </member>
+        <member name="M:LsdeDialogEngine.Validator.DescribeBlock(LsdeDialogEngine.BlueprintBlock)">
+            <summary>
+            How a block is named in a diagnostic.
+            <para>DIALOG-007 is already readable on its own — that is what replaced the v1 uuid, and
+            it is why blocks carry no mandatory name. When the writer left a note, it says far more
+            than any label would, so it is appended. A Label wins over both when an export has one.</para>
+            </summary>
+        </member>
+    </members>
+</doc>

@@ -67,7 +67,7 @@ namespace LSDE.Demo
             && !_hasBeenRecruited
             && _gameState != null
             && _characterMarker != null
-            && !_gameState.IsInParty(_characterMarker.LsdeCharacterId);
+            && !_gameState.IsInParty(_characterMarker.LsdeCharacterName);
 
         private void Awake()
         {
@@ -94,7 +94,7 @@ namespace LSDE.Demo
             if (
                 _characterMarker != null
                 && _gameState != null
-                && _gameState.IsInParty(_characterMarker.LsdeCharacterId)
+                && _gameState.IsInParty(_characterMarker.LsdeCharacterName)
             )
             {
                 _hasBeenRecruited = true;
@@ -116,10 +116,10 @@ namespace LSDE.Demo
             _hasBeenRecruited = true;
             HideRecruitmentHint();
 
-            _gameState.AddToParty(_characterMarker.LsdeCharacterId);
+            _gameState.AddToParty(_characterMarker.LsdeCharacterName);
 
             Debug.Log(
-                $"[LSDE Demo] Recruited {_characterMarker.LsdeCharacterId} "
+                $"[LSDE Demo] Recruited {_characterMarker.LsdeCharacterName} "
                     + $"from '{gameObject.name}'!"
             );
 

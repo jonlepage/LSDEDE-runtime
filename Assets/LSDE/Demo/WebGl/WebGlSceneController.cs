@@ -17,7 +17,7 @@ namespace LSDE.Demo
     /// <code>
     /// React sidebar click
     ///   → sendMessage("WebGlSceneController", "SelectScene", "simpleDialogFlow")
-    ///   → this script maps "simpleDialogFlow" → LSDE_SCENES.simpleDialogFlow UUID
+    ///   → this script maps "simpleDialogFlow" → the stable scene id (sc_60ql8la3)
     ///   → force-stops any active scene
     ///   → resets game state, character positions, triggers
     ///   → launches the new scene via DemoSceneTrigger
@@ -72,7 +72,9 @@ namespace LSDE.Demo
         private DemoLocale _editorTestLocale = DemoLocale.French;
 
         /// <summary>
-        /// Maps friendly scene names (used by React sidebar) to LSDE_SCENES UUID constants.
+        /// Maps friendly scene names (used by the React sidebar) to the STABLE scene ids of
+        /// the generated LsdedeDemoTsBlueprintIds.Scenes constants. The id is what survives a
+        /// rename, so it is what a value stored outside the payload should hold.
         /// Populated in <see cref="Awake"/>.
         /// </summary>
         private readonly Dictionary<string, string> _sceneNameToUuid = new();
@@ -157,8 +159,13 @@ namespace LSDE.Demo
                 return;
             }
 
-            _dialogueEngineBootstrap.Engine.SetLocale(locale);
-            Debug.Log($"[LSDE WebGL] Locale changed to: {locale}");
+            // Through LsdeText, which refuses a code the payload does not declare instead
+            // of letting the engine throw — a language dropdown is not worth crashing a
+            // scene over.
+            if (LsdeText.SetCurrentLanguage(locale))
+            {
+                Debug.Log($"[LSDE WebGL] Locale changed to: {locale}");
+            }
         }
 
         /// <summary>
@@ -265,7 +272,7 @@ namespace LSDE.Demo
                 string characterId = entry.Key;
                 Vector3 initialPosition = entry.Value;
 
-                var characterMarker = _characterRegistry.FindMarkerByCharacterId(characterId);
+                var characterMarker = _characterRegistry.FindMarkerByCharacterName(characterId);
 
                 if (characterMarker == null)
                 {
@@ -290,23 +297,19 @@ namespace LSDE.Demo
         /// </summary>
         private void ResetAllTriggers()
         {
-            var dialogueTriggers = FindObjectsByType<DialogueProximityTrigger>(
-                FindObjectsSortMode.None
-            );
+            var dialogueTriggers = FindObjectsByType<DialogueProximityTrigger>();
             foreach (var trigger in dialogueTriggers)
             {
                 trigger.ResetTrigger();
             }
 
-            var walkInTriggers = FindObjectsByType<WalkInSceneTrigger>(FindObjectsSortMode.None);
+            var walkInTriggers = FindObjectsByType<WalkInSceneTrigger>();
             foreach (var trigger in walkInTriggers)
             {
                 trigger.ResetTrigger();
             }
 
-            var recruitmentTriggers = FindObjectsByType<PartyRecruitmentTrigger>(
-                FindObjectsSortMode.None
-            );
+            var recruitmentTriggers = FindObjectsByType<PartyRecruitmentTrigger>();
             foreach (var trigger in recruitmentTriggers)
             {
                 trigger.ResetTrigger();
@@ -392,9 +395,7 @@ namespace LSDE.Demo
         /// <param name="sceneUuid">The LSDE scene UUID to assign.</param>
         private void AssignSceneUuidToTriggers(string sceneUuid)
         {
-            var dialogueTriggers = FindObjectsByType<DialogueProximityTrigger>(
-                FindObjectsSortMode.None
-            );
+            var dialogueTriggers = FindObjectsByType<DialogueProximityTrigger>();
 
             foreach (var trigger in dialogueTriggers)
             {
@@ -407,18 +408,31 @@ namespace LSDE.Demo
         }
 
         /// <summary>
-        /// Build the friendly-name-to-UUID mapping from <see cref="LSDE_SCENES"/> constants.
+        /// Build the friendly-name-to-id mapping from the generated
+        /// <c>LsdedeDemoTsBlueprintIds.Scenes</c> constants.
         /// React sends these friendly names via <c>sendMessage</c>.
         /// </summary>
         private void BuildSceneNameMapping()
         {
-            _sceneNameToUuid.Add("simpleDialogFlow", LSDE_SCENES.simpleDialogFlow);
-            _sceneNameToUuid.Add("multiTracks", LSDE_SCENES.multiTracks);
-            _sceneNameToUuid.Add("simpleChoices", LSDE_SCENES.simpleChoices);
-            _sceneNameToUuid.Add("simpleAction", LSDE_SCENES.simpleAction);
-            _sceneNameToUuid.Add("simpleCondition", LSDE_SCENES.simpleCondition);
-            _sceneNameToUuid.Add("conditionDispatch", LSDE_SCENES.conditionDispatch);
-            _sceneNameToUuid.Add("advanceFullDemo", LSDE_SCENES.advanceFullDemo);
+            _sceneNameToUuid.Add(
+                "simpleDialogFlow",
+                LsdedeDemoTsBlueprintIds.Scenes.simpleDialogFlow
+            );
+            _sceneNameToUuid.Add("multiTracks", LsdedeDemoTsBlueprintIds.Scenes.multiTracks);
+            _sceneNameToUuid.Add("simpleChoices", LsdedeDemoTsBlueprintIds.Scenes.simpleChoices);
+            _sceneNameToUuid.Add("simpleAction", LsdedeDemoTsBlueprintIds.Scenes.simpleAction);
+            _sceneNameToUuid.Add(
+                "simpleCondition",
+                LsdedeDemoTsBlueprintIds.Scenes.simpleCondition
+            );
+            _sceneNameToUuid.Add(
+                "conditionDispatch",
+                LsdedeDemoTsBlueprintIds.Scenes.conditionDispatch
+            );
+            _sceneNameToUuid.Add(
+                "advanceFullDemo",
+                LsdedeDemoTsBlueprintIds.Scenes.advanceFullDemo
+            );
         }
 
         /// <summary>
@@ -437,18 +451,9 @@ namespace LSDE.Demo
                 return;
             }
 
-            string[] allCharacterIds =
+            foreach (string characterId in DemoCharacterNames.All)
             {
-                lsdeCharacter.l1,
-                lsdeCharacter.l2,
-                lsdeCharacter.l3,
-                lsdeCharacter.l4,
-                lsdeCharacter.boss,
-            };
-
-            foreach (string characterId in allCharacterIds)
-            {
-                var characterMarker = _characterRegistry.FindMarkerByCharacterId(characterId);
+                var characterMarker = _characterRegistry.FindMarkerByCharacterName(characterId);
 
                 if (characterMarker != null)
                 {

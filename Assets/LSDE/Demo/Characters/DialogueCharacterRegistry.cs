@@ -7,20 +7,25 @@ namespace LSDE.Demo
 {
     /// <summary>
     /// Discovers all <see cref="DialogueCharacterMarker"/> components in the scene at startup
-    /// and builds a mapping from LSDE character IDs to their scene GameObjects.
-    /// Also implements <see cref="ICharacterResolver"/> — the engine uses this to determine
-    /// which character is available at runtime based on scene presence.
+    /// and builds a mapping from LSDE character names to their scene GameObjects.
+    /// Also implements <see cref="ICharacterResolver"/> — the engine uses this to decide which
+    /// actor is available at runtime, based on who is actually present in the Unity scene.
     ///
-    /// Replaces <see cref="DemoCharacterResolver"/> from Phase 1.
+    /// <para><b>Name, not id.</b> A v2 card has two identities: <c>Id</c>, a uuid that survives a
+    /// rename, and <c>Name</c>, what the writer typed (<c>l1</c>, <c>boss</c>). This demo indexes
+    /// by NAME because that is the identity the rest of the payload speaks: the <c>party</c>
+    /// dictionary asks about <c>party.l1</c>, and <c>moveCharacterAt</c> is called with
+    /// <c>id: "l1"</c>. Indexing by uuid would be sturdier against renames but would then need a
+    /// uuid↔name table to answer those two.</para>
     /// </summary>
     public class DialogueCharacterRegistry : MonoBehaviour, ICharacterResolver
     {
-        private readonly Dictionary<string, DialogueCharacterMarker> _characterMarkersByIdentifier =
+        private readonly Dictionary<string, DialogueCharacterMarker> _characterMarkersByName =
             new Dictionary<string, DialogueCharacterMarker>();
 
         /// <summary>
         /// Unity calls Awake before Start. We scan the scene for all character markers
-        /// and index them by their LSDE character ID for O(1) lookups.
+        /// and index them by their LSDE character name for O(1) lookups.
         /// </summary>
         private void Awake()
         {
@@ -30,45 +35,46 @@ namespace LSDE.Demo
 
             foreach (var characterMarker in allCharacterMarkers)
             {
-                if (string.IsNullOrEmpty(characterMarker.LsdeCharacterId))
+                if (string.IsNullOrEmpty(characterMarker.LsdeCharacterName))
                 {
                     Debug.LogWarning(
                         $"[LSDE] DialogueCharacterMarker on '{characterMarker.gameObject.name}' "
-                            + "has no LSDE character ID assigned. Skipping.",
+                            + "has no LSDE character name assigned. Skipping.",
                         characterMarker
                     );
                     continue;
                 }
 
-                if (_characterMarkersByIdentifier.ContainsKey(characterMarker.LsdeCharacterId))
+                if (_characterMarkersByName.ContainsKey(characterMarker.LsdeCharacterName))
                 {
                     Debug.LogWarning(
-                        $"[LSDE] Duplicate character ID '{characterMarker.LsdeCharacterId}' "
+                        $"[LSDE] Duplicate character name '{characterMarker.LsdeCharacterName}' "
                             + $"found on '{characterMarker.gameObject.name}'. Using first occurrence.",
                         characterMarker
                     );
                     continue;
                 }
 
-                _characterMarkersByIdentifier[characterMarker.LsdeCharacterId] = characterMarker;
+                _characterMarkersByName[characterMarker.LsdeCharacterName] = characterMarker;
             }
 
             Debug.Log(
-                $"[LSDE] Character registry initialized: {_characterMarkersByIdentifier.Count} characters found."
+                $"[LSDE] Character registry initialized: {_characterMarkersByName.Count} characters found."
             );
         }
 
         /// <summary>
-        /// Find the scene marker for a given LSDE character ID.
-        /// Used by <see cref="BubbleDialoguePresenter"/> to position speech bubbles.
+        /// Find the scene marker for a given LSDE character name.
+        /// Used by <see cref="BubbleDialoguePresenter"/> to position speech bubbles and by
+        /// <see cref="DemoActionExecutor"/> to move a character or aim the camera at one.
         /// </summary>
-        /// <param name="characterId">The LSDE character ID (e.g. "l1", "boss").</param>
-        /// <returns>The marker component, or null if no character with this ID exists in the scene.</returns>
-        public DialogueCharacterMarker FindMarkerByCharacterId(string characterId)
+        /// <param name="characterName">The LSDE character name (e.g. "l1", "boss").</param>
+        /// <returns>The marker component, or null if nobody with that name is in the scene.</returns>
+        public DialogueCharacterMarker FindMarkerByCharacterName(string characterName)
         {
             if (
-                characterId != null
-                && _characterMarkersByIdentifier.TryGetValue(characterId, out var characterMarker)
+                characterName != null
+                && _characterMarkersByName.TryGetValue(characterName, out var characterMarker)
             )
             {
                 return characterMarker;
@@ -78,22 +84,25 @@ namespace LSDE.Demo
 
         /// <inheritdoc />
         /// <remarks>
-        /// Returns the first character from the available list whose ID matches
-        /// a marker present in the scene. If none match, returns null —
-        /// the engine may invalidate the block via OnInvalidateBlock.
+        /// Returns the first card of the cast that is actually present in the Unity scene. If none
+        /// is, returns null — a legitimate answer meaning "nobody available can carry this line".
+        ///
+        /// <para>With <c>inPortPerCharacter</c> the list holds exactly one card, the one the wire
+        /// named, so this method either confirms that actor or says nobody. That is the point of
+        /// the property: the engine still asks, but the answer cannot be a different actor.</para>
         /// </remarks>
-        public BlockCharacter ResolveCharacter(List<BlockCharacter> availableCharacters)
+        public Card ResolveCharacter(List<Card> availableCharacters)
         {
             if (availableCharacters == null)
             {
                 return null;
             }
 
-            foreach (var blockCharacter in availableCharacters)
+            foreach (var card in availableCharacters)
             {
-                if (_characterMarkersByIdentifier.ContainsKey(blockCharacter.Id))
+                if (_characterMarkersByName.ContainsKey(card.Name))
                 {
-                    return blockCharacter;
+                    return card;
                 }
             }
 

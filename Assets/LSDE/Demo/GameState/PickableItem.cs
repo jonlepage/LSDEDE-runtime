@@ -13,14 +13,15 @@ namespace LSDE.Demo
     ///
     /// Demo usage: create a Cube, scale it to (0.3, 0.3, 0.3), attach this script, assign
     /// the <see cref="DemoGameState"/> reference, and set <see cref="_itemKey"/> to
-    /// <c>lsdeDictionaryinventory.carrot</c>.
+    /// <c>LsdedeDemoTsBlueprintIds.DictionaryEntries.inventory.carrot</c>.
     /// </summary>
     public class PickableItem : MonoBehaviour
     {
         [Header("Item Configuration")]
         [SerializeField]
         [Tooltip(
-            "The inventory key for this item (e.g. lsdeDictionaryinventory.carrot). "
+            "The inventory entry key for this item, as the blueprint cites it "
+                + "(e.g. carrot). "
                 + "Must match the condition key used in LSDE blueprints."
         )]
         private string _itemKey = "carrot";

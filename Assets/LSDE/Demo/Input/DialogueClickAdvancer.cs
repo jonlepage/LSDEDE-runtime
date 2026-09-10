@@ -9,48 +9,49 @@ namespace LSDE.Demo
     /// Listens for mouse clicks and manages dialogue flow advancement with typewriter support.
     /// Supports multiple simultaneous dialogue blocks (multi-track parallel dialogue).
     ///
-    /// Click behavior depends on the current state:
+    /// <para>Click behaviour, in two phases:</para>
     /// <list type="bullet">
-    ///   <item>If any typewriter is playing → first click skips ALL typewriters (reveals all text)</item>
-    ///   <item>If all text is fully revealed → click advances ALL waiting blocks (broadcast)</item>
+    ///   <item>If any typewriter is playing → the click skips ALL typewriters (reveals the text)
+    ///     and advances nothing.</item>
+    ///   <item>If every text is fully revealed → the click advances every block that is WAITING
+    ///     FOR INPUT (broadcast).</item>
     /// </list>
     ///
-    /// The <see cref="BubbleDialoguePresenter"/> registers pending advance callbacks here
-    /// when DIALOG blocks are displayed. It also provides references to the active
-    /// <see cref="SpeechBubbleController"/> instances so we can check typewriter state and skip them.
+    /// <para><b>Two kinds of registration.</b> A block that waits for the player is registered
+    /// with <see cref="SetPendingAdvance"/>. A block that plays its own time —
+    /// one carrying <c>timeout</c> — is registered with <see cref="SetRevealOnly"/> instead: it
+    /// takes part in phase 1, so a click still HURRIES its reveal, but it is never advanced by a
+    /// click. That is what "timeout outranks waitInput" means in practice: the writer said how
+    /// long the line stays, so a click may only get to the end of the sentence faster.</para>
     ///
-    /// In single-track mode (e.g. simpleDialogFlow), only one entry exists in the dictionary
-    /// at a time — behavior is identical to a single-callback model.
-    ///
-    /// In multi-track mode (e.g. multiTracks), multiple entries coexist. A single click
-    /// broadcasts to ALL waiting blocks: every track that needs acknowledgement reacts
-    /// to the same player interaction at once.
+    /// <para>Entries are keyed by PRESENTATION, not by block id: with
+    /// <c>inPortPerCharacter</c> one block can be on screen several times at once, each for a
+    /// different actor. See <c>LsdePresentationKey</c>.</para>
     ///
     /// Clicking does NOT block other interactions (e.g. player movement).
-    /// The click simply also advances dialogue if one is pending.
     /// </summary>
     public class DialogueClickAdvancer : MonoBehaviour
     {
         /// <summary>
-        /// Holds the advance callback and bubble controller for a single block
-        /// that is waiting for player input to proceed.
+        /// One presentation waiting on the player, or merely skippable.
         /// </summary>
-        private struct PendingAdvanceEntry
+        private struct PendingEntry
         {
+            /// <summary>The engine's Next callback, or null for a reveal-only entry.</summary>
             public Action AdvanceCallback;
+
+            /// <summary>The bubble, used to check and skip its typewriter.</summary>
             public SpeechBubbleController BubbleController;
         }
 
         /// <summary>
-        /// All blocks currently waiting for a player click to advance.
-        /// Keyed by block UUID so that individual entries can be added/removed
-        /// independently when parallel dialogue tracks are active.
+        /// All presentations a click can act on, keyed by presentation key.
         /// </summary>
-        private readonly Dictionary<string, PendingAdvanceEntry> _pendingAdvancesByBlockUuid =
-            new Dictionary<string, PendingAdvanceEntry>();
+        private readonly Dictionary<string, PendingEntry> _pendingEntriesByKey =
+            new Dictionary<string, PendingEntry>();
 
         /// <summary>
-        /// The frame number on which <see cref="SetPendingAdvance"/> was last called.
+        /// The frame number on which an entry was last armed.
         /// Clicks on this exact frame are ignored to prevent the "phantom click" problem:
         /// the player's click to START the dialogue (via NPC interaction) would otherwise
         /// also be detected as a click to skip the typewriter, because both the dialogue
@@ -60,27 +61,41 @@ namespace LSDE.Demo
         private int _armedOnFrame = -1;
 
         /// <summary>
-        /// Whether there are any pending dialogue advances waiting for a click.
+        /// Whether any presentation is waiting for a click to advance.
+        /// Reveal-only entries do not count: nothing is waiting on the player there.
         /// </summary>
-        public bool HasPendingAdvance => _pendingAdvancesByBlockUuid.Count > 0;
+        public bool HasPendingAdvance
+        {
+            get
+            {
+                foreach (var entry in _pendingEntriesByKey.Values)
+                {
+                    if (entry.AdvanceCallback != null)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
 
         /// <summary>
-        /// Store the advance callback and active bubble controller for a specific block.
-        /// Called by the presenter when a DIALOG block is shown and needs player input to advance.
+        /// Register a presentation that WAITS for the player: a click reveals its text, and the
+        /// next click advances the flow.
         /// </summary>
-        /// <param name="blockUuid">The UUID of the dialogue block, used as dictionary key.</param>
-        /// <param name="advanceCallback">The engine's Next callback that advances to the next block.</param>
+        /// <param name="presentationKey">Identifies this presentation of the block.</param>
+        /// <param name="advanceCallback">The engine's Next callback.</param>
         /// <param name="activeBubbleController">
-        /// The currently visible bubble controller, used to check typewriter state
-        /// and skip it on first click. Can be null if no typewriter support is needed.
+        /// The visible bubble, used to check typewriter state and skip it on the first click.
+        /// May be null when no typewriter support is needed.
         /// </param>
         public void SetPendingAdvance(
-            string blockUuid,
+            string presentationKey,
             Action advanceCallback,
             SpeechBubbleController activeBubbleController = null
         )
         {
-            _pendingAdvancesByBlockUuid[blockUuid] = new PendingAdvanceEntry
+            _pendingEntriesByKey[presentationKey] = new PendingEntry
             {
                 AdvanceCallback = advanceCallback,
                 BubbleController = activeBubbleController,
@@ -89,40 +104,50 @@ namespace LSDE.Demo
         }
 
         /// <summary>
-        /// Clear the pending advance callback for a specific block.
-        /// Called during individual block cleanup when the engine moves past this block,
-        /// or when a timeout coroutine auto-advances the block.
+        /// Register a presentation a click may only HURRY, never dismiss — a block whose
+        /// <c>timeout</c> decides when it leaves.
         /// </summary>
-        /// <param name="blockUuid">The UUID of the block to clear.</param>
-        public void ClearPendingAdvanceForBlock(string blockUuid)
+        /// <param name="presentationKey">Identifies this presentation of the block.</param>
+        /// <param name="activeBubbleController">The visible bubble, whose typewriter can be skipped.</param>
+        public void SetRevealOnly(
+            string presentationKey,
+            SpeechBubbleController activeBubbleController
+        )
         {
-            _pendingAdvancesByBlockUuid.Remove(blockUuid);
+            _pendingEntriesByKey[presentationKey] = new PendingEntry
+            {
+                AdvanceCallback = null,
+                BubbleController = activeBubbleController,
+            };
+            _armedOnFrame = Time.frameCount;
         }
 
         /// <summary>
-        /// Clear all pending advance callbacks.
+        /// Forget one presentation. Called during block cleanup, or when a timeout advanced it.
+        /// </summary>
+        /// <param name="presentationKey">The presentation to clear.</param>
+        public void ClearPendingAdvanceForBlock(string presentationKey)
+        {
+            _pendingEntriesByKey.Remove(presentationKey);
+        }
+
+        /// <summary>
+        /// Forget every presentation.
         /// Called during scene exit or when switching to a CHOICE block
         /// (choices use their own selection buttons, not click-anywhere).
         /// </summary>
         public void ClearAllPendingAdvances()
         {
-            _pendingAdvancesByBlockUuid.Clear();
+            _pendingEntriesByKey.Clear();
         }
 
         /// <summary>
-        /// Unity calls Update every frame. We check for left mouse button press
+        /// Unity calls Update every frame. We check for a left-button press
         /// using the new Input System (UnityEngine.InputSystem).
-        ///
-        /// Two-phase broadcast click behavior:
-        /// 1. If any typewriter is playing → skip ALL typewriters (reveal all text), do NOT advance yet
-        /// 2. If all text is fully visible → invoke ALL advance callbacks (broadcast to all waiting blocks)
-        ///
-        /// The broadcast pattern models "press to continue" — every track that needs
-        /// acknowledgement reacts to the same player interaction at once.
         /// </summary>
         private void Update()
         {
-            if (_pendingAdvancesByBlockUuid.Count == 0)
+            if (_pendingEntriesByKey.Count == 0)
             {
                 return;
             }
@@ -138,19 +163,17 @@ namespace LSDE.Demo
                 return;
             }
 
-            // Ignore clicks on the same frame the advancer was armed.
-            // This prevents the "phantom click" where the player's click to START
-            // the dialogue (via NPC interaction) is also detected as a click to
-            // skip the typewriter — both systems see the same wasPressedThisFrame.
+            // Ignore clicks on the same frame an entry was armed — the click that STARTED the
+            // dialogue must not also skip the first typewriter.
             if (Time.frameCount == _armedOnFrame)
             {
                 return;
             }
 
-            // Phase 1: If ANY typewriter is still playing, skip ALL typewriters.
-            // Do NOT advance yet — let the player read the fully revealed text.
+            // Phase 1: if ANY typewriter is still playing, skip them all and advance nothing.
+            // Reveal-only entries take part here: hurrying the reveal is exactly what they allow.
             bool anyTypewriterIsPlaying = false;
-            foreach (var entry in _pendingAdvancesByBlockUuid.Values)
+            foreach (var entry in _pendingEntriesByKey.Values)
             {
                 if (entry.BubbleController != null && entry.BubbleController.IsTypewriterPlaying)
                 {
@@ -161,7 +184,7 @@ namespace LSDE.Demo
 
             if (anyTypewriterIsPlaying)
             {
-                foreach (var entry in _pendingAdvancesByBlockUuid.Values)
+                foreach (var entry in _pendingEntriesByKey.Values)
                 {
                     if (
                         entry.BubbleController != null
@@ -174,18 +197,28 @@ namespace LSDE.Demo
                 return;
             }
 
-            // Phase 2: All text is fully visible — advance ALL waiting blocks.
-            // Snapshot callbacks before clearing to avoid mutation during invocation.
-            // Each next() call may synchronously trigger PresentBlockCleanup which calls
-            // ClearPendingAdvanceForBlock, modifying the dictionary while we iterate.
-            // By clearing first and invoking from the snapshot, cleanup re-entry calls
-            // Remove on an already-empty dictionary — safe no-op.
-            var callbacksToInvoke = new List<Action>(_pendingAdvancesByBlockUuid.Count);
-            foreach (var entry in _pendingAdvancesByBlockUuid.Values)
+            // Phase 2: every text is revealed — advance the presentations that WAIT for input.
+            // A reveal-only entry is left alone: its timeout owns when it leaves.
+            //
+            // Snapshot the callbacks before invoking: each next() may synchronously trigger the
+            // block cleanup, which calls ClearPendingAdvanceForBlock and would mutate the
+            // dictionary while we iterate.
+            var callbacksToInvoke = new List<Action>(_pendingEntriesByKey.Count);
+            var keysToClear = new List<string>(_pendingEntriesByKey.Count);
+
+            foreach (var entry in _pendingEntriesByKey)
             {
-                callbacksToInvoke.Add(entry.AdvanceCallback);
+                if (entry.Value.AdvanceCallback != null)
+                {
+                    callbacksToInvoke.Add(entry.Value.AdvanceCallback);
+                    keysToClear.Add(entry.Key);
+                }
             }
-            _pendingAdvancesByBlockUuid.Clear();
+
+            foreach (var key in keysToClear)
+            {
+                _pendingEntriesByKey.Remove(key);
+            }
 
             foreach (var advanceCallback in callbacksToInvoke)
             {

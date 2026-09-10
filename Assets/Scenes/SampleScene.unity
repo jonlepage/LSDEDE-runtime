@@ -284,6 +284,99 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DemoConditionResolver
   _gameState: {fileID: 1914617372}
+--- !u!1 &78339473
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 78339476}
+  - component: {fileID: 78339475}
+  - component: {fileID: 78339474}
+  m_Layer: 0
+  m_Name: Terrain
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 2147483647
+  m_IsActive: 1
+--- !u!154 &78339474
+TerrainCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 78339473}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_TerrainData: {fileID: 15600000, guid: aeee092bd7e21324c8e0e9831f282ff4, type: 2}
+  m_EnableTreeColliders: 1
+--- !u!218 &78339475
+Terrain:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 78339473}
+  m_Enabled: 1
+  serializedVersion: 6
+  m_TerrainData: {fileID: 15600000, guid: aeee092bd7e21324c8e0e9831f282ff4, type: 2}
+  m_TreeDistance: 5000
+  m_TreeBillboardDistance: 50
+  m_TreeCrossFadeLength: 5
+  m_TreeMaximumFullLODCount: 50
+  m_DetailObjectDistance: 80
+  m_DetailObjectDensity: 1
+  m_HeightmapPixelError: 5
+  m_SplatMapDistance: 1000
+  m_HeightmapMinimumLODSimplification: 0
+  m_HeightmapMaximumLOD: 0
+  m_ShadowCastingMode: 2
+  m_DrawHeightmap: 1
+  m_DrawInstanced: 0
+  m_DrawTreesAndFoliage: 1
+  m_StaticShadowCaster: 0
+  m_IgnoreQualitySettings: 0
+  m_ReflectionProbeUsage: 1
+  m_MaterialTemplate: {fileID: 2100000, guid: 594ea882c5a793440b60ff72d896021e, type: 2}
+  m_BakeLightProbesForTrees: 1
+  m_PreserveTreePrototypeLayers: 0
+  m_DeringLightProbesForTrees: 1
+  m_ReceiveGI: 1
+  m_ScaleInLightmap: 0.0256
+  m_LightmapParameters: {fileID: 15203, guid: 0000000000000000f000000000000000, type: 0}
+  m_GroupingID: 0
+  m_RenderingLayerMask: 1
+  m_AllowAutoConnect: 1
+  m_EnableHeightmapRayTracing: 1
+  m_EnableTreesAndDetailsRayTracing: 0
+  m_TreeMotionVectorModeOverride: 3
+--- !u!4 &78339476
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 78339473}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -460, y: 0, z: -511}
+  m_LocalScale: {x: 0.27382687, y: -0.22, z: -0.046441372}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &90706765
 GameObject:
   m_ObjectHideFlags: 0
@@ -459,7 +552,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 428336655ed00bb47b140f87bbf06b58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueCharacterMarker
-  _lsdeCharacterId: l4
+  _lsdeCharacterName: l4
   _bubbleAnchorPoint: {fileID: 2097137453}
   _cameraAnchorPoint: {fileID: 0}
 --- !u!114 &93071356
@@ -502,6 +595,9 @@ MonoBehaviour:
   _hopLandingDuration: 0.15
   _maxTiltAngle: 12
   _inertiaVelocityLerp: 3.46
+  _groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!143 &93071359
 CharacterController:
   m_ObjectHideFlags: 0
@@ -628,7 +724,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DemoActionExecutor
   _cameraFollowController: {fileID: 330585548}
   _characterRegistry: {fileID: 1959115875}
-  _playerCharacterId: l4
+  _playerCharacterName: l4
   _shakeIntensityWorldScaleFactor: 0.02
   _partyFollowController: {fileID: 93071360}
   _pixelToWorldScaleFactor: 0.01
@@ -1887,7 +1983,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueProximityTrigger
   _interactionRadius: 0.94
   _demoSceneTrigger: {fileID: 1361365180}
-  _sceneUuidToLaunch: c2e75db2-85c7-421b-91ab-f7ea1ea45284
+  _sceneUuidToLaunch: sc_q4c6vbo6
   _interactionHintDisplay: {fileID: 883980583}
 --- !u!114 &416999300
 MonoBehaviour:
@@ -2463,7 +2559,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 428336655ed00bb47b140f87bbf06b58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueCharacterMarker
-  _lsdeCharacterId: l3
+  _lsdeCharacterName: l3
   _bubbleAnchorPoint: {fileID: 1531141608}
   _cameraAnchorPoint: {fileID: 0}
 --- !u!65 &695945934
@@ -2507,6 +2603,9 @@ MonoBehaviour:
   _hopLandingDuration: 0.15
   _maxTiltAngle: 12
   _inertiaVelocityLerp: 3.46
+  _groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!143 &695945936
 CharacterController:
   m_ObjectHideFlags: 0
@@ -2786,43 +2885,43 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -21.091099
+      value: -20.812
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.049
+      value: 1.42
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -72.14461
+      value: -70.266
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.9886579
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0.05158925
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: 0.13880093
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: -0.025069578
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
+      value: -5.454
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: 16.159
       objectReference: {fileID: 0}
     - target: {fileID: 2018365450437254147, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
+      value: -3.68
       objectReference: {fileID: 0}
     - target: {fileID: 2213089068918022443, guid: 1509360826d6bb34587310ad4949fdd5, type: 3}
       propertyPath: m_BodyType
@@ -3528,7 +3627,7 @@ MonoBehaviour:
   _characterRegistry: {fileID: 1959115875}
   _dialogueClickAdvancer: {fileID: 796626529}
   _actionExecutor: {fileID: 120999131}
-  _fallbackChoiceCharacterId: l4
+  _fallbackChoiceCharacterName: l4
 --- !u!1 &924522821
 GameObject:
   m_ObjectHideFlags: 0
@@ -4698,7 +4797,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 428336655ed00bb47b140f87bbf06b58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueCharacterMarker
-  _lsdeCharacterId: l2
+  _lsdeCharacterName: l2
   _bubbleAnchorPoint: {fileID: 90706766}
   _cameraAnchorPoint: {fileID: 0}
 --- !u!65 &1307401951
@@ -4742,6 +4841,9 @@ MonoBehaviour:
   _hopLandingDuration: 0.15
   _maxTiltAngle: 12
   _inertiaVelocityLerp: 3.46
+  _groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!143 &1307401953
 CharacterController:
   m_ObjectHideFlags: 0
@@ -4909,7 +5011,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.WalkInSceneTrigger
   _triggerRadius: 0.69
   _demoSceneTrigger: {fileID: 1361365180}
-  _sceneUuidToLaunch: c2e75db2-85c7-421b-91ab-f7ea1ea45284
+  _sceneUuidToLaunch: sc_q4c6vbo6
 --- !u!4 &1343309501
 Transform:
   m_ObjectHideFlags: 0
@@ -5032,7 +5134,7 @@ Transform:
   m_GameObject: {fileID: 1360042252}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -27.239, y: -0, z: -70.996}
+  m_LocalPosition: {x: -27.239, y: 0.01, z: -70.996}
   m_LocalScale: {x: 2.8, y: 0.66, z: 2.2}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5088,7 +5190,7 @@ MonoBehaviour:
   _characterRegistry: {fileID: 1959115875}
   _dialogueClickAdvancer: {fileID: 796626529}
   _bubbleDialoguePresenter: {fileID: 912666324}
-  _autoLaunchSceneUuid: 
+  _autoLaunchSceneRef: 
 --- !u!1 &1371324973
 GameObject:
   m_ObjectHideFlags: 0
@@ -6734,6 +6836,135 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.SceneVisibilityFilter
   _visibleInScenes: 32
+--- !u!1 &1790313220
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1790313222}
+  - component: {fileID: 1790313221}
+  m_Layer: 0
+  m_Name: Audio Source
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!82 &1790313221
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1790313220}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: 2bb81e184b1ff9b44bb42bbecf0006c0, type: 3}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!4 &1790313222
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1790313220}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.8515548, z: -0, w: 0.5242656}
+  m_LocalPosition: {x: -29.87, y: 1.31032, z: -71.1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 116.762, z: 0}
 --- !u!1001 &1802940514
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6852,7 +7083,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 428336655ed00bb47b140f87bbf06b58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueCharacterMarker
-  _lsdeCharacterId: l1
+  _lsdeCharacterName: l1
   _bubbleAnchorPoint: {fileID: 92375939}
   _cameraAnchorPoint: {fileID: 0}
 --- !u!65 &1802940520
@@ -6896,6 +7127,9 @@ MonoBehaviour:
   _hopLandingDuration: 0.15
   _maxTiltAngle: 12
   _inertiaVelocityLerp: 3.46
+  _groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!143 &1802940522
 CharacterController:
   m_ObjectHideFlags: 0
@@ -7279,7 +7513,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e539f3c0787d4b0498ba9157446352d3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Runtime.DialogueEngineBootstrap
-  _blueprintTextAsset: {fileID: 4900000, guid: ea432abe2bd02924e995e5b44546a968, type: 3}
+  _blueprintTextAsset: {fileID: 4900000, guid: f12c936ac37943829e392448987a1f83, type: 3}
 --- !u!1001 &1927494135
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8050,7 +8284,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 428336655ed00bb47b140f87bbf06b58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.DialogueCharacterMarker
-  _lsdeCharacterId: boss
+  _lsdeCharacterName: boss
   _bubbleAnchorPoint: {fileID: 262269204}
   _cameraAnchorPoint: {fileID: 1304179455}
 --- !u!1 &2096941937 stripped
@@ -8142,3 +8376,5 @@ SceneRoots:
   - {fileID: 1707113549}
   - {fileID: 753734358}
   - {fileID: 1739892202}
+  - {fileID: 1790313222}
+  - {fileID: 78339476}

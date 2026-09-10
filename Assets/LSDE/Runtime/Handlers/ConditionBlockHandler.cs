@@ -1,14 +1,22 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using LsdeDialogEngine;
 
 namespace LSDE.Runtime
 {
     /// <summary>
-    /// Global handler for CONDITION blocks. Reads pre-evaluated condition groups,
-    /// resolves the routing result, and delegates presentation to <see cref="IDialoguePresenter"/>.
-    /// Supports both switch mode (first match) and dispatcher mode (all matches fire async).
+    /// Global handler for CONDITION blocks — a logging hook, and nothing more.
+    ///
+    /// <para>Once <c>OnResolveCondition</c> is installed the engine has already evaluated every
+    /// case and already knows the exit port, so <c>OnCondition</c> becomes optional: the handler
+    /// exists to let a game watch the routing, or to override it with
+    /// <c>context.Resolve( port )</c> where the port is a NAME — <c>out</c>, <c>default</c>, or a
+    /// case port like <c>K1</c>. This demo watches and never overrides.</para>
+    ///
+    /// <para>A condition has exactly two modes. Without <c>portPerCase</c>, every case must hold
+    /// → <c>out</c>, otherwise <c>default</c>. With <c>portPerCase: true</c>, the first case that
+    /// holds takes its own port. The third mode of v1 — the dispatcher, which fired every matching
+    /// case at once — is gone from the condition block: what replaced it is the ROUTER, a block
+    /// type of its own with no handler at all. See <see cref="RouterBlockObserver"/>.</para>
     /// </summary>
     public class ConditionBlockHandler
     {
@@ -17,7 +25,7 @@ namespace LSDE.Runtime
         /// <summary>
         /// Create a new condition block handler.
         /// </summary>
-        /// <param name="dialoguePresenter">The presenter that will display condition evaluation results.</param>
+        /// <param name="dialoguePresenter">The presenter that will report the evaluation.</param>
         public ConditionBlockHandler(IDialoguePresenter dialoguePresenter)
         {
             _dialoguePresenter =
@@ -26,34 +34,16 @@ namespace LSDE.Runtime
 
         /// <summary>
         /// Handle a CONDITION block dispatched by the LSDEDE runtime.
-        /// Matches the <see cref="BlockHandler{ConditionBlock, IConditionContext}"/> delegate signature.
         /// </summary>
-        /// <param name="arguments">Block handler arguments containing the block, context, and next callback.</param>
-        /// <returns>A cleanup action called when the engine leaves this block, or null.</returns>
+        /// <param name="arguments">Block, context, and the Next callback.</param>
+        /// <returns>Null — a condition renders nothing, so there is nothing to clean up.</returns>
         public Action HandleConditionBlock(
-            BlockHandlerArgs<ConditionBlock, IConditionContext> arguments
+            BlockHandlerArgs<BlueprintBlock, IConditionContext> arguments
         )
         {
-            var block = arguments.Block;
-            var context = arguments.Context;
-            var conditionGroups = context.ConditionGroups;
-            bool isDispatcherMode = block.NativeProperties?.EnableDispatcher == true;
+            _dialoguePresenter.PresentConditionBlock(arguments.Block, arguments.Context.Cases);
 
-            // Collect all groups whose conditions evaluated to true
-            List<int> matchedPortIndices = conditionGroups
-                .Where(group => group.Result == true)
-                .Select(group => group.PortIndex)
-                .ToList();
-
-            // Switch mode: route to first matching group's port, or -1 for default/false
-            // Dispatcher mode: fire all matching groups as async tracks
-            object resolvedResult = isDispatcherMode
-                ? (object)matchedPortIndices
-                : (object)(matchedPortIndices.Count > 0 ? matchedPortIndices[0] : -1);
-
-            _dialoguePresenter.PresentConditionBlock(block, conditionGroups, resolvedResult);
-
-            context.Resolve(resolvedResult);
+            // No Resolve call: the port is already picked. Calling it would OVERRIDE the engine.
             arguments.Next();
 
             return null;

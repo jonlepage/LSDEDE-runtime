@@ -23,7 +23,7 @@ namespace LSDE.Demo
     /// Setup in Unity Editor:
     /// 1. Attach this script to the NPC GameObject
     /// 2. Assign the DemoSceneTrigger and InteractionHintDisplay references
-    /// 3. Set the scene UUID to launch (use LSDE_SCENES constants)
+    /// 3. Set the scene to launch (use LsdedeDemoTsBlueprintIds.Scenes constants)
     /// 4. Ensure the NPC has a Collider and is on the "Interactable" layer
     /// 5. Ensure the player has the "Player" tag, a Collider, and a Rigidbody (isKinematic)
     /// </summary>
@@ -188,7 +188,7 @@ namespace LSDE.Demo
         /// </summary>
         /// <param name="sceneUuid">
         /// The LSDE scene UUID to launch when the player clicks this NPC.
-        /// Use <c>LSDE_SCENES.*</c> constants.
+        /// Use <c>LsdedeDemoTsBlueprintIds.Scenes.*</c> constants.
         /// </param>
         public void SetSceneUuid(string sceneUuid)
         {

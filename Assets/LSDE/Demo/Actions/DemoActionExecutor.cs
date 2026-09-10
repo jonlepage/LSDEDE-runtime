@@ -4,23 +4,23 @@ using System.Collections.Generic;
 using LSDE.Runtime;
 using LsdeDialogEngine;
 using UnityEngine;
+using UnityEngine.Serialization;
+using DemoIds = LsdedeDemoTsBlueprintIds;
 
 namespace LSDE.Demo
 {
     /// <summary>
-    /// Demo implementation of <see cref="IActionExecutor"/> that maps action IDs
-    /// to game effects via a switch/case pattern.
+    /// Demo implementation of <see cref="IActionExecutor"/> that maps a call's function id
+    /// to a game effect via a switch/case pattern.
     ///
-    /// This is the Unity C# equivalent of the TypeScript <c>execute-action.ts</c>
-    /// shared module. The switch/case pattern is intentional — it keeps all action
-    /// mapping in one place, making it easy for developers to see and extend.
+    /// The switch/case is intentional — it keeps all mapping in one place, making it easy for
+    /// developers to see and extend. Both the function ids and the parameter names come from the
+    /// generated <c>DemoIds.Functions</c> / <c>DemoIds.FunctionParams</c> constants, so a renamed
+    /// function or parameter breaks the build instead of failing silently at runtime.
     ///
-    /// Camera actions (<c>shakeCamera</c>, <c>moveCameraToLabel</c>) use the
+    /// <para>Camera calls (<c>shakeCamera</c>, <c>moveCameraToLabel</c>) use the
     /// <see cref="CameraFollowController"/> API (pause/resume/shake offset).
-    /// Character movement (<c>moveCharacterAt</c>) uses <see cref="CharacterMovementController"/>.
-    ///
-    /// Uses <see cref="lsdeActionId"/> constants for compile-time validated matching.
-    /// Never use string literals for action IDs.
+    /// Character movement (<c>moveCharacterAt</c>) uses <see cref="CharacterMovementController"/>.</para>
     /// </summary>
     public class DemoActionExecutor : MonoBehaviour, IActionExecutor
     {
@@ -30,19 +30,20 @@ namespace LSDE.Demo
 
         [SerializeField]
         [Tooltip(
-            "The character registry that maps LSDE character IDs to scene GameObjects. "
+            "The character registry that maps LSDE card names to scene GameObjects. "
                 + "Required for moveCameraToLabel and moveCharacterAt."
         )]
         private DialogueCharacterRegistry _characterRegistry;
 
         [Header("Camera Settings")]
+        [FormerlySerializedAs("_playerCharacterId")]
         [SerializeField]
         [Tooltip(
-            "The LSDE character ID of the player character. When moveCameraToLabel targets "
+            "The LSDE card NAME of the player character. When moveCameraToLabel targets "
                 + "this character, the camera resumes following after arriving. "
                 + "For other targets, the camera stays on the target until the next command."
         )]
-        private string _playerCharacterId = lsdeCharacter.l4;
+        private string _playerCharacterName = "l4";
 
         [SerializeField]
         [Tooltip(
@@ -73,7 +74,7 @@ namespace LSDE.Demo
         [SerializeField]
         [Tooltip(
             "Reference Transform used as the origin for absolute character positioning. "
-                + "When moveCharacterAt uses isAbsolute=true, pixel offsets are applied relative "
+                + "When moveCharacterAt uses absolut=true, pixel offsets are applied relative "
                 + "to this Transform's position. Drag the player character or a central scene "
                 + "object here. If not assigned, falls back to (0,0,0) which is rarely correct."
         )]
@@ -88,33 +89,49 @@ namespace LSDE.Demo
 
         private const string LogPrefix = "[LSDE Action]";
 
-        /// <summary>
-        /// Default duration in seconds for actions that don't have
-        /// an explicit duration parameter.
-        /// </summary>
+        // Defaults for arguments the writer left empty — such an argument is ABSENT from the
+        // bag, not zero, so every read states its own. Same values as the reference demo
+        // (src/demos/shared/execute-action.ts).
+
+        /// <summary>Fallback shake intensity, in blueprint units.</summary>
+        private const float DefaultShakeIntensity = 1f;
+
+        /// <summary>Fallback shake duration, in seconds.</summary>
+        private const float DefaultShakeDurationInSeconds = 0.3f;
+
+        /// <summary>Fallback camera travel duration, in seconds.</summary>
+        private const float DefaultCameraDurationInSeconds = 1f;
+
+        /// <summary>How long a call waits when it cannot do its work at all.</summary>
         private const float DefaultDurationInSeconds = 0.5f;
 
         /// <inheritdoc />
-        public IEnumerator ExecuteAction(ExportAction action)
+        public IEnumerator ExecuteAction(ActionCall call)
         {
-            switch (action.ActionId)
+            // Fn is empty when the writer has not picked a function yet. That is a draft, not an
+            // error, and the flow must carry on.
+            if (string.IsNullOrEmpty(call.Fn))
             {
-                case lsdeActionId.shakeCamera:
-                    yield return ExecuteShakeCamera(action.Params);
+                Debug.LogWarning($"{LogPrefix} A call has no function picked yet. Skipping.");
+                yield break;
+            }
+
+            switch (call.Fn)
+            {
+                case DemoIds.Functions.shakeCamera:
+                    yield return ExecuteShakeCamera(call.Args);
                     break;
 
-                case lsdeActionId.moveCameraToLabel:
-                    yield return ExecuteMoveCameraToLabel(action.Params);
+                case DemoIds.Functions.moveCameraToLabel:
+                    yield return ExecuteMoveCameraToLabel(call.Args);
                     break;
 
-                case lsdeActionId.moveCharacterAt:
-                    yield return ExecuteMoveCharacterAt(action.Params);
+                case DemoIds.Functions.moveCharacterAt:
+                    yield return ExecuteMoveCharacterAt(call.Args);
                     break;
 
                 default:
-                    Debug.LogWarning(
-                        $"{LogPrefix} Unknown action ID '{action.ActionId}'. Skipping."
-                    );
+                    Debug.LogWarning($"{LogPrefix} Unknown function '{call.Fn}'. Skipping.");
                     yield break;
             }
         }
@@ -136,25 +153,32 @@ namespace LSDE.Demo
         }
 
         /// <summary>
-        /// Shake the camera by applying random offsets each frame for the specified duration.
+        /// Shake the camera by applying random offsets each frame for the given duration.
         /// Uses <see cref="CameraFollowController.SetShakeOffset"/> so the shake is additive
         /// on top of both normal follow and paused (command) states.
-        /// Params: [0] intensity (number), [1] duration in seconds (number).
+        /// Arguments: <c>intensity</c> (number), <c>duration</c> (number, seconds).
         /// </summary>
-        /// <param name="parameters">Ordered parameter values from the blueprint action.</param>
-        private IEnumerator ExecuteShakeCamera(List<object> parameters)
+        private IEnumerator ExecuteShakeCamera(Dictionary<string, object> arguments)
         {
-            var intensity = ConvertParameterToFloat(parameters, 0, "intensity");
-            var durationInSeconds = ConvertParameterToFloat(parameters, 1, "duration");
+            var intensity = LsdeActionArgs.GetSingle(
+                arguments,
+                DemoIds.FunctionParams.shakeCamera.intensity,
+                DefaultShakeIntensity
+            );
+            var durationInSeconds = LsdeActionArgs.GetSingle(
+                arguments,
+                DemoIds.FunctionParams.shakeCamera.duration,
+                DefaultShakeDurationInSeconds
+            );
 
             if (durationInSeconds <= 0)
             {
-                durationInSeconds = DefaultDurationInSeconds;
+                durationInSeconds = DefaultShakeDurationInSeconds;
             }
 
             Debug.Log(
-                $"{LogPrefix} shakeCamera — intensity={intensity}, "
-                    + $"duration={durationInSeconds}s"
+                $"{LogPrefix} shakeCamera — {LsdeActionArgs.Describe(arguments)} "
+                    + $"→ duration={durationInSeconds}s"
             );
 
             if (_cameraFollowController == null)
@@ -188,30 +212,45 @@ namespace LSDE.Demo
         }
 
         /// <summary>
-        /// Smoothly move the camera to focus on a character identified by label.
-        /// Pauses the camera follow, lerps to the character's position (+ camera offset)
-        /// with ease-in-out cubic easing, then:
-        /// - If the target is the player character (<see cref="_playerCharacterId"/>):
+        /// Smoothly move the camera to focus on a character named by a dictionary key.
+        /// Pauses the camera follow, lerps to the character's anchor with ease-in-out cubic
+        /// easing, then:
+        /// - If the target is the player character (<see cref="_playerCharacterName"/>):
         ///   resumes follow so the camera tracks the player again.
         /// - Otherwise: leaves follow paused so the camera stays on the target
         ///   until the next camera command or scene exit.
         ///
-        /// Params: [0] label (string, character ID), [1] duration in seconds (number).
+        /// Arguments: <c>id</c> (a key of the <c>moveCameraToLabel_id</c> dictionary — a card
+        /// name), <c>duration</c> (number, seconds).
         /// </summary>
-        /// <param name="parameters">Ordered parameter values from the blueprint action.</param>
-        private IEnumerator ExecuteMoveCameraToLabel(List<object> parameters)
+        private IEnumerator ExecuteMoveCameraToLabel(Dictionary<string, object> arguments)
         {
-            var label = parameters.Count > 0 ? parameters[0]?.ToString() : "unknown";
-            var durationInSeconds = ConvertParameterToFloat(parameters, 1, "duration");
+            var targetName = LsdeActionArgs.GetString(
+                arguments,
+                DemoIds.FunctionParams.moveCameraToLabel.id
+            );
+            var durationInSeconds = LsdeActionArgs.GetSingle(
+                arguments,
+                DemoIds.FunctionParams.moveCameraToLabel.duration,
+                DefaultCameraDurationInSeconds
+            );
 
             if (durationInSeconds <= 0)
             {
-                durationInSeconds = DefaultDurationInSeconds;
+                durationInSeconds = DefaultCameraDurationInSeconds;
+            }
+
+            // No target named: the writer has not filled the argument in. Nothing to aim at,
+            // and nothing to wait for either.
+            if (string.IsNullOrEmpty(targetName))
+            {
+                Debug.LogWarning($"{LogPrefix} moveCameraToLabel — no target named.");
+                yield break;
             }
 
             Debug.Log(
-                $"{LogPrefix} moveCameraToLabel — label={label}, "
-                    + $"duration={durationInSeconds}s"
+                $"{LogPrefix} moveCameraToLabel — {LsdeActionArgs.Describe(arguments)} "
+                    + $"→ duration={durationInSeconds}s"
             );
 
             if (_cameraFollowController == null || _characterRegistry == null)
@@ -224,11 +263,11 @@ namespace LSDE.Demo
                 yield break;
             }
 
-            var characterMarker = _characterRegistry.FindMarkerByCharacterId(label);
+            var characterMarker = _characterRegistry.FindMarkerByCharacterName(targetName);
             if (characterMarker == null)
             {
                 Debug.LogWarning(
-                    $"{LogPrefix} Character '{label}' not found in scene — simulating wait only."
+                    $"{LogPrefix} Character '{targetName}' not in scene — simulating wait only."
                 );
                 yield return new WaitForSeconds(durationInSeconds);
                 yield break;
@@ -238,11 +277,7 @@ namespace LSDE.Demo
             // Uses CameraAnchorPoint instead of transform directly — this allows
             // per-character camera framing by placing the anchor further away.
             Vector3 anchorPosition = characterMarker.CameraAnchorPoint.position;
-            Vector3 characterGroundPosition = new Vector3(
-                anchorPosition.x,
-                0f,
-                anchorPosition.z
-            );
+            Vector3 characterGroundPosition = new Vector3(anchorPosition.x, 0f, anchorPosition.z);
             Vector3 targetCameraPosition =
                 characterGroundPosition + _cameraFollowController.CameraOffset;
 
@@ -272,8 +307,8 @@ namespace LSDE.Demo
             // For other targets, the camera stays on the target until the next
             // camera command or scene exit (which calls ResetCameraState).
             bool isTargetingPlayerCharacter = string.Equals(
-                label,
-                _playerCharacterId,
+                targetName,
+                _playerCharacterName,
                 StringComparison.OrdinalIgnoreCase
             );
 
@@ -290,41 +325,48 @@ namespace LSDE.Demo
         /// The character walks to the target with hop animation and collision handling.
         ///
         /// Two positioning modes:
-        /// - <b>Relative</b> (<c>isAbsolute=false</c>): offset from the character's current position.
-        ///   Example: character at X=500, offsetX=-100 → target = 400.
-        /// - <b>Absolute</b> (<c>isAbsolute=true</c>): offset from <see cref="_absolutePositionOriginTransform"/>.
-        ///   The dev configures the origin point (default: scene center at 0,0,0).
+        /// - <b>Relative</b> (<c>absolut</c> absent or false): offset from the character's current
+        ///   position. Example: character at X=500, x=-100 → target = 400.
+        /// - <b>Absolute</b> (<c>absolut=true</c>): offset from
+        ///   <see cref="_absolutePositionOriginTransform"/>.
         ///
         /// Blueprint offsets are in 2D pixel space. <see cref="_pixelToWorldScaleFactor"/>
         /// converts them to 3D world units (e.g. 800px * 0.01 = 8 units).
         ///
-        /// Params: [0] characterId (string), [1] offsetX (number),
-        ///         [2] offsetY (number, optional), [3] isAbsolute (boolean, optional).
+        /// Arguments: <c>id</c> (a key of the <c>party</c> dictionary — a card name),
+        /// <c>x</c> (number), <c>y</c> (number, often absent), <c>absolut</c> (boolean, often absent).
         /// </summary>
-        /// <param name="parameters">Ordered parameter values from the blueprint action.</param>
-        private IEnumerator ExecuteMoveCharacterAt(List<object> parameters)
+        private IEnumerator ExecuteMoveCharacterAt(Dictionary<string, object> arguments)
         {
-            var characterId = parameters.Count > 0 ? parameters[0]?.ToString() : "unknown";
-            var offsetX = ConvertParameterToFloat(parameters, 1, "offsetX");
-            var offsetY = ConvertParameterToFloat(parameters, 2, "offsetY");
-            // The boolean parameter may arrive as a raw bool or as a Newtonsoft JValue
-            // wrapping a bool. "parameters[3] is bool" fails for JValue, so we use
-            // Convert.ToBoolean which handles both via IConvertible.
-            var isAbsolute = ConvertParameterToBoolean(parameters, 3);
-
-            // Diagnostic log: print the actual C# type of the boolean parameter
-            // to verify Newtonsoft deserialization (JValue vs bool).
-            string boolParamDebugInfo =
-                parameters.Count > 3 && parameters[3] != null
-                    ? $"type={parameters[3].GetType().Name}, value={parameters[3]}"
-                    : "missing/null";
+            var characterName = LsdeActionArgs.GetString(
+                arguments,
+                DemoIds.FunctionParams.moveCharacterAt.id
+            );
+            var offsetX = LsdeActionArgs.GetSingle(
+                arguments,
+                DemoIds.FunctionParams.moveCharacterAt.x
+            );
+            var offsetY = LsdeActionArgs.GetSingle(
+                arguments,
+                DemoIds.FunctionParams.moveCharacterAt.y
+            );
+            var isAbsolute = LsdeActionArgs.GetBoolean(
+                arguments,
+                DemoIds.FunctionParams.moveCharacterAt.absolut
+            );
 
             Debug.Log(
-                $"{LogPrefix} moveCharacterAt — character={characterId}, "
-                    + $"offsetX={offsetX}, offsetY={offsetY}, absolute={isAbsolute}, "
-                    + $"scaleFactor={_pixelToWorldScaleFactor}, "
-                    + $"boolParam=[{boolParamDebugInfo}]"
+                $"{LogPrefix} moveCharacterAt — {LsdeActionArgs.Describe(arguments)} "
+                    + $"→ offset=({offsetX}, {offsetY}) absolute={isAbsolute} "
+                    + $"scaleFactor={_pixelToWorldScaleFactor}"
             );
+
+            // No character named: nothing to move, and nothing to wait for.
+            if (string.IsNullOrEmpty(characterName))
+            {
+                Debug.LogWarning($"{LogPrefix} moveCharacterAt — no character named.");
+                yield break;
+            }
 
             if (_characterRegistry == null)
             {
@@ -335,10 +377,10 @@ namespace LSDE.Demo
                 yield break;
             }
 
-            var characterMarker = _characterRegistry.FindMarkerByCharacterId(characterId);
+            var characterMarker = _characterRegistry.FindMarkerByCharacterName(characterName);
             if (characterMarker == null)
             {
-                Debug.LogWarning($"{LogPrefix} Character '{characterId}' not found in scene.");
+                Debug.LogWarning($"{LogPrefix} Character '{characterName}' not found in scene.");
                 yield return new WaitForSeconds(DefaultDurationInSeconds);
                 yield break;
             }
@@ -347,7 +389,7 @@ namespace LSDE.Demo
             if (movementController == null)
             {
                 Debug.LogWarning(
-                    $"{LogPrefix} No CharacterMovementController on character '{characterId}'."
+                    $"{LogPrefix} No CharacterMovementController on character '{characterName}'."
                 );
                 yield return new WaitForSeconds(DefaultDurationInSeconds);
                 yield break;
@@ -364,7 +406,6 @@ namespace LSDE.Demo
             if (isAbsolute)
             {
                 // Absolute: offset from the origin reference point.
-                // Uses the Transform if assigned, otherwise falls back to the Vector3 field.
                 Vector3 originPosition =
                     _absolutePositionOriginTransform != null
                         ? _absolutePositionOriginTransform.position
@@ -386,19 +427,9 @@ namespace LSDE.Demo
                 );
             }
 
-            Vector3 logOrigin = isAbsolute
-                ? (
-                    _absolutePositionOriginTransform != null
-                        ? _absolutePositionOriginTransform.position
-                        : _absolutePositionOriginFallback
-                )
-                : characterMarker.transform.position;
-
             Debug.Log(
                 $"{LogPrefix} moveCharacterAt — "
                     + $"currentPos={characterMarker.transform.position}, "
-                    + $"worldOffset=({worldOffsetX}, {worldOffsetZ}), "
-                    + $"origin={logOrigin}, "
                     + $"targetPos={targetPosition}"
             );
 
@@ -406,7 +437,7 @@ namespace LSDE.Demo
             // the trail system from fighting with this action-driven movement.
             if (_partyFollowController != null)
             {
-                _partyFollowController.SuspendFollower(characterId);
+                _partyFollowController.SuspendFollower(characterName);
             }
 
             movementController.SetMovementTarget(targetPosition);
@@ -420,7 +451,7 @@ namespace LSDE.Demo
             // Resume the follower so the follow controller can take over again
             if (_partyFollowController != null)
             {
-                _partyFollowController.ResumeFollower(characterId);
+                _partyFollowController.ResumeFollower(characterName);
             }
 
             Debug.Log($"{LogPrefix} moveCharacterAt — complete");
@@ -429,10 +460,7 @@ namespace LSDE.Demo
         /// <summary>
         /// Ease-in-out cubic easing function for smooth camera movements.
         /// Accelerates during the first half, decelerates during the second half.
-        /// Matches the TS <c>easeInOutCubic</c> used in <c>moveCameraToPosition</c>.
         /// </summary>
-        /// <param name="progress">Linear progress from 0 to 1.</param>
-        /// <returns>Eased progress value from 0 to 1.</returns>
         private static float EaseInOutCubic(float progress)
         {
             if (progress < 0.5f)
@@ -442,73 +470,6 @@ namespace LSDE.Demo
 
             float shifted = -2f * progress + 2f;
             return 1f - shifted * shifted * shifted / 2f;
-        }
-
-        /// <summary>
-        /// Safely extract a float parameter by index from the action's parameter list.
-        /// Handles JSON deserialization quirks where Newtonsoft produces <c>long</c>
-        /// for integers and <c>double</c> for decimals. Direct <c>(float)</c> casting
-        /// on a boxed <c>long</c> throws <see cref="InvalidCastException"/>.
-        /// <see cref="Convert.ToSingle(object)"/> handles all numeric types correctly.
-        /// </summary>
-        /// <param name="parameters">The action's parameter list.</param>
-        /// <param name="index">The position of the parameter to extract.</param>
-        /// <param name="parameterName">
-        /// Human-readable name of the parameter, used in warning messages
-        /// when the value is missing or cannot be converted.
-        /// </param>
-        /// <returns>The parameter value as a float, or 0 if missing or unconvertible.</returns>
-        private static float ConvertParameterToFloat(
-            List<object> parameters,
-            int index,
-            string parameterName
-        )
-        {
-            if (parameters == null || index >= parameters.Count || parameters[index] == null)
-            {
-                return 0f;
-            }
-
-            try
-            {
-                return Convert.ToSingle(parameters[index]);
-            }
-            catch (Exception)
-            {
-                Debug.LogWarning(
-                    $"{LogPrefix} Cannot convert parameter '{parameterName}' "
-                        + $"value '{parameters[index]}' to float. Defaulting to 0."
-                );
-                return 0f;
-            }
-        }
-
-        /// <summary>
-        /// Safely extract a boolean parameter by index from the action's parameter list.
-        /// Handles the same Newtonsoft deserialization quirk as <see cref="ConvertParameterToFloat"/>:
-        /// JSON <c>true</c>/<c>false</c> may arrive as a raw <c>bool</c> OR as a Newtonsoft
-        /// <c>JValue</c> wrapping a bool. Direct <c>is bool</c> pattern matching fails for
-        /// <c>JValue</c>, so we use <see cref="Convert.ToBoolean(object)"/> which handles
-        /// both via <see cref="IConvertible"/>.
-        /// </summary>
-        /// <param name="parameters">The action's parameter list.</param>
-        /// <param name="index">The position of the parameter to extract.</param>
-        /// <returns>The parameter value as a bool, or false if missing or unconvertible.</returns>
-        private static bool ConvertParameterToBoolean(List<object> parameters, int index)
-        {
-            if (parameters == null || index >= parameters.Count || parameters[index] == null)
-            {
-                return false;
-            }
-
-            try
-            {
-                return Convert.ToBoolean(parameters[index]);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
         }
     }
 }

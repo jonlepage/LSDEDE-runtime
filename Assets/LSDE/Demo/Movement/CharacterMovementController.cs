@@ -117,7 +117,15 @@ namespace LSDE.Demo
             }
 
             Vector3 rayOrigin = new Vector3(worldX, transform.position.y + 50f, worldZ);
-            if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hitInfo, 200f, _groundLayerMask))
+            if (
+                Physics.Raycast(
+                    rayOrigin,
+                    Vector3.down,
+                    out RaycastHit hitInfo,
+                    200f,
+                    _groundLayerMask
+                )
+            )
             {
                 return hitInfo.point.y;
             }
@@ -273,13 +281,8 @@ namespace LSDE.Demo
                 {
                     // Speed too low to sustain hop — smooth frame-rate independent
                     // landing using MoveTowards. Duration adapts to _hopMaxHeight.
-                    float landingSpeed =
-                        (_hopMaxHeight / _hopLandingDuration) * Time.deltaTime;
-                    _currentHopHeight = Mathf.MoveTowards(
-                        _currentHopHeight,
-                        0f,
-                        landingSpeed
-                    );
+                    float landingSpeed = (_hopMaxHeight / _hopLandingDuration) * Time.deltaTime;
+                    _currentHopHeight = Mathf.MoveTowards(_currentHopHeight, 0f, landingSpeed);
                     if (_currentHopHeight == 0f)
                     {
                         _hopProgress = -1f;
@@ -305,8 +308,7 @@ namespace LSDE.Demo
             else if (_currentHopHeight > 0f)
             {
                 // No active hop but residual height — smooth landing
-                float landingSpeed =
-                    (_hopMaxHeight / _hopLandingDuration) * Time.deltaTime;
+                float landingSpeed = (_hopMaxHeight / _hopLandingDuration) * Time.deltaTime;
                 _currentHopHeight = Mathf.MoveTowards(_currentHopHeight, 0f, landingSpeed);
             }
 
@@ -358,8 +360,7 @@ namespace LSDE.Demo
             // Decay residual hop height with frame-rate independent landing
             if (_currentHopHeight > 0f)
             {
-                float landingSpeed =
-                    (_hopMaxHeight / _hopLandingDuration) * Time.deltaTime;
+                float landingSpeed = (_hopMaxHeight / _hopLandingDuration) * Time.deltaTime;
                 _currentHopHeight = Mathf.MoveTowards(_currentHopHeight, 0f, landingSpeed);
 
                 ApplyPosition(
@@ -372,9 +373,7 @@ namespace LSDE.Demo
             }
             else if (Mathf.Abs(transform.position.y - idleGroundY) > 0.001f)
             {
-                ApplyPosition(
-                    new Vector3(transform.position.x, idleGroundY, transform.position.z)
-                );
+                ApplyPosition(new Vector3(transform.position.x, idleGroundY, transform.position.z));
             }
 
             // Decay tilt smoothly using SmoothDamp's residual velocity

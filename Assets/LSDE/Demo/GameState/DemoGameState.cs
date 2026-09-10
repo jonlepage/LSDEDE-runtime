@@ -33,8 +33,9 @@ namespace LSDE.Demo
         private List<string> _partyMembers = new() { "l1", "l4" };
 
         /// <summary>
-        /// Runtime inventory store. Maps item keys (from <c>lsdeDictionaryinventory</c> constants)
-        /// to their quantities. Built from Inspector toggles in <see cref="Awake"/>.
+        /// Runtime inventory store. Maps entry keys of the `inventory` dictionary — see
+        /// <c>LsdedeDemoTsBlueprintIds.DictionaryEntries.inventory</c> — to their quantities.
+        /// Built from Inspector toggles in <see cref="Awake"/>.
         /// </summary>
         private readonly Dictionary<string, int> _inventory = new();
 
@@ -65,7 +66,7 @@ namespace LSDE.Demo
             // A real game would load this from a save file or persistent state.
             if (_playerHasCarrot)
             {
-                _inventory[lsdeDictionaryinventory.carrot] = 1;
+                _inventory[LsdedeDemoTsBlueprintIds.DictionaryEntries.inventory.carrot] = 1;
             }
 
             // Build party set from the serialized list
@@ -80,7 +81,8 @@ namespace LSDE.Demo
         /// Returns 0 if the item is not present — condition operators like <c>&gt;= 1</c>
         /// naturally evaluate to false when the item is absent.
         /// </summary>
-        /// <param name="itemKey">The item key (e.g. <c>lsdeDictionaryinventory.carrot</c>).</param>
+        /// <param name="itemKey">The entry key, e.g.
+        /// <c>LsdedeDemoTsBlueprintIds.DictionaryEntries.inventory.carrot</c>.</param>
         /// <returns>The item quantity, or 0 if not in inventory.</returns>
         public int GetItemQuantity(string itemKey)
         {
@@ -132,7 +134,8 @@ namespace LSDE.Demo
         /// Check whether a character is currently in the player's party.
         /// Used by the condition resolver for <c>party.*</c> dictionary keys.
         /// </summary>
-        /// <param name="memberId">The character ID (e.g. <c>lsdeCharacter.l1</c>).</param>
+        /// <param name="memberId">The card name, e.g.
+        /// <c>LsdedeDemoTsBlueprintIds.DictionaryEntries.party.l1</c>.</param>
         /// <returns>True if the character is in the party.</returns>
         public bool IsInParty(string memberId)
         {
@@ -145,7 +148,7 @@ namespace LSDE.Demo
         /// then raises <see cref="OnPartyMemberAdded"/> so other systems (follow, UI) can react.
         /// No effect if the character is already in the party.
         /// </summary>
-        /// <param name="memberId">The character ID to add (e.g. <c>lsdeCharacter.l1</c>).</param>
+        /// <param name="memberId">The card name to add (e.g. <c>DemoCharacterNames.L1</c>).</param>
         public void AddToParty(string memberId)
         {
             if (_partyMemberSet.Contains(memberId))
@@ -189,7 +192,7 @@ namespace LSDE.Demo
             _inventory.Clear();
             if (_playerHasCarrot)
             {
-                _inventory[lsdeDictionaryinventory.carrot] = 1;
+                _inventory[LsdedeDemoTsBlueprintIds.DictionaryEntries.inventory.carrot] = 1;
             }
 
             // Reset party to initial composition

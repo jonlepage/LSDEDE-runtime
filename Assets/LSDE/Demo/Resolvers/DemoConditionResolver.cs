@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using LSDE.Runtime;
 using LsdeDialogEngine;
@@ -6,21 +7,33 @@ using UnityEngine;
 namespace LSDE.Demo
 {
     /// <summary>
-    /// Demo implementation of <see cref="IConditionResolver"/> that evaluates blueprint
-    /// conditions against the game state held in <see cref="DemoGameState"/>.
+    /// Demo implementation of <see cref="IConditionResolver"/> that answers blueprint tests from
+    /// the game state held in <see cref="DemoGameState"/>.
     ///
-    /// Ported from the TypeScript reference <c>evaluate-game-condition.ts</c>.
-    /// Each condition has a dot-separated key (e.g. <c>inventory.carrot</c>),
-    /// an operator (e.g. <c>&gt;=</c>), and a target value (e.g. <c>1</c>).
-    /// The first segment of the key identifies the dictionary group:
+    /// <para>A v2 test is already split for you: <c>Dict</c> is the dictionary id, <c>Entry</c>
+    /// the entry read in it, <c>Op</c> the comparison and <c>Value</c> the right-hand side. There
+    /// is no dotted key to parse any more — v1 sent <c>"inventory.carrot"</c> as one string and
+    /// every game had to split it.</para>
+    ///
+    /// <para>This payload asks two dictionaries:</para>
     /// <list type="bullet">
-    ///   <item><c>inventory</c> — numeric quantity check via <see cref="DemoGameState.GetItemQuantity"/></item>
-    ///   <item><c>party</c> — boolean membership check via <see cref="DemoGameState.IsInParty"/></item>
-    ///   <item>default — generic numeric variable via <see cref="DemoGameState.GetVariable"/></item>
+    ///   <item><c>inventory</c> — a number, e.g. <c>carrot &gt;= 1</c></item>
+    ///   <item><c>party</c> — a boolean, e.g. <c>l2 == true</c> ("is l2 with us?")</item>
     /// </list>
     ///
-    /// In a real game, replace <see cref="DemoGameState"/> with your own game state system.
-    /// The pattern stays the same: split the key, dispatch to the right store, compare.
+    /// <para>Anything else is read as a plain game variable keyed <c>dict.entry</c>, which reads 0
+    /// when unset — so a test nobody can answer fails rather than opening a branch. That is also
+    /// what the engine does for routing: an unanswerable test is false. Option visibility is the
+    /// exception, and the engine handles it: there, unknown stays unknown, because saying false
+    /// about a question nobody could answer would HIDE an answer.</para>
+    ///
+    /// <para>One thing worth keeping in your own game: <b>Value is a boxed JSON value</b> — a
+    /// <c>bool</c>, a <c>long</c>, a <c>double</c> or a <c>string</c> depending on how the writer
+    /// typed it — so compare through <c>Convert</c>, never with a direct cast, which throws on a
+    /// boxed <c>long</c>.</para>
+    ///
+    /// <para>Tests on the reserved <c>choice</c> dictionary never arrive here: the engine answers
+    /// those from the scene's own choice history.</para>
     /// </summary>
     public class DemoConditionResolver : MonoBehaviour, IConditionResolver
     {
@@ -29,168 +42,207 @@ namespace LSDE.Demo
         [SerializeField]
         [Tooltip(
             "Reference to the game state that holds inventory, party, and variables. "
-                + "The resolver queries this state to evaluate blueprint conditions."
+                + "The resolver queries this state to answer blueprint tests."
         )]
         private DemoGameState _gameState;
 
         /// <inheritdoc />
-        public bool EvaluateCondition(ExportCondition condition)
+        public bool EvaluateCondition(ConditionTest test)
         {
-            Debug.Log(
-                $"{LogPrefix} Evaluating: {condition.Key} {condition.Operator} {condition.Value}"
-            );
-
             if (_gameState == null)
             {
                 Debug.LogError(
                     $"{LogPrefix} DemoGameState reference is missing! "
-                        + "Assign it in the Inspector. Returning true by default."
+                        + "Assign it in the Inspector. Answering false."
                 );
-                return true;
+                return false;
             }
 
-            // Split "inventory.carrot" → dictionaryGroup = "inventory", itemKey = "carrot"
-            int dotIndex = condition.Key.IndexOf('.');
-            string dictionaryGroup = dotIndex >= 0 ? condition.Key.Substring(0, dotIndex) : "";
-            string itemKey = dotIndex >= 0 ? condition.Key.Substring(dotIndex + 1) : condition.Key;
+            bool result = EvaluateByDictionary(test);
 
-            bool result = EvaluateByDictionaryGroup(
-                dictionaryGroup,
-                itemKey,
-                condition.Key,
-                condition.Operator,
-                condition.Value
+            Debug.Log(
+                $"{LogPrefix} {test.Dict}.{test.Entry} {test.Op} {Describe(test.Value)} "
+                    + $"→ {result}"
             );
-
-            Debug.Log($"{LogPrefix}   → result: {result}");
 
             return result;
         }
 
         /// <summary>
-        /// Dispatch the condition evaluation to the appropriate game state store
-        /// based on the dictionary group extracted from the condition key.
+        /// Route the test to the right store, by dictionary id.
         /// </summary>
-        private bool EvaluateByDictionaryGroup(
-            string dictionaryGroup,
-            string itemKey,
-            string fullKey,
-            string comparisonOperator,
-            string targetValueString
-        )
+        private bool EvaluateByDictionary(ConditionTest test)
         {
-            switch (dictionaryGroup)
+            switch (test.Dict)
             {
-                case "inventory":
+                case LsdedeDemoTsBlueprintIds.Dictionaries.inventory:
                 {
-                    int quantity = _gameState.GetItemQuantity(itemKey);
-                    Debug.Log(
-                        $"{LogPrefix}   inventory.{itemKey} = {quantity} (checking {comparisonOperator} {targetValueString})"
-                    );
-                    return EvaluateNumericComparison(
-                        quantity,
-                        comparisonOperator,
-                        targetValueString,
-                        fullKey
-                    );
+                    int quantity = _gameState.GetItemQuantity(test.Entry);
+                    return CompareNumbers(quantity, test.Op, test.Value, test);
                 }
 
-                case "party":
+                case LsdedeDemoTsBlueprintIds.Dictionaries.party:
                 {
-                    bool isMember = _gameState.IsInParty(itemKey);
-                    bool expectedTrue = targetValueString == "true" || targetValueString == "1";
-                    Debug.Log(
-                        $"{LogPrefix}   party.{itemKey} = {isMember} (expected {expectedTrue})"
-                    );
-
-                    switch (comparisonOperator)
-                    {
-                        case "=":
-                        case "==":
-                            return isMember == expectedTrue;
-                        case "!=":
-                            return isMember != expectedTrue;
-                        default:
-                            Debug.LogWarning(
-                                $"{LogPrefix} Unknown party operator: \"{comparisonOperator}\" in key \"{fullKey}\""
-                            );
-                            return false;
-                    }
+                    bool isMember = _gameState.IsInParty(test.Entry);
+                    return CompareBooleans(isMember, test.Op, test.Value, test);
                 }
 
                 default:
                 {
-                    // Generic variable lookup — uses the full key (e.g. "variables.score")
-                    float variableValue = _gameState.GetVariable(fullKey);
-                    Debug.Log(
-                        $"{LogPrefix}   variable {fullKey} = {variableValue} (checking {comparisonOperator} {targetValueString})"
-                    );
-                    return EvaluateNumericComparison(
-                        variableValue,
-                        comparisonOperator,
-                        targetValueString,
-                        fullKey
-                    );
+                    // Any dictionary this demo does not model specially is read as a plain
+                    // game variable, keyed "dict.entry". An unset variable reads 0, so a
+                    // test like `>= 1` naturally fails instead of opening a branch.
+                    float variableValue = _gameState.GetVariable($"{test.Dict}.{test.Entry}");
+                    return CompareNumbers(variableValue, test.Op, test.Value, test);
                 }
             }
         }
 
         /// <summary>
-        /// Compare a numeric game value against a target using the specified operator.
-        /// Supports: <c>&gt;=</c>, <c>&gt;</c>, <c>&lt;=</c>, <c>&lt;</c>, <c>==</c>/<c>=</c>, <c>!=</c>.
-        /// Blueprint values are always strings (e.g. <c>"1"</c>), parsed with invariant culture
-        /// to avoid locale issues (dot-decimal format).
+        /// Compare a boolean game value against the test's value.
+        /// Only equality makes sense on a boolean dictionary; anything else is a design mistake
+        /// in the blueprint and answers false rather than guessing.
         /// </summary>
-        /// <param name="currentValue">The current game state value.</param>
-        /// <param name="comparisonOperator">The comparison operator from the blueprint.</param>
-        /// <param name="targetValueString">The target value as a string from the blueprint.</param>
-        /// <param name="conditionKey">The full condition key, for warning messages.</param>
-        /// <returns>True if the comparison holds, false otherwise.</returns>
-        private static bool EvaluateNumericComparison(
-            float currentValue,
+        private static bool CompareBooleans(
+            bool currentValue,
             string comparisonOperator,
-            string targetValueString,
-            string conditionKey
+            object expectedValue,
+            ConditionTest test
         )
         {
-            if (
-                !float.TryParse(
-                    targetValueString,
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out float targetValue
-                )
-            )
+            if (!TryConvertToBoolean(expectedValue, out bool expected))
             {
                 Debug.LogWarning(
-                    $"{LogPrefix} Cannot parse target value \"{targetValueString}\" as float "
-                        + $"in condition \"{conditionKey}\". Returning false."
+                    $"{LogPrefix} Cannot read {Describe(expectedValue)} as a boolean "
+                        + $"in {test.Dict}.{test.Entry}. Answering false."
                 );
                 return false;
             }
 
             switch (comparisonOperator)
             {
-                case ">=":
-                    return currentValue >= targetValue;
-                case ">":
-                    return currentValue > targetValue;
-                case "<=":
-                    return currentValue <= targetValue;
-                case "<":
-                    return currentValue < targetValue;
-                case "=":
-                case "==":
-                    return Mathf.Approximately(currentValue, targetValue);
-                case "!=":
-                    return !Mathf.Approximately(currentValue, targetValue);
+                case ConditionOperator.Equals:
+                    return currentValue == expected;
+                case ConditionOperator.NotEquals:
+                    return currentValue != expected;
                 default:
                     Debug.LogWarning(
-                        $"{LogPrefix} Unknown operator: \"{comparisonOperator}\" "
-                            + $"in condition \"{conditionKey}\". Returning false."
+                        $"{LogPrefix} Operator \"{comparisonOperator}\" makes no sense on the "
+                            + $"boolean dictionary \"{test.Dict}\". Answering false."
                     );
                     return false;
             }
+        }
+
+        /// <summary>
+        /// Compare a numeric game value against the test's value, for every operator.
+        /// </summary>
+        private static bool CompareNumbers(
+            float currentValue,
+            string comparisonOperator,
+            object expectedValue,
+            ConditionTest test
+        )
+        {
+            if (!TryConvertToSingle(expectedValue, out float expected))
+            {
+                Debug.LogWarning(
+                    $"{LogPrefix} Cannot read {Describe(expectedValue)} as a number "
+                        + $"in {test.Dict}.{test.Entry}. Answering false."
+                );
+                return false;
+            }
+
+            switch (comparisonOperator)
+            {
+                case ConditionOperator.Equals:
+                    return Mathf.Approximately(currentValue, expected);
+                case ConditionOperator.NotEquals:
+                    return !Mathf.Approximately(currentValue, expected);
+                case ConditionOperator.LessThan:
+                    return currentValue < expected;
+                case ConditionOperator.LessOrEqual:
+                    return currentValue <= expected;
+                case ConditionOperator.GreaterThan:
+                    return currentValue > expected;
+                case ConditionOperator.GreaterOrEqual:
+                    return currentValue >= expected;
+                default:
+                    Debug.LogWarning(
+                        $"{LogPrefix} Unknown operator \"{comparisonOperator}\" "
+                            + $"in {test.Dict}.{test.Entry}. Answering false."
+                    );
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Read a boxed JSON value as a boolean. Newtonsoft hands back a real <c>bool</c> for
+        /// <c>true</c>/<c>false</c>, but a writer may also have typed the string "true".
+        /// </summary>
+        private static bool TryConvertToBoolean(object value, out bool result)
+        {
+            result = false;
+
+            if (value is bool booleanValue)
+            {
+                result = booleanValue;
+                return true;
+            }
+
+            if (value is string stringValue)
+            {
+                return bool.TryParse(stringValue, out result);
+            }
+
+            try
+            {
+                result = Convert.ToBoolean(value, CultureInfo.InvariantCulture);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Read a boxed JSON value as a float. An integer arrives as <c>long</c> and a decimal as
+        /// <c>double</c>, so a direct <c>(float)</c> cast throws on the first one.
+        /// </summary>
+        private static bool TryConvertToSingle(object value, out float result)
+        {
+            result = 0f;
+
+            if (value is string stringValue)
+            {
+                return float.TryParse(
+                    stringValue,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out result
+                );
+            }
+
+            try
+            {
+                result = Convert.ToSingle(value, CultureInfo.InvariantCulture);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>Describe a boxed value with its CLR type, for readable logs.</summary>
+        private static string Describe(object value)
+        {
+            if (value == null)
+            {
+                return "null";
+            }
+            return $"{value} ({value.GetType().Name})";
         }
     }
 }

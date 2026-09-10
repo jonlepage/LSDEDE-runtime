@@ -107,7 +107,7 @@ namespace LSDE.Demo
         /// </summary>
         private struct FollowerState
         {
-            /// <summary>The LSDE character ID (e.g. <c>lsdeCharacter.l1</c>).</summary>
+            /// <summary>The LSDE card NAME (e.g. <c>DemoCharacterNames.L1</c>).</summary>
             public string CharacterId;
 
             /// <summary>The movement controller used to send movement targets.</summary>
@@ -160,11 +160,13 @@ namespace LSDE.Demo
             if (_gameState != null && _characterRegistry != null)
             {
                 // Check each known party dictionary member
+                // The entries of the `party` dictionary, from the generated constants:
+                // exactly the members the blueprint can ask about.
                 string[] potentialPartyMembers =
                 {
-                    lsdeDictionaryparty.l1,
-                    lsdeDictionaryparty.l2,
-                    lsdeDictionaryparty.l3,
+                    LsdedeDemoTsBlueprintIds.DictionaryEntries.party.l1,
+                    LsdedeDemoTsBlueprintIds.DictionaryEntries.party.l2,
+                    LsdedeDemoTsBlueprintIds.DictionaryEntries.party.l3,
                 };
 
                 foreach (string memberId in potentialPartyMembers)
@@ -191,7 +193,7 @@ namespace LSDE.Demo
         /// takes control of the character's movement. While suspended, the follow controller
         /// will not assign trail targets to this character.
         /// </summary>
-        /// <param name="characterId">The LSDE character ID to suspend (e.g. <c>lsdeCharacter.l1</c>).</param>
+        /// <param name="characterId">The LSDE card NAME to suspend (e.g. <c>DemoCharacterNames.L1</c>).</param>
         public void SuspendFollower(string characterId)
         {
             for (int index = 0; index < _activeFollowers.Count; index++)
@@ -277,8 +279,8 @@ namespace LSDE.Demo
         /// </summary>
         private void HandlePartyMemberAdded(string memberId)
         {
-            // Don't add the player character as a follower
-            if (memberId == lsdeCharacter.l4)
+            // Don't add the player character as a follower: they lead the trail.
+            if (memberId == DemoCharacterNames.L4)
             {
                 return;
             }
@@ -309,7 +311,7 @@ namespace LSDE.Demo
                 return;
             }
 
-            var characterMarker = _characterRegistry.FindMarkerByCharacterId(characterId);
+            var characterMarker = _characterRegistry.FindMarkerByCharacterName(characterId);
 
             if (characterMarker == null)
             {

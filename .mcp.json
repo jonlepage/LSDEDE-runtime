@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "UnityMCP": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp"
+    },
+    "unity-api": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "unity-api-mcp"
+      ],
+      "env": {
+        "UNITY_VERSION": "6"
+      }
+    },
+    "decompiler": {
+      "type": "stdio",
+      "command": "C:/Tools/DecompilerServer/decompilerserver-v1.3.3-win-x64/DecompilerServer.exe",
+      "args": [],
+      "env": {}
+    }
+  }
+}

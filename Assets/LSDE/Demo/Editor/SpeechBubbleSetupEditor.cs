@@ -64,7 +64,7 @@ namespace LSDE.Demo.Editor
                     continue;
                 }
 
-                CreateSpeechBubbleOnAnchor(anchorPoint, characterMarker.LsdeCharacterId);
+                CreateSpeechBubbleOnAnchor(anchorPoint, characterMarker.LsdeCharacterName);
                 createdCount++;
             }
 

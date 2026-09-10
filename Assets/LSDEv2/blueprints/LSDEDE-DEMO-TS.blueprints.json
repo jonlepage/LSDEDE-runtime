@@ -1,0 +1,2527 @@
+{
+	"format": "lsde-blueprints",
+	"version": 1,
+	"generator": {
+		"app": "LSDE",
+		"version": "2.0.3"
+	},
+	"exportedAt": "2026-09-09T21:47:34.313Z",
+	"project": "LSDEDE-DEMO-TS",
+	"locales": [
+		"fr",
+		"en",
+		"ja",
+		"zh"
+	],
+	"referenceLocale": "fr",
+	"dictionaries": [
+		{
+			"id": "inventory",
+			"valueType": "number",
+			"entries": [
+				"carrot"
+			]
+		},
+		{
+			"id": "party",
+			"valueType": "boolean",
+			"entries": [
+				"l1",
+				"l2",
+				"l3"
+			]
+		},
+		{
+			"id": "moveCameraToLabel_id",
+			"valueType": "string",
+			"entries": [
+				"boss",
+				"l4",
+				"l1"
+			]
+		}
+	],
+	"functions": [
+		{
+			"id": "moveCameraToLabel",
+			"params": [
+				{
+					"name": "id",
+					"type": "dictionaryKey",
+					"dictionary": "moveCameraToLabel_id"
+				},
+				{
+					"name": "duration",
+					"type": "number"
+				}
+			]
+		},
+		{
+			"id": "shakeCamera",
+			"params": [
+				{
+					"name": "intensity",
+					"type": "number"
+				},
+				{
+					"name": "duration",
+					"type": "number"
+				}
+			]
+		},
+		{
+			"id": "moveCharacterAt",
+			"params": [
+				{
+					"name": "id",
+					"type": "dictionaryKey",
+					"dictionary": "party"
+				},
+				{
+					"name": "x",
+					"type": "number"
+				},
+				{
+					"name": "y",
+					"type": "number"
+				},
+				{
+					"name": "absolut",
+					"type": "boolean"
+				}
+			]
+		}
+	],
+	"cards": [
+		{
+			"id": "0d848982-9b5e-4437-b0d7-96a97ae78538",
+			"name": "l1",
+			"role": "characters"
+		},
+		{
+			"id": "0d9e2f0f-7382-439e-a256-8a29e65bdc09",
+			"name": "l2",
+			"role": "characters"
+		},
+		{
+			"id": "0f16b34e-f9d5-493f-8bbc-8a2d1418f221",
+			"name": "l3",
+			"role": "characters"
+		},
+		{
+			"id": "60383860-3694-4f1e-9ae4-c1b5bdc9d842",
+			"name": "l4",
+			"role": "characters"
+		},
+		{
+			"id": "1cd35781-e3b7-47b3-bc2b-76b1a2424eba",
+			"name": "boss",
+			"role": "characters"
+		}
+	],
+	"scenes": [
+		{
+			"scene": "simple-dialog-flow",
+			"id": "sc_60ql8la3",
+			"start": "rabbit_rumor-AI",
+			"blocks": [
+				{
+					"id": "player_suggestion-AI",
+					"key": "__blueprints__.simple-dialog-flow.player_suggestion-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "Let's stay calm, friends.\nIf this giant carrot is real, it'd be the feast of the century for our whole clan.\nIf it's a decoy, at least we'll have gotten our morning exercise and some fresh air.\nWhat do we really have to lose by going to check it out?",
+						"fr": "Restons calmes les amis. \nSi cette carotte géante est réelle, ce serait le festin du siècle pour tout notre clan. \nSi c'est un leurre, on aura au moins fait notre gym matinale et pris l'air. \nQu'est-ce qu'on risque vraiment à aller voir ?",
+						"ja": "みんな、落ち着こう。\nもしこの巨大なニンジンが本物なら、僕たちの一族みんなにとって世紀のご馳走になるだろう。\nもしそれが作り物だったとしても、少なくとも朝の運動にはなるし、外の空気も吸える。\n見に行くだけで、一体何を失うって言うんだい？",
+						"zh": "保持冷静，朋友们。\n如果这根巨型胡萝卜是真的，那对我们整个族群来说，这将是世纪盛宴。\n如果只是个诱饵，我们至少也做了早间运动，呼吸了新鲜空气。\n我们去看看又能有什么真正的风险呢？"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "rabbit_hype-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "player_warning-AI",
+					"key": "__blueprints__.simple-dialog-flow.player_warning-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "Right, l3, we'll try your metaphysical distraction technique if we run into a hungry predator. In the meantime, we move in silence.\nAnd l1, if it's another old human sock, you'll be on guard duty for the entire month!",
+						"fr": "C'est ça, l3, on essaiera ta technique de distraction métaphysique si on croise un prédateur affamé. En attendant, on avance en silence. \nEt l1, si c'est encore une vieille chaussette humaine, tu assures les tours de garde tout le mois !",
+						"ja": "ああ、そうかい、L3。もし腹を空かせた捕食者に出くわしたら、お前のその形而上学的な惑わしの戦法とやらを試してみるさ。それまでは、静かに進むんだ。\nそしてL1、もしそれがまた古い人間の靴下だったりしたら、その月は全部、お前が見張り番をやるんだからな！",
+						"zh": "好的吧，l3，如果我们遇到饥饿的捕食者，我们会试试你那套形而上学的注意力分散法。在此之前，我们先悄悄前进。\n还有l1，如果（我们找到的）又是什么人类的破烂玩意儿，你这个月就负责站岗放哨了！"
+					}
+				},
+				{
+					"id": "rabbit_hype-AI",
+					"key": "__blueprints__.simple-dialog-flow.rabbit_hype-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "This is just the spirit of adventure we needed, l4!\nWe're going to become living legends, the rabbits who discovered the orange treasure!\nI can already smell its sweet scent floating on the breeze, it must be this way, follow me!",
+						"fr": "C'est exactement l'esprit d'aventure qu'il nous fallait, l4 ! \nOn va devenir des légendes vivantes, les lapins qui ont découvert le trésor orange ! \nJe peux déjà sentir son parfum sucré flotter dans la brise, c'est forcément par là, suivez-moi !",
+						"ja": "l4、これこそ僕らが求めていた冒険心ってやつさ！\n僕らがオレンジの宝を見つけたウサギとして、生きた伝説になるんだ！\nもう甘い香りが風に乗って漂ってくるのが分かるよ。間違いない、あっちだ！さあ、ついてきて！",
+						"zh": "这正是我们需要的冒险精神，l4！\n我们将会成为活着的传奇，那些发现了橙色宝藏的兔子！\n我已经能闻到它甜美的香气在微风中飘荡，肯定就在那边，跟我来！"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "rabbit_resignation-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "rabbit_philosophy-AI",
+					"key": "__blueprints__.simple-dialog-flow.rabbit_philosophy-AI",
+					"type": "dialog",
+					"actors": [
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"en": "But time is just a mental construct, l2.\nDoes the carrot truly exist if no one is there to lovingly nibble on it?\nPerhaps we are all just stuck in the dream of a giant cosmic turnip.",
+						"fr": "Mais le temps n'est qu'une construction mentale, l2. \nEst-ce que la carotte existe vraiment si personne n'est là pour la grignoter avec amour ? \nPeut-être que c'est nous qui sommes tous coincés dans le rêve d'un grand navet cosmique.",
+						"ja": "しかし、時間は単なる心の構造に過ぎない、l2。\n誰も愛情を込めてかじる者がいなければ、人参は本当に存在するのだろうか？\nもしかしたら、私たちみんなが閉じ込められているのは、巨大な宇宙のカブの夢の中なのかもしれない。",
+						"zh": "可是时间不过是一种心理建构，l2。\n如果没有人在那里带着爱意啃食它，胡萝卜真的存在吗？\n也许我们都只是被困在一个巨大宇宙萝卜的梦境里。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "player_suggestion-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "rabbit_resignation-AI",
+					"key": "__blueprints__.simple-dialog-flow.rabbit_resignation-AI",
+					"type": "dialog",
+					"actors": [
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+					],
+					"text": {
+						"en": "Your nose already led us into a stinking mud puddle last week, you triple idiot. But anyway, I suppose I have to come with you to make sure you don't end up in a stew out of sheer absentmindedness. Come on, let's go.",
+						"fr": "Ton nez nous a déjà conduits dans une mare de boue malodorante la semaine dernière, triple idiot. \nMais bon, je suppose que je dois vous accompagner pour m'assurer que vous ne finissiez pas en civet par pure distraction. \nAllez, en route.",
+						"ja": "先週も、お前の鼻のせいで、俺たちは臭い泥沼に突っ込んだんだぞ、この大バカ者め！\nまあ、しょうがない。お前が油断して捕まって、シチューにでもされないように、俺がついていってやるよ。\nさあ、行くぞ。",
+						"zh": "你的鼻子上周就把我们带到了臭烘烘的泥坑里，你这糊涂蛋。\n但算了，我想我得跟着你，免得你因为心不在焉，最后成了别人的炖肉。\n走吧。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "rabbit_wisdom-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "rabbit_rumor-AI",
+					"key": "__blueprints__.simple-dialog-flow.rabbit_rumor-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Guys, you're not going to believe me, but I've unearthed the scoop of the century: there's supposedly a carrot the size of an oak tree just behind East Hill. It's called the Sacred Carrot and it apparently shines with a golden glow in total darkness!",
+						"fr": "Les copains, vous n'allez pas me croire, mais j'ai déniché le scoop du siècle : il y aurait une carotte de la taille d'un chêne juste derrière la colline de l'Est. \nOn l'appelle la Carotte Sacrée et elle brille apparemment d'un éclat doré dans le noir total !",
+						"ja": "みんな、信じられないかもしれないけど、とんでもない世紀の大スクープを見つけたんだ！東の丘のすぐ後ろに、樫の木ほどの大きさの人参があるらしいんだよ。\nそれは聖なる人参と呼ばれていて、どうやら真っ暗闇の中で黄金の輝きを放っているらしいんだ！",
+						"zh": "伙计们，你们肯定不会相信，但我挖到了本世纪最惊天的大发现：据说东山后面有根橡树那么大的胡萝卜！\n它被叫做圣胡萝卜，而且据说在漆黑一片里，它会发出金色的光芒！"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "rabbit_skepticism-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "rabbit_skepticism-AI",
+					"key": "__blueprints__.simple-dialog-flow.rabbit_skepticism-AI",
+					"type": "dialog",
+					"actors": [
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+					],
+					"text": {
+						"en": "Another one of your stupid inventions, l1!\nLast time, your famous mountain of clovers was just an old, torn green sweater left by a messy hiker.\nYou're making us waste our time and our calories for absolutely nothing.",
+						"fr": "Encore une de tes inventions débiles, l1 ! \nLa dernière fois, ta fameuse montagne de trèfles n'était qu'un vieux pull vert tout troué laissé par un randonneur malpropre. \nTu nous fais perdre notre temps et nos calories pour absolument rien.",
+						"ja": "またお前のくだらない発明か、l1！\n前回は、お前の言う「有名なクローバーの山」は、汚いハイカーが置き忘れたただの古くて穴だらけの緑のセーターだったじゃないか。\nお前は僕たちの時間とカロリーを、まったくの無駄にさせてるだけだ。",
+						"zh": "l1，又是你那些蠢主意！上次你那所谓的幸运草山，不过是一个不讲卫生的徒步者扔下的一件又旧又破的绿毛衣罢了。你让我们白白浪费了时间和体力，却一无所获。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "rabbit_philosophy-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "rabbit_wisdom-AI",
+					"key": "__blueprints__.simple-dialog-flow.rabbit_wisdom-AI",
+					"type": "dialog",
+					"actors": [
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"en": "Did you know that foxes are just dogs who have studied philosophy?\nIf you ask them a complex question about being and nothingness, they instantly fall asleep from intellectual fatigue.\nMy uncle told me that.",
+						"fr": "Saviez-vous que les renards ne sont que des chiens qui ont fait des études de philosophie ? \nSi on leur pose une question complexe sur l'être et le néant, ils s'endorment instantanément de fatigue intellectuelle. \nC'est mon oncle qui me l'a dit.",
+						"ja": "狐って、哲学を学んだ犬にすぎないって知ってました？\n存在と無について複雑な質問をすると、彼らは知的疲労で瞬時に眠り込んでしまうんです。\nこれはうちの叔父が言ってたことなんですけどね。",
+						"zh": "你知道吗，狐狸只不过是读过哲学的狗？如果你问它们一个关于存在与虚无的复杂问题，它们会因为脑力疲劳而立刻睡着。这是我叔叔告诉我的。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "player_warning-AI",
+							"toPort": "in"
+						}
+					]
+				}
+			]
+		},
+		{
+			"scene": "multi-tracks",
+			"id": "sc_k6owddmj",
+			"start": "start_discussion-AI",
+			"blocks": [
+				{
+					"id": "DIALOG-001",
+					"key": "__blueprints__.multi-tracks.DIALOG-001",
+					"type": "dialog",
+					"actors": [
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"en": "Hey!",
+						"fr": "hey!",
+						"ja": "ねえ！",
+						"zh": "嘿"
+					},
+					"props": {
+						"isAsync": true,
+						"timeout": 2000
+					}
+				},
+				{
+					"id": "DIALOG-009",
+					"key": "__blueprints__.multi-tracks.DIALOG-009",
+					"type": "dialog",
+					"actors": [
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"en": "Ugh, I'm stinky!!!",
+						"fr": "oufff, je pu !!!",
+						"ja": "うげぇ、俺、臭っ！",
+						"zh": "哎哟，我臭死了！！！"
+					},
+					"props": {
+						"delay": 1200,
+						"waitForBlocks": [
+							"l4_comment-AI"
+						]
+					}
+				},
+				{
+					"id": "DIALOG-010",
+					"key": "__blueprints__.multi-tracks.DIALOG-010",
+					"type": "dialog",
+					"actors": [
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+					],
+					"text": {
+						"en": "Pffft...",
+						"fr": "pfff...",
+						"ja": "はぁ…",
+						"zh": "唉..."
+					},
+					"props": {
+						"isAsync": true,
+						"delay": 1000,
+						"timeout": 1000
+					}
+				},
+				{
+					"id": "final_decision-AI",
+					"key": "__blueprints__.multi-tracks.final_decision-AI",
+					"type": "dialog",
+					"actors": [
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+					],
+					"text": {
+						"en": "Alright, I'm in for the north burrow. But if we see anything that barks, I'm outta here and you're on your own.",
+						"fr": "Bref, d'accord pour le terrier nord. Mais si on voit un truc qui aboie, je détale et je ne vous connais plus.",
+						"ja": "まあ、北の抜け道でいいよ。でも、もし吠える奴を見たら、俺はすぐさま逃げ出すし、あんたらのことなんか知らないからね。",
+						"zh": "总之，北边的洞穴我同意。但要是我们看到会叫的东西，我就开溜，到时候可就不认识你们了。"
+					}
+				},
+				{
+					"id": "l1_irritation-AI",
+					"key": "__blueprints__.multi-tracks.l1_irritation-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "L3, for crying out loud, stop those silly noises! We're trying to organize a serious heist here, be a bit professional.",
+						"fr": "L3, par pitié, arrête tes bruits débiles ! On essaie d'organiser un casse sérieux là, sois un peu pro.",
+						"ja": "L3、頼むからそのくだらない音を出すのをやめろ！こっちは真剣な強盗を計画してるんだぞ、少しはプロらしくしろよ。",
+						"zh": "L3，拜托，别再发出你那些蠢声音了！我们正在策划一次认真的劫案呢，专业一点好吗？"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l4_comment-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l2_response-AI",
+					"key": "__blueprints__.multi-tracks.l2_response-AI",
+					"type": "dialog",
+					"actors": [
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+					],
+					"text": {
+						"en": "The north burrow? Isn't that where we ran into that weird dog the other day? I'm not too keen on going back there.",
+						"fr": "Le terrier nord ? C'est pas là où l'on a croisé ce chien bizarre l'autre jour ? J'ai pas trop envie d'y retourner.",
+						"ja": "北の巣穴？って、この前あの変な犬に会ったところじゃない？あんまりそこには戻りたくないんだけど。",
+						"zh": "北洞？那不就是我们前几天遇到那条奇怪的狗的地方吗？我不太想再回去了。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "noise_2-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "out",
+							"to": "l1_irritation-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "out",
+							"to": "DIALOG-010",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l4_comment-AI",
+					"key": "__blueprints__.multi-tracks.l4_comment-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "He's a write-off today, he's eaten some weird berries near the stream again. We'd better just ignore him.",
+						"fr": "Il est irrécupérable aujourd'hui, il a encore mangé des baies bizarres près du ruisseau. On ferait mieux de l'ignorer.",
+						"ja": "今日はもうどうしようもないな。また小川の近くで変なベリーを食べたんだ。放っておこう。",
+						"zh": "他今天没救了，他又在小溪边吃了奇怪的浆果。我们最好别理他了。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "final_decision-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "noise_1-AI",
+					"key": "__blueprints__.multi-tracks.noise_1-AI",
+					"type": "dialog",
+					"actors": [
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+					],
+					"text": {
+						"en": "*Scratch scratch scratch* !",
+						"fr": "*Scratch scratch scratch* ! ",
+						"ja": "ガリガリガリ！",
+						"zh": "*嚓嚓嚓*！"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l2_response-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "noise_2-AI",
+					"key": "__blueprints__.multi-tracks.noise_2-AI",
+					"type": "dialog",
+					"actors": [
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"en": "*Toot!* Oops, that wasn't me, it was the wind! Or maybe my ears applauded!",
+						"fr": "*Prout !* Oups, c'était pas moi, c'était le vent ! Ou peut-être mes oreilles qui ont applaudi !",
+						"ja": "ぷーっ！おっと、僕じゃないよ、風だよ！もしかして、僕の耳が拍手しちゃったのかな！",
+						"zh": "噗！哎呀，不是我，是风！也可能是我耳朵在鼓掌呢！"
+					},
+					"props": {
+						"isAsync": true,
+						"waitInput": true
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "DIALOG-009",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "start_discussion-AI",
+					"key": "__blueprints__.multi-tracks.start_discussion-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Alright, listen up guys, for the giant carrot, we need to go through the north burrow, it's more discreet.",
+						"fr": "Bon, écoutez les gars, pour la carotte géante, il faut qu'on passe par le terrier nord, c'est plus discret.",
+						"ja": "よし、みんな聞いてくれ。あの巨大な人参のためには、北の巣穴を通らないとダメだ。その方がばれにくいからな。",
+						"zh": "听着，伙计们，为了那根大胡萝卜，我们得走北边的洞穴，那样更隐蔽。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "noise_1-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "out",
+							"to": "DIALOG-001",
+							"toPort": "in"
+						}
+					]
+				}
+			]
+		},
+		{
+			"scene": "simple-choices",
+			"id": "sc_nfiw90w6",
+			"start": "l1_dramatic_intro-AI",
+			"blocks": [
+				{
+					"id": "player_moral_choice-AI",
+					"key": "__blueprints__.simple-choices.player_moral_choice-AI",
+					"type": "choice",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"note": "Nous nous battrons ! | C'est un suicide. | Est-ce vraiment réel ?",
+					"options": [
+						{
+							"id": "C1",
+							"key": "__blueprints__.simple-choices.player_moral_choice-AI.C1",
+							"text": {
+								"en": "We will fight!",
+								"fr": "Nous nous battrons !",
+								"ja": "戦うぞ！",
+								"zh": "我们要战斗！"
+							}
+						},
+						{
+							"id": "C2",
+							"key": "__blueprints__.simple-choices.player_moral_choice-AI.C2",
+							"text": {
+								"en": "It's a suicide.",
+								"fr": "C'est un suicide.",
+								"ja": "それは自殺だ。",
+								"zh": "这是自杀。"
+							}
+						},
+						{
+							"id": "C3",
+							"key": "__blueprints__.simple-choices.player_moral_choice-AI.C3",
+							"text": {
+								"en": "Is this really real?",
+								"fr": "Est-ce vraiment réel ?",
+								"ja": "本当に起きてるの？",
+								"zh": "这真的是真的吗？"
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "C1",
+							"to": "l4_brave_response-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "C2",
+							"to": "l4_fear_response-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "C3",
+							"to": "l4_doubt_response-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l1_brave_reaction-AI",
+					"key": "__blueprints__.simple-choices.l1_brave_reaction-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Your inner fire may guide us through the shadows creeping towards us.",
+						"fr": "Ton feu intérieur nous guidera peut-être à travers les ombres qui rampent vers nous.",
+						"ja": "あなたの内なる炎が、私たちに忍び寄る闇の中を導いてくれるかもしれません。",
+						"zh": "你内心的火焰或许能指引我们穿越那些向我们蔓延而来的阴影。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l1_final_warning-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l1_doubt_reaction-AI",
+					"key": "__blueprints__.simple-choices.l1_doubt_reaction-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Denial will not change the weight of the silence that now falls upon the prairie.",
+						"fr": "Le déni ne changera pas le poids du silence qui s'abat désormais sur la prairie.",
+						"ja": "否定は、今や牧草地に重くのしかかる沈黙の重みを変えることはないだろう。",
+						"zh": "否认改变不了如今笼罩在草原上的沉默重压。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l1_final_warning-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l1_dramatic_intro-AI",
+					"key": "__blueprints__.simple-choices.l1_dramatic_intro-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "The sky is darkening, l4. The legend of the Carotte Éternelle was merely a prelude to our imminent downfall.",
+						"fr": "Le ciel s'assombrit, l4. La légende de la Carotte Éternelle n'était qu'un prélude à notre chute imminente.",
+						"ja": "空が暗くなる、l4。永遠のニンジンの伝説は、私たちの差し迫った破滅への序章に過ぎなかった。",
+						"zh": "天色渐暗，l4。永恒胡萝卜的传说，只不过是我们迫在眉睫的厄运的前奏。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "player_moral_choice-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l1_fear_reaction-AI",
+					"key": "__blueprints__.simple-choices.l1_fear_reaction-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Fear is a poison, but it is also the only mirror of our fragile truth.",
+						"fr": "La peur est un poison, mais elle est aussi le seul miroir de notre fragile vérité.",
+						"ja": "恐怖は毒だが、それは同時に私たちの脆い真実を映し出す唯一の鏡でもある。",
+						"zh": "恐惧是毒药，但它也是我们脆弱真相的唯一镜子。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l1_final_warning-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l1_final_warning-AI",
+					"key": "__blueprints__.simple-choices.l1_final_warning-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Listen... the wind is already howling the name of our doom. We have no other choice but to move forward.",
+						"fr": "Écoute... le vent hurle déjà le nom de notre perte. Nous n'avons plus d'autre choix que d'avancer.",
+						"ja": "聞け…風は既に我々の破滅の名を叫んでいる。我々には、もはや進むしかないのだ。",
+						"zh": "听着……风已在呼啸，宣告着我们的末日。我们别无选择，唯有向前。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l4_final_resolution-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l4_brave_response-AI",
+					"key": "__blueprints__.simple-choices.l4_brave_response-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "I will not let anyone destroy our home. I will fight until my last breath if necessary.",
+						"fr": "Je ne laisserai personne détruire notre foyer. Je me battrai jusqu'à mon dernier souffle s'il le faut.",
+						"ja": "誰にも私たちの家を壊させはしない。必要ならば、最後の息が尽きるまで戦い抜いてみせる。",
+						"zh": "我绝不会让任何人摧毁我们的家园。即便要战至最后一息，我也在所不惜。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l1_brave_reaction-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l4_doubt_response-AI",
+					"key": "__blueprints__.simple-choices.l4_doubt_response-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "You speak like a tired old prophet, l1. What if it was just a simple fox trap?",
+						"fr": "Tu parles comme un vieux prophète fatigué, l1. Et si ce n'était qu'un simple piège des renards ?",
+						"ja": "l1、まるで疲れた老預言者のように話しているな。もしそれが単なるキツネの罠だったとしたら、どうするんだ？",
+						"zh": "你说话像个疲惫的老先知，l1。万一这只是狐狸的一个简单陷阱呢？"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l1_doubt_reaction-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l4_fear_response-AI",
+					"key": "__blueprints__.simple-choices.l4_fear_response-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "Look at us! We are nothing but prey. To hope to overcome this fate is sheer folly.",
+						"fr": "Regarde-nous ! Nous ne sommes que des proies. Espérer vaincre ce destin est une folie pure.",
+						"ja": "私たちを見てみろ！私たちは獲物に過ぎない。この運命に打ち勝とうと望むなど、まったくの狂気だ。",
+						"zh": "看看我们！我们不过是猎物罢了。希望战胜这种命运，纯粹是痴心妄想。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l1_fear_reaction-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l4_final_resolution-AI",
+					"key": "__blueprints__.simple-choices.l4_final_resolution-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "So be it. May destiny judge us on the battlefield, towards the north burrow.",
+						"fr": "Alors qu'il en soit ainsi. Que le destin nous juge sur le champ de bataille, vers le terrier nord.",
+						"ja": "ならば、それでいい。戦場で運命が我々を裁くがいい、北の巣穴へ。",
+						"zh": "就让它如此吧。让命运在战场上审判我们，向着北方的洞穴进发。"
+					}
+				}
+			]
+		},
+		{
+			"scene": "simple-action",
+			"id": "sc_2oxljar5",
+			"start": "l1_alert-AI",
+			"blocks": [
+				{
+					"id": "ACTION-0016",
+					"key": "__blueprints__.simple-action.ACTION-0016",
+					"type": "action",
+					"note": "shakeCamera(8, 0.8)",
+					"props": {
+						"isAsync": true,
+						"delay": 300
+					},
+					"calls": [
+						{
+							"fn": "shakeCamera",
+							"args": {
+								"intensity": 16,
+								"duration": 2
+							}
+						}
+					]
+				},
+				{
+					"id": "ACTION-006",
+					"key": "__blueprints__.simple-action.ACTION-006",
+					"type": "action",
+					"props": {
+						"isAsync": true
+					},
+					"calls": [
+						{
+							"fn": "shakeCamera",
+							"args": {
+								"intensity": 5,
+								"duration": 2
+							}
+						},
+						{
+							"fn": "moveCharacterAt",
+							"args": {
+								"id": "l1",
+								"x": -800
+							}
+						}
+					]
+				},
+				{
+					"id": "ACTION-007",
+					"key": "__blueprints__.simple-action.ACTION-007",
+					"type": "action",
+					"note": "moveCameraToLabel(l1)",
+					"calls": [
+						{
+							"fn": "moveCameraToLabel",
+							"args": {
+								"id": "l1",
+								"duration": 1.3
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "then",
+							"to": "DIALOG-009",
+							"toPort": "in"
+						},
+						{
+							"port": "then",
+							"to": "DIALOG-010",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "ACTION-008",
+					"key": "__blueprints__.simple-action.ACTION-008",
+					"type": "action",
+					"props": {
+						"isAsync": true
+					},
+					"calls": [
+						{
+							"fn": "moveCameraToLabel",
+							"args": {
+								"id": "l1",
+								"duration": 2
+							}
+						},
+						{
+							"fn": "moveCharacterAt",
+							"args": {
+								"id": "l1",
+								"x": 800
+							}
+						}
+					]
+				},
+				{
+					"id": "focus_boss-AI",
+					"key": "__blueprints__.simple-action.focus_boss-AI",
+					"type": "action",
+					"note": "moveCameraToLabel(boss)",
+					"props": {
+						"delay": 500
+					},
+					"calls": [
+						{
+							"fn": "moveCameraToLabel",
+							"args": {
+								"id": "boss",
+								"duration": 1
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "then",
+							"to": "boss_roar-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "then",
+							"to": "ACTION-0016",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "return_to_rabbits-AI",
+					"key": "__blueprints__.simple-action.return_to_rabbits-AI",
+					"type": "action",
+					"note": "moveCameraToLabel(l1)",
+					"calls": [
+						{
+							"fn": "moveCameraToLabel",
+							"args": {
+								"id": "l4",
+								"duration": 0.3
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "then",
+							"to": "final_decision-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "shake_intro-AI",
+					"key": "__blueprints__.simple-action.shake_intro-AI",
+					"type": "action",
+					"note": "shakeCamera(5, 0.5)",
+					"calls": [
+						{
+							"fn": "shakeCamera",
+							"args": {
+								"intensity": 5,
+								"duration": 0.3
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "then",
+							"to": "l4_terror-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "shake_mid-AI",
+					"key": "__blueprints__.simple-action.shake_mid-AI",
+					"type": "action",
+					"note": "shakeCamera(8, 0.8)",
+					"calls": [
+						{
+							"fn": "shakeCamera",
+							"args": {
+								"intensity": 8,
+								"duration": 0.4
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "then",
+							"to": "focus_boss-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "final_decision-AI",
+					"key": "__blueprints__.simple-action.final_decision-AI",
+					"type": "choice",
+					"note": "Charger la créature ! | Battre en retraite !",
+					"options": [
+						{
+							"id": "C1",
+							"key": "__blueprints__.simple-action.final_decision-AI.C1",
+							"text": {
+								"en": "Charge the creature!",
+								"fr": "Charger la créature !",
+								"ja": "クリーチャーを突撃せよ！",
+								"zh": "冲锋生物！"
+							}
+						},
+						{
+							"id": "C2",
+							"key": "__blueprints__.simple-action.final_decision-AI.C2",
+							"text": {
+								"en": "Retreat!",
+								"fr": "Battre en retraite !",
+								"ja": "退却！",
+								"zh": "撤退！"
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "C1",
+							"to": "l1_brave-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "C2",
+							"to": "l4_flee-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "C2",
+							"to": "ACTION-006",
+							"toPort": "in"
+						},
+						{
+							"port": "C2",
+							"to": "DIALOG-008",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "boss_roar-AI",
+					"key": "__blueprints__.simple-action.boss_roar-AI",
+					"type": "dialog",
+					"actors": [
+						"1cd35781-e3b7-47b3-bc2b-76b1a2424eba"
+					],
+					"text": {
+						"fr": "RWMIAAAOUWWW ...... WROIUMOIWUUWWW...."
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "DIALOG-007",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "climax_moment-AI",
+					"key": "__blueprints__.simple-action.climax_moment-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"fr": "whaaaaaaaaaaa"
+					},
+					"props": {
+						"isAsync": true,
+						"delay": 209,
+						"timeout": 2000,
+						"portPerCharacter": true
+					}
+				},
+				{
+					"id": "DIALOG-007",
+					"key": "__blueprints__.simple-action.DIALOG-007",
+					"type": "dialog",
+					"actors": [
+						"1cd35781-e3b7-47b3-bc2b-76b1a2424eba"
+					],
+					"text": {
+						"fr": "mmmmm !🐰🐰🐰"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "return_to_rabbits-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-008",
+					"key": "__blueprints__.simple-action.DIALOG-008",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "By the whiskers!! Run for your lives! Aaaaaaaah!!!!",
+						"fr": "Nom d'une carotte !! Sauve qui peut ! Haaaaa !!!!",
+						"ja": "にんじん、なんてこった！皆、逃げろ！うわああああ！",
+						"zh": "我的胡萝卜啊！！ 各自逃命吧！ 啊啊啊啊啊！！！！"
+					},
+					"props": {
+						"isAsync": true,
+						"timeout": 2500
+					}
+				},
+				{
+					"id": "DIALOG-009",
+					"key": "__blueprints__.simple-action.DIALOG-009",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "I love carrots, but not *this* much!",
+						"fr": "J'aime les carottes, mais pas à ce point !",
+						"ja": "人参は好きだけど、さすがにそこまでは！",
+						"zh": "我喜欢胡萝卜，但也不至于这样！"
+					},
+					"props": {
+						"isAsync": true,
+						"delay": 200,
+						"timeout": 3000
+					}
+				},
+				{
+					"id": "DIALOG-010",
+					"key": "__blueprints__.simple-action.DIALOG-010",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "You're a big chicken, l1... traitor!",
+						"fr": "T'es un gros lapin mouillé, l1... traître !",
+						"ja": "このとんでもない臆病者め、l1…裏切り者！",
+						"zh": "你这个大怂包，l1...叛徒！"
+					},
+					"props": {
+						"delay": 2500,
+						"timeout": 3500
+					}
+				},
+				{
+					"id": "DIALOG-011",
+					"key": "__blueprints__.simple-action.DIALOG-011",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"fr": "whaaaa"
+					},
+					"props": {
+						"delay": 1600,
+						"timeout": 4000
+					}
+				},
+				{
+					"id": "l1_alert-AI",
+					"key": "__blueprints__.simple-action.l1_alert-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Do you feel that? The ground is tearing apart beneath its feet...",
+						"fr": "Est-ce que tu sens ça ? La terre se déchire sous ses pas...",
+						"ja": "これ、感じるか？奴の足元で地面が裂けている…",
+						"zh": "你感觉到了吗？大地正在它的脚下崩裂……"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "shake_intro-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l1_brave-AI",
+					"key": "__blueprints__.simple-action.l1_brave-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "For the honor of the clan and the eternal carrot, attack!",
+						"fr": "Pour l'honneur du clan et la carotte éternelle, à l'attaque !",
+						"ja": "クランの栄誉と、永遠のニンジンのために、突撃だ！",
+						"zh": "为了氏族的荣耀，为了永恒的胡萝卜，冲啊！"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "ACTION-008",
+							"toPort": "in"
+						},
+						{
+							"port": "out",
+							"to": "climax_moment-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "out",
+							"to": "DIALOG-011",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l4_flee-AI",
+					"key": "__blueprints__.simple-action.l4_flee-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "But you can't leave me alone!",
+						"fr": "Mais tu ne peux pas me laisser seul !",
+						"ja": "でも、一人にしないでよ！",
+						"zh": "但是你不能丢下我一个人！"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "ACTION-007",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l4_terror-AI",
+					"key": "__blueprints__.simple-action.l4_terror-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "It's way too big to be just a rabbit, l1!",
+						"fr": "C'est beaucoup trop gros pour être un simple lapin, l1 !",
+						"ja": "ただのウサギにしては、あまりにも大きすぎる、l1！",
+						"zh": "这实在是太大了，不可能是只普通的兔子，l1！"
+					},
+					"props": {
+						"delay": 500
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "shake_mid-AI",
+							"toPort": "in"
+						}
+					]
+				}
+			]
+		},
+		{
+			"scene": "simple-condition",
+			"id": "sc_u7rz0ucc",
+			"start": "l1_lost_carrot_distress-AI",
+			"blocks": [
+				{
+					"id": "check_carrot_inventory-AI",
+					"key": "__blueprints__.simple-condition.check_carrot_inventory-AI",
+					"type": "condition",
+					"note": "inventory.carrot >= 1",
+					"cases": [
+						{
+							"port": "out",
+							"when": [
+								{
+									"dict": "inventory",
+									"entry": "carrot",
+									"op": "greaterOrEqual",
+									"value": 1
+								}
+							]
+						}
+					],
+					"next": [
+						{
+							"port": "default",
+							"to": "l4_comfort_response-AI",
+							"toPort": "in"
+						},
+						{
+							"port": "out",
+							"to": "DIALOG-006",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-006",
+					"key": "__blueprints__.simple-condition.DIALOG-006",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "I've found your carrot!",
+						"fr": "J'ai retrouvé ta carotte !",
+						"ja": "君のニンジンを見つけたよ！",
+						"zh": "我把你的胡萝卜找回来了！"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l1_carrot_found-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-007",
+					"key": "__blueprints__.simple-condition.DIALOG-007",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": ".... ok",
+						"fr": ".... dac",
+						"ja": "…分かった",
+						"zh": "....好吧"
+					}
+				},
+				{
+					"id": "l1_carrot_found-AI",
+					"key": "__blueprints__.simple-condition.l1_carrot_found-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "You've got it! I can already feel luck returning, I can feel it in my ears. You're my hero! Keep it, I'm too afraid of losing it again after all!",
+						"fr": "Tu l'as ! Je sens déjà la chance revenir dans mes oreilles. Tu es mon héros !\nGarde la, j'ai trop peur de la perde a nouveau finalement ! ",
+						"ja": "やった、それだ！もう耳の奥から、幸運が湧き上がってくるのを感じるよ！君は僕のヒーローだよ！\nそれ、君が持っていてくれ。だって、やっぱりまたなくしてしまうのが怖すぎるんだ！",
+						"zh": "你找到了！我仿佛能听到好运又回来了。你真是我的英雄！\n你拿着它吧，我真的太害怕再把它弄丢了！"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "DIALOG-007",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l1_carrot_missing_demand-AI",
+					"key": "__blueprints__.simple-condition.l1_carrot_missing_demand-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Why are you just standing there grazing? Go find it right now, before disaster strikes us!",
+						"fr": "Pourquoi restes-tu là à brouter ? Cherche-la sur le champ, avant que le malheur ne nous frappe !",
+						"ja": "なんでそこでぼーっとしてるんだ？ 今すぐそれを探しに行け、災難が私たちを襲う前に！",
+						"zh": "你还杵在那里啃草干什么？赶紧去找它，免得我们倒大霉！"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l4_final_thought-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l1_lost_carrot_distress-AI",
+					"key": "__blueprints__.simple-condition.l1_lost_carrot_distress-AI",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Oh no, my lucky carrot is gone! Without it, surely the sky will fall on our heads!",
+						"fr": "Oh non, ma carotte porte-bonheur a disparu ! Sans elle, c'est sûr, le ciel va nous tomber sur la tête !",
+						"ja": "ああ、大変だ！私の幸運のニンジンがなくなっちゃった！あれがないと、間違いなく、とんでもない災難が私たちに降りかかってくる！",
+						"zh": "哦不，我的幸运胡萝卜不见了！没有它，天就要塌下来了！"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "check_carrot_inventory-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l4_comfort_response-AI",
+					"key": "__blueprints__.simple-condition.l4_comfort_response-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "Calm down, l1. It's just a dried root. We'll eventually find it in this field.",
+						"fr": "Calme-toi, l1. Ce n'est qu'une racine séchée. On finira par la retrouver dans ce champ.",
+						"ja": "落ち着いて、l1。ただの干からびた根っこじゃないか。そのうち、この畑で見つかるよ。",
+						"zh": "冷静点，l1。它不过是一根干根而已。我们最终会在这片田地里找到它的。"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "l1_carrot_missing_demand-AI",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "l4_final_thought-AI",
+					"key": "__blueprints__.simple-condition.l4_final_thought-AI",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "Alright, alright. Let's not make a big deal out of a vegetable, even if it's a good luck charm.",
+						"fr": "D'accord, d'accord. Ne faisons pas un drame pour un légume, même s'il est porte-bonheur.",
+						"ja": "まあまあ。それが縁起物だとしても、野菜一本でそこまで大騒ぎするのはやめよう。",
+						"zh": "好的，好的。别为一个蔬菜小题大做了，即使它是个幸运物。"
+					}
+				}
+			]
+		},
+		{
+			"scene": "condition-dispatch",
+			"id": "sc_q4c6vbo6",
+			"start": "DIALOG-001",
+			"blocks": [
+				{
+					"id": "ACTION-001",
+					"key": "__blueprints__.condition-dispatch.ACTION-001",
+					"type": "action",
+					"calls": [
+						{
+							"fn": "shakeCamera",
+							"args": {
+								"intensity": 3,
+								"duration": 1
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "then",
+							"to": "DIALOG-007",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "ACTION-002",
+					"key": "__blueprints__.condition-dispatch.ACTION-002",
+					"type": "action",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"props": {
+						"isAsync": true
+					},
+					"calls": [
+						{
+							"fn": "moveCharacterAt",
+							"args": {
+								"id": "l1",
+								"x": -200,
+								"absolut": true
+							}
+						}
+					]
+				},
+				{
+					"id": "ACTION-003",
+					"key": "__blueprints__.condition-dispatch.ACTION-003",
+					"type": "action",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"props": {
+						"isAsync": true
+					},
+					"calls": [
+						{
+							"fn": "moveCharacterAt",
+							"args": {
+								"id": "l2",
+								"x": -100,
+								"y": -200,
+								"absolut": true
+							}
+						}
+					]
+				},
+				{
+					"id": "ACTION-004",
+					"key": "__blueprints__.condition-dispatch.ACTION-004",
+					"type": "action",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"props": {
+						"isAsync": true
+					},
+					"calls": [
+						{
+							"fn": "moveCharacterAt",
+							"args": {
+								"id": "l3",
+								"x": 200,
+								"absolut": true
+							}
+						}
+					]
+				},
+				{
+					"id": "CONDITION-002",
+					"key": "__blueprints__.condition-dispatch.CONDITION-002",
+					"type": "condition",
+					"cases": [
+						{
+							"port": "out",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l1",
+									"op": "equals",
+									"value": true
+								},
+								{
+									"dict": "party",
+									"entry": "l2",
+									"op": "equals",
+									"value": true,
+									"join": "or"
+								},
+								{
+									"dict": "party",
+									"entry": "l3",
+									"op": "equals",
+									"value": true,
+									"join": "or"
+								}
+							]
+						}
+					],
+					"next": [
+						{
+							"port": "default",
+							"to": "DIALOG-002",
+							"toPort": "in"
+						},
+						{
+							"port": "out",
+							"to": "ROUTER-001",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "CONDITION-003",
+					"key": "__blueprints__.condition-dispatch.CONDITION-003",
+					"type": "condition",
+					"cases": [
+						{
+							"port": "out",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l1",
+									"op": "equals",
+									"value": true
+								},
+								{
+									"dict": "party",
+									"entry": "l2",
+									"op": "equals",
+									"value": true,
+									"join": "and"
+								},
+								{
+									"dict": "party",
+									"entry": "l3",
+									"op": "equals",
+									"value": true,
+									"join": "and"
+								}
+							]
+						}
+					],
+					"next": [
+						{
+							"port": "out",
+							"to": "ACTION-001",
+							"toPort": "in"
+						},
+						{
+							"port": "default",
+							"to": "DIALOG-008",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-001",
+					"key": "__blueprints__.condition-dispatch.DIALOG-001",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "\"O great spirit of carrots...\"",
+						"fr": "« Ô grand esprit des carottes... »",
+						"ja": "おお、偉大なる人参の精霊よ...",
+						"zh": "「哦，伟大的胡萝卜之灵...」"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "CONDITION-002",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-002",
+					"key": "__blueprints__.condition-dispatch.DIALOG-002",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Hey, choose us before we invoke the carrot spirits!",
+						"fr": "Hey, choisissez-nous avant que nous n'invoquions les esprits de la carotte ! ",
+						"ja": "ねえ、ニンジンの精霊を召喚する前に、俺たちを選んでくれよ！",
+						"zh": "嘿，选我们吧，不然我们就要召唤胡萝卜精灵了！"
+					}
+				},
+				{
+					"id": "DIALOG-003",
+					"key": "__blueprints__.condition-dispatch.DIALOG-003",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538"
+					],
+					"text": {
+						"en": "Ho, immense red carrot, radiant with life!",
+						"fr": "Ho, immense carotte rouge éclatante de vie !",
+						"ja": "おお、生命輝く巨大な赤いニンジンよ！",
+						"zh": "噢，巨大的红色胡萝卜，生机盎然！"
+					},
+					"props": {
+						"isAsync": true,
+						"delay": 1000,
+						"timeout": 1000
+					}
+				},
+				{
+					"id": "DIALOG-004",
+					"key": "__blueprints__.condition-dispatch.DIALOG-004",
+					"type": "dialog",
+					"actors": [
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+					],
+					"text": {
+						"en": "Oh, vibrant sun-yellow carrot!",
+						"fr": "Ho, vibrante carotte d'un jaune soleil !",
+						"ja": "おお、太陽の黄色に輝く活気あるニンジンよ！",
+						"zh": "嗬，生机勃勃的阳光黄胡萝卜！"
+					},
+					"props": {
+						"isAsync": true,
+						"delay": 2000,
+						"timeout": 1000
+					}
+				},
+				{
+					"id": "DIALOG-005",
+					"key": "__blueprints__.condition-dispatch.DIALOG-005",
+					"type": "dialog",
+					"actors": [
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"en": "\"O great blue carrot, we implore you!\"",
+						"fr": "« Ô grande carotte bleue, nous t'implorons ! »",
+						"ja": "「おお、大いなる青きニンジンよ、我々はあなたに懇願いたします！」",
+						"zh": "哦，伟大的蓝色胡萝卜，我们祈求你！"
+					},
+					"props": {
+						"isAsync": true,
+						"delay": 3000,
+						"timeout": 1000
+					}
+				},
+				{
+					"id": "DIALOG-006",
+					"key": "__blueprints__.condition-dispatch.DIALOG-006",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "Oh great carrot, thank you for nourishing us!",
+						"fr": "Oh grande carotte, merci de nous nourrir !",
+						"ja": "おお、偉大なる人参よ、私たちを養ってくださりありがとうございます！",
+						"zh": "噢，伟大的胡萝卜啊，感谢你滋养我们！"
+					},
+					"props": {
+						"delay": 7700
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "CONDITION-003",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-007",
+					"key": "__blueprints__.condition-dispatch.DIALOG-007",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "It's working!",
+						"fr": "ca marcher !",
+						"ja": "うまくいった！",
+						"zh": "成了！"
+					}
+				},
+				{
+					"id": "DIALOG-008",
+					"key": "__blueprints__.condition-dispatch.DIALOG-008",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "Nothing's happening! Is an incantation missing!? ....",
+						"fr": "il ce passe rien ! il manque une incantation !? ....",
+						"ja": "何も起こらない！詠唱が足りないのか！？…",
+						"zh": "没反应！是不是少了一段咒语？！……"
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "ROUTER-002",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-009",
+					"key": "__blueprints__.condition-dispatch.DIALOG-009",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538",
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09",
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"en": "Yes, me.",
+						"fr": "Oui moi",
+						"ja": "はい、私です",
+						"zh": "是的，我"
+					},
+					"props": {
+						"isAsync": true,
+						"inPortPerCharacter": true
+					}
+				},
+				{
+					"id": "DIALOG-010",
+					"key": "__blueprints__.condition-dispatch.DIALOG-010",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"en": "Ho !",
+						"fr": "Ho !",
+						"ja": "ほう！",
+						"zh": "嚯！"
+					},
+					"props": {
+						"delay": 1000
+					}
+				},
+				{
+					"id": "ROUTER-001",
+					"key": "__blueprints__.condition-dispatch.ROUTER-001",
+					"type": "router",
+					"cases": [
+						{
+							"port": "K1",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l1",
+									"op": "equals",
+									"value": true
+								}
+							]
+						},
+						{
+							"port": "K2",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l2",
+									"op": "equals",
+									"value": true
+								}
+							]
+						},
+						{
+							"port": "K3",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l3",
+									"op": "equals",
+									"value": true
+								}
+							]
+						}
+					],
+					"next": [
+						{
+							"port": "catch",
+							"to": "DIALOG-006",
+							"toPort": "in"
+						},
+						{
+							"port": "K1",
+							"to": "DIALOG-003",
+							"toPort": "in"
+						},
+						{
+							"port": "K2",
+							"to": "DIALOG-004",
+							"toPort": "in"
+						},
+						{
+							"port": "K3",
+							"to": "DIALOG-005",
+							"toPort": "in"
+						},
+						{
+							"port": "K1",
+							"to": "ACTION-002",
+							"toPort": "in"
+						},
+						{
+							"port": "K2",
+							"to": "ACTION-003",
+							"toPort": "in"
+						},
+						{
+							"port": "K3",
+							"to": "ACTION-004",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "ROUTER-002",
+					"key": "__blueprints__.condition-dispatch.ROUTER-002",
+					"type": "router",
+					"cases": [
+						{
+							"port": "K1",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l1",
+									"op": "notEquals",
+									"value": true
+								}
+							]
+						},
+						{
+							"port": "K2",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l2",
+									"op": "notEquals",
+									"value": true
+								}
+							]
+						},
+						{
+							"port": "K3",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l3",
+									"op": "notEquals",
+									"value": true
+								}
+							]
+						}
+					],
+					"next": [
+						{
+							"port": "catch",
+							"to": "DIALOG-010",
+							"toPort": "in"
+						},
+						{
+							"port": "K1",
+							"to": "DIALOG-009",
+							"toPort": "0d848982-9b5e-4437-b0d7-96a97ae78538"
+						},
+						{
+							"port": "K2",
+							"to": "DIALOG-009",
+							"toPort": "0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+						},
+						{
+							"port": "K3",
+							"to": "DIALOG-009",
+							"toPort": "0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+						}
+					]
+				}
+			]
+		},
+		{
+			"scene": "advance-full-demo",
+			"id": "sc_pnshhy9t",
+			"start": "DIALOG-009",
+			"blocks": [
+				{
+					"id": "NOTE-001",
+					"key": "__blueprints__.advance-full-demo.NOTE-001",
+					"type": "note",
+					"note": "LE CLOU DU SPECTACLE — les quatre lapins devant la Carotte Éternelle, gardée par la bête endormie. l4 refuse d'attaquer tant que l'équipe n'est pas au complet et qu'il n'y a pas assez de carottes : tant qu'il manque quelqu'un ou des carottes, on entend crier ceux qui sont restés en arrière, l4 renvoie chercher ce qui manque, et la scène revient à la question. Une fois prêts, trois plans possibles, et celui de l3 marche pour une raison ridicule — il endort la bête en lui parlant de l'être et du néant, exactement ce qu'il racontait sur les renards au tout début de l'aventure. La scène paye cette blague. Elle sert aussi de banc d'essai : les 6 types de blocs, les 10 propriétés natives, deux pistes parallèles rejointes par une attente, un diffuseur, un aiguillage, trois des six opérateurs, une sortie et une entrée par personnage, la mémoire du choix du joueur, et deux fils qui remontent."
+				},
+				{
+					"id": "DIALOG-009",
+					"key": "__blueprints__.advance-full-demo.DIALOG-009",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"fr": "Silence dans les rangs. La voilà... la Carotte Suprême. Et ce lièvre géant roupille juste devant. Que personne ne claque des dents.",
+						"en": "Quiet in the ranks. There it is... the Supreme Carrot. And that giant hare is snoozing right in front of it. Nobody's teeth had better chatter.",
+						"ja": "静かにしろ。あれだ……至高のニンジンだ。しかも、あの巨大なウサギは目の前で居眠りをしている。誰もガタガタ震えるんじゃないぞ。",
+						"zh": "保持安静。它就在那儿……至尊胡萝卜。而那只巨型野兔正睡在它面前。谁都不许打冷颤。"
+					},
+					"note": "l4 vient de déboucher du terrier et découvre la Carotte Éternelle, la bête endormie juste devant. Il impose le silence à tout le monde. C'est le bloc de départ : il attend un clic du joueur après 400 ms, puis LANCE TROIS FILS depuis une seule sortie — la caméra, la remarque de l3, et le fil principal.",
+					"props": {
+						"delay": 400,
+						"waitInput": true
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "ACTION-003",
+							"toPort": "in"
+						},
+						{
+							"port": "out",
+							"to": "DIALOG-010",
+							"toPort": "in"
+						},
+						{
+							"port": "out",
+							"to": "DIALOG-011",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "ACTION-003",
+					"key": "__blueprints__.advance-full-demo.ACTION-003",
+					"type": "action",
+					"note": "La caméra glisse sur la bête pendant que les lapins chuchotent, et le sol tremble sous son ronflement. Piste parallèle qui porte DEUX appels moteur dans un seul bloc, et un point d'arrêt de développement pour que le programmeur puisse geler la scène ici.",
+					"props": {
+						"isAsync": true,
+						"delay": 200,
+						"debug": true
+					},
+					"calls": [
+						{
+							"fn": "moveCameraToLabel",
+							"args": {
+								"id": "boss",
+								"duration": 1.5
+							}
+						},
+						{
+							"fn": "shakeCamera",
+							"args": {
+								"intensity": 4,
+								"duration": 0.8
+							}
+						}
+					]
+				},
+				{
+					"id": "DIALOG-010",
+					"key": "__blueprints__.advance-full-demo.DIALOG-010",
+					"type": "dialog",
+					"actors": [
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"fr": "Dilemme métaphysique : s'il rêve de carottes, son sommeil a-t-il plus de valeur nutritive que notre réalité ?",
+						"en": "Metaphysical dilemma: if he dreams of carrots, does his sleep have more nutritional value than our reality?",
+						"ja": "形而上学的なジレンマ：彼がニンジンの夢を見ているなら、彼の睡眠は私たちの現実よりも高い栄養価を持つのだろうか？",
+						"zh": "形而上学的困境：如果它梦见胡萝卜，它的睡眠会比我们的现实更有营养价值吗？"
+					},
+					"note": "l3 philosophe à voix basse, comme d'habitude, sans attendre son tour. Deuxième piste parallèle : elle s'abandonne au bout de 2,5 s et se saute entièrement si l3 n'est pas présent dans la scène de jeu.",
+					"props": {
+						"isAsync": true,
+						"timeout": 2500,
+						"skipIfMissingActor": true
+					}
+				},
+				{
+					"id": "DIALOG-011",
+					"key": "__blueprints__.advance-full-demo.DIALOG-011",
+					"type": "dialog",
+					"actors": [
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+					],
+					"text": {
+						"fr": "{{@l3}}, tais-toi ! Point d'étape avant l'assaut : est-ce que tout le terrier est là, et combien de carottes on a en réserve ?",
+						"en": "{{@l3}}, shut it! Quick check before the assault: is the whole warren here, and how many carrots do we have in reserve?",
+						"ja": "{{@l3}}、静かにしろ！襲撃前の最終確認だ：巣穴の連中は全員揃っているか、それと予備の人参はどれくらいある？",
+						"zh": "{{@l3}}，闭嘴！突袭前的最后确认：所有兔穴的人都在吗，我们还存了多少胡萝卜？"
+					},
+					"note": "l2 coupe court à la philosophie et pose les deux seules questions qui comptent avant d'attaquer : qui est là, et ce qu'on a dans le sac. C'est le point de JOINTURE — il n'avance que quand les deux pistes lancées plus haut sont finies. Son texte cite un compagnon par un jeton, jamais par un nom écrit en dur.",
+					"props": {
+						"delay": 300,
+						"waitForBlocks": [
+							"ACTION-003",
+							"DIALOG-010"
+						]
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "COND-005",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-012",
+					"key": "__blueprints__.advance-full-demo.DIALOG-012",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"fr": "Incroyable. Vous êtes tous restés plantés derrière ? Je suis tout seul face à une boule de poils de trois cents kilos !",
+						"en": "Inbelievable. You all just stood there planted behind? I'm all alone facing a three-hundred-kilo fur ball!",
+						"ja": "信じられない。みんな後ろで突っ立ってたのか？俺一人で３００キロの毛玉を相手にしてるんだぞ！",
+						"zh": "难以置信。你们全都呆立在后面？我一个人面对一个三百公斤重的毛球！"
+					},
+					"note": "Personne n'a suivi : l4 est seul devant la bête et n'entend que ceux qui l'appellent de loin. Sortie « then » du diffuseur — tous les cas étaient vrais, donc les trois manquent en même temps.",
+					"next": [
+						{
+							"port": "out",
+							"to": "DIALOG-013",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-013",
+					"key": "__blueprints__.advance-full-demo.DIALOG-013",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"fr": "Équipe incomplète ou stock insuffisant : c'est le suicide assuré. Demi-tour, on rassemble tout le monde et on réessaie !",
+						"en": "Incomplete team or insufficient supplies: that's pure suicide. Turn back, let's gather everyone and try again!",
+						"ja": "人員不足か物資の不足か、そんな状態で挑むのは自殺行為だ。引き返して全員を召集し、もう一度やり直すぞ！",
+						"zh": "队员不齐或物资不足：这和自杀没两样。撤退，把大家都集结起来，我们重试！"
+					},
+					"note": "l4 renvoie tout le monde chercher ce qui manque plutôt que d'attaquer à moitié. Sortie « catch » du diffuseur — au moins un cas était faux —, et son fil REMONTE vers l'aiguillage : tant que l'équipe est incomplète ou le sac trop léger, on repasse par là."
+				},
+				{
+					"id": "DIALOG-015",
+					"key": "__blueprints__.advance-full-demo.DIALOG-015",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538",
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09",
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"fr": "Hé, m'abandonnez pas ! Mes pattes sont coincées dans un terrier !",
+						"en": "Hey, don't leave me behind! My paws are stuck in a burrow!",
+						"ja": "おい、見捨てないでくれ！穴に足が挟まっちまったんだ！",
+						"zh": "喂，别丢下我！我的爪子卡在洞里了！"
+					},
+					"note": "Celui qui manque crie depuis l'endroit où il est resté en arrière, et il n'est pas forcément seul : le diffuseur lance une piste par absent, donc ces voix peuvent se répondre en même temps. Le bloc porte les trois lapins et une ENTRÉE PAR PERSONNAGE — dans le jeu, chacun entre par sa propre porte et le moteur sait qui crie : un seul texte, une seule traduction, trois voix. Sa bulle se ferme deux secondes après le cri, parce qu'un cri lointain ne s'éternise pas.",
+					"props": {
+						"isAsync": true,
+						"timeout": 2000,
+						"inPortPerCharacter": true
+					}
+				},
+				{
+					"id": "DIALOG-016",
+					"key": "__blueprints__.advance-full-demo.DIALOG-016",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"fr": "Impeccable. Les troupes sont au complet et le sac déborde de carottes. C'est l'heure : quelle stratégie on adopte contre ce monstre ?",
+						"en": "Immaculate. The troops are all present and the bag is overflowing with carrots. It's time: what strategy are we adopting against this monster?",
+						"ja": "完璧だ。部隊の戦力は万全で、袋にはニンジンがぎっしり詰まっている。さあ時間だ。この怪物に対してどんな戦略で行く？",
+						"zh": "太棒了。部队全员到齐，包里也塞满了胡萝卜。时候到了，我们对付这个怪物的策略是什么？"
+					},
+					"note": "l4 constate que l'équipe est au complet et que le sac n'est pas vide, et prend la responsabilité du plan. Sortie du cas vrai de l'aiguillage : c'est le seul chemin vers l'assaut.",
+					"next": [
+						{
+							"port": "out",
+							"to": "CHOICE-003",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "CHOICE-003",
+					"key": "__blueprints__.advance-full-demo.CHOICE-003",
+					"type": "choice",
+					"note": "Le joueur décide comment franchir la bête. Trois options, trois ports — et la scène RETIENDRA la réponse : un aiguillage tout en bas la relira sans qu'aucune variable de jeu n'ait eu à être écrite.",
+					"options": [
+						{
+							"id": "C1",
+							"key": "__blueprints__.advance-full-demo.CHOICE-003.C1",
+							"text": {
+								"fr": "Lancer une carotte pour faire diversion",
+								"en": "Throw a carrot as a diversion",
+								"ja": "ニンジンを投げて気をそらす",
+								"zh": "扔胡萝卜转移注意力"
+							}
+						},
+						{
+							"id": "C2",
+							"key": "__blueprints__.advance-full-demo.CHOICE-003.C2",
+							"text": {
+								"fr": "Charger en hurlant tous ensemble",
+								"en": "Charge all together, screaming",
+								"ja": "全員で雄叫びを上げながら突撃する",
+								"zh": "咆哮着一起冲锋"
+							}
+						},
+						{
+							"id": "C3",
+							"key": "__blueprints__.advance-full-demo.CHOICE-003.C3",
+							"text": {
+								"fr": "Envoyer {{@l3}} lui parler d'existentialisme",
+								"en": "Send {{@l3}} to talk to him about existentialism",
+								"ja": "{{@l3}}に実存主義について話しかけに行く",
+								"zh": "派{{@l3}}去和他谈谈存在主义"
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "C1",
+							"to": "ACTION-004",
+							"toPort": "in"
+						},
+						{
+							"port": "C2",
+							"to": "DIALOG-018",
+							"toPort": "in"
+						},
+						{
+							"port": "C3",
+							"to": "DIALOG-019",
+							"toPort": "in"
+						},
+						{
+							"port": "C2",
+							"to": "ACTION-005",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "ACTION-004",
+					"key": "__blueprints__.advance-full-demo.ACTION-004",
+					"type": "action",
+					"note": "l1 s'avance de quelques pas et lance sa carotte de toutes ses forces ; la bête bouge et le sol tremble. Action à deux appels, moitié mise en place moitié secousse. Elle reçoit aussi le fil de la sortie « l1 » du bloc de charge — deux chemins, une même action.",
+					"props": {
+						"delay": 500
+					},
+					"calls": [
+						{
+							"fn": "moveCharacterAt",
+							"args": {
+								"id": "l1",
+								"x": 200,
+								"y": 0,
+								"absolut": false
+							}
+						},
+						{
+							"fn": "shakeCamera",
+							"args": {
+								"intensity": 6,
+								"duration": 1
+							}
+						}
+					],
+					"next": [
+						{
+							"port": "then",
+							"to": "COND-004",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-018",
+					"key": "__blueprints__.advance-full-demo.DIALOG-018",
+					"type": "dialog",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538",
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09",
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"fr": "POUR L'HONNEUR DU CLAN ET LA VITAMINE A !",
+						"en": "FOR THE HONOR OF THE CLAN AND VITAMIN A!",
+						"ja": "一族の誇りとビタミンAのために！",
+						"zh": "为了家族的荣誉和维生素 A！"
+					},
+					"note": "Les trois se jettent en avant en criant la même chose. SORTIE PAR PERSONNAGE : le bloc a un port par lapin plus un « sinon », donc la suite diffère selon qui a crié — l1 part lancer sa carotte quand même, les deux autres foncent droit devant.",
+					"props": {
+						"isAsync": true,
+						"timeout": 1600
+					}
+				},
+				{
+					"id": "DIALOG-019",
+					"key": "__blueprints__.advance-full-demo.DIALOG-019",
+					"type": "dialog",
+					"actors": [
+						"0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+					],
+					"text": {
+						"fr": "Salutations, colosse. Réfléchis bien : garder un légume que tu ne manges jamais fait-il de toi un protecteur ou un otage de ton propre devoir ?",
+						"en": "Greetings, colossus. Think carefully: does keeping a vegetable you never eat make you a protector, or a hostage to your own duty?",
+						"ja": "挨拶を、巨漢よ。よく考えるのだ。決して食べない野菜をとどめておくことは、お前を保護者にするのか、それともお前自身の義務の人質にするのか？",
+						"zh": "问候，庞然大物。好好想想吧：留着一个你从来不吃的蔬菜，究竟是让你成为了一个保护者，还是成为了你自身职责的人质？"
+					},
+					"note": "l3 pose à la bête exactement le genre de question dont il disait, au début de l'aventure, qu'elle endort les prédateurs par fatigue intellectuelle. Long délai avant qu'il ne commence, et abandon au bout de 4 s si le moteur ne l'a pas laissé finir.",
+					"props": {
+						"delay": 800,
+						"timeout": 4000
+					},
+					"next": [
+						{
+							"port": "out",
+							"to": "COND-004",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "COND-004",
+					"key": "__blueprints__.advance-full-demo.COND-004",
+					"type": "condition",
+					"note": "La bête réagit selon ce qui vient d'être tenté. L'aiguillage relit LA RÉPONSE DU JOUEUR au choix plus haut — la mémoire que le moteur tient tout seul le temps de la scène — et la combine par ET avec la présence de l3. Aucune variable de jeu n'a eu à être écrite pour ça. Un seul cas, donc une sortie et un repli : tout ce qui n'endort pas la bête la réveille.",
+					"props": {
+						"portPerCase": true
+					},
+					"cases": [
+						{
+							"port": "K1",
+							"when": [
+								{
+									"dict": "choice",
+									"entry": "CHOICE-003",
+									"op": "equals",
+									"value": "C3"
+								},
+								{
+									"dict": "party",
+									"entry": "l3",
+									"op": "notEquals",
+									"value": false,
+									"join": "and"
+								}
+							]
+						}
+					],
+					"next": [
+						{
+							"port": "K1",
+							"to": "DIALOG-020",
+							"toPort": "in"
+						},
+						{
+							"port": "default",
+							"to": "DIALOG-021",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-020",
+					"key": "__blueprints__.advance-full-demo.DIALOG-020",
+					"type": "dialog",
+					"actors": [
+						"1cd35781-e3b7-47b3-bc2b-76b1a2424eba"
+					],
+					"text": {
+						"fr": "...otage... devoir... carotte ontologique... zzzzz...",
+						"en": "...hostage... duty... ontological carrot... zzzzz...",
+						"ja": "...人質...義務...存在論的なニンジン...zzzzz...",
+						"zh": "...人质...责任...本体论胡萝卜...呼呼呼……"
+					},
+					"note": "La bête s'endort en essayant de résoudre la question, exactement comme l3 l'avait annoncé pour les renards. Fin de la scène : elle attend un clic du joueur avant de rendre la main au jeu.",
+					"props": {
+						"delay": 1200,
+						"waitInput": true
+					}
+				},
+				{
+					"id": "DIALOG-021",
+					"key": "__blueprints__.advance-full-demo.DIALOG-021",
+					"type": "dialog",
+					"actors": [
+						"1cd35781-e3b7-47b3-bc2b-76b1a2424eba"
+					],
+					"text": {
+						"fr": "GROUAAARGH ! MAUDITS LAPINS, JE VAIS VOUS RÉDUIRE EN COMPOTE !",
+						"en": "GRAAAARGH! CURSED RABBITS, I'M GOING TO MASH YOU TO A PULP!",
+						"ja": "グアアアァァ！　クソウサギども、すり潰してピューレにしてやる！",
+						"zh": "吼——！可恶的兔子，我要把你们做成果酱！"
+					},
+					"note": "La bête se réveille furieuse et tout le monde recule jusqu'à sa place de départ. Son fil REMONTE vers le choix : le joueur reprend la décision, ce qui referme la boucle et prouve qu'un fil peut aller en arrière dans le graphe.",
+					"next": [
+						{
+							"port": "out",
+							"to": "CHOICE-003",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "COND-005",
+					"key": "__blueprints__.advance-full-demo.COND-005",
+					"type": "condition",
+					"note": "l4 compte son monde et ses vivres avant de lancer quoi que ce soit : il ne bouge pas tant que les trois autres ne sont pas revenus ET qu'il n'y a pas au moins trois carottes dans le sac. Un seul cas, donc une sortie et un repli — quatre comparaisons enchaînées par ET, dont une seule porte sur un nombre.",
+					"props": {
+						"portPerCase": true
+					},
+					"cases": [
+						{
+							"port": "K1",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l1",
+									"op": "equals",
+									"value": true
+								},
+								{
+									"dict": "party",
+									"entry": "l2",
+									"op": "equals",
+									"value": true,
+									"join": "and"
+								},
+								{
+									"dict": "party",
+									"entry": "l3",
+									"op": "equals",
+									"value": true,
+									"join": "and"
+								},
+								{
+									"dict": "inventory",
+									"entry": "carrot",
+									"op": "greaterOrEqual",
+									"value": 3,
+									"join": "and"
+								}
+							]
+						}
+					],
+					"next": [
+						{
+							"port": "K1",
+							"to": "DIALOG-016",
+							"toPort": "in"
+						},
+						{
+							"port": "default",
+							"to": "DIALOG-022",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "DIALOG-022",
+					"key": "__blueprints__.advance-full-demo.DIALOG-022",
+					"type": "dialog",
+					"actors": [
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"text": {
+						"fr": "Halte ! On ne défie pas un colosse pareil sans une escouade complète et assez de provisions. Faisons le point.",
+						"en": "Halt! You don't challenge a giant like that without a full squad and enough supplies. Let's take stock.",
+						"ja": "待て！あんな巨人に挑むには、十分な部隊と食料が必要だ。作戦を練り直そう。",
+						"zh": "站住！不带上一整支小队和充足的补给，休想挑战这样庞然的巨物。我们先商量一下对策。"
+					},
+					"note": "l4 refuse de lancer l'assaut tant qu'il manque quelqu'un ou quelque chose. Repli de l'aiguillage : c'est le chemin qu'on prend chaque fois que la partie n'est pas prête.",
+					"next": [
+						{
+							"port": "out",
+							"to": "ROUTER-004",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "ROUTER-004",
+					"key": "__blueprints__.advance-full-demo.ROUTER-004",
+					"type": "router",
+					"note": "Chacun de ceux qui manquent se signale depuis l'endroit où il est resté, tous en même temps, et chaque cas entre par la porte de SON lapin — c'est par où le flux arrive que le moteur sait qui crie. C'est un DIFFUSEUR, pas un aiguillage : il évalue TOUS ses cas, lance une piste par cas vrai, puis sort par « then » si tous l'étaient (plus personne devant la bête) et par « catch » sinon — y compris quand personne ne manque mais que les carottes ne suffisent pas : aucun cas n'est vrai, et on tombe directement en « catch ».",
+					"cases": [
+						{
+							"port": "K1",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l1",
+									"op": "notEquals",
+									"value": true
+								}
+							]
+						},
+						{
+							"port": "K2",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l2",
+									"op": "notEquals",
+									"value": true
+								}
+							]
+						},
+						{
+							"port": "K3",
+							"when": [
+								{
+									"dict": "party",
+									"entry": "l3",
+									"op": "notEquals",
+									"value": true
+								}
+							]
+						}
+					],
+					"next": [
+						{
+							"port": "K1",
+							"to": "DIALOG-015",
+							"toPort": "0d848982-9b5e-4437-b0d7-96a97ae78538"
+						},
+						{
+							"port": "K2",
+							"to": "DIALOG-015",
+							"toPort": "0d9e2f0f-7382-439e-a256-8a29e65bdc09"
+						},
+						{
+							"port": "K3",
+							"to": "DIALOG-015",
+							"toPort": "0f16b34e-f9d5-493f-8bbc-8a2d1418f221"
+						},
+						{
+							"port": "then",
+							"to": "DIALOG-012",
+							"toPort": "in"
+						},
+						{
+							"port": "catch",
+							"to": "DIALOG-013",
+							"toPort": "in"
+						}
+					]
+				},
+				{
+					"id": "ACTION-005",
+					"key": "__blueprints__.advance-full-demo.ACTION-005",
+					"type": "action",
+					"actors": [
+						"0d848982-9b5e-4437-b0d7-96a97ae78538",
+						"0d9e2f0f-7382-439e-a256-8a29e65bdc09",
+						"60383860-3694-4f1e-9ae4-c1b5bdc9d842"
+					],
+					"props": {
+						"timeout": 2000
+					},
+					"calls": [
+						{
+							"fn": "moveCharacterAt",
+							"args": {
+								"id": "l1",
+								"x": 200,
+								"y": 10
+							}
+						},
+						{
+							"fn": "moveCharacterAt",
+							"args": {
+								"id": "l2",
+								"x": 300,
+								"y": -10
+							}
+						},
+						{
+							"fn": "moveCharacterAt",
+							"args": {
+								"x": 400,
+								"y": 5,
+								"id": "l3"
+							}
+						},
+						{
+							"fn": "moveCameraToLabel",
+							"args": {
+								"id": "boss",
+								"duration": 2
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

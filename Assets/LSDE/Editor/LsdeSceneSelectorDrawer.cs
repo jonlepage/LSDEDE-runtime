@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using LSDE.Runtime;
@@ -8,21 +9,32 @@ namespace LSDE.Editor
 {
     /// <summary>
     /// Custom property drawer for <see cref="LsdeSceneSelectorAttribute"/>.
-    /// Displays a dropdown of all scene names from <c>LSDE_SCENES</c> instead of
-    /// a raw UUID text field. The UUID is stored in the string field automatically.
+    /// Shows a dropdown of the payload's scenes instead of a raw id text field, and stores the
+    /// stable scene id in the string field.
     ///
-    /// If the LSDE_SCENES class is not found or has no constants, falls back to
-    /// the default string text field.
+    /// <para>The list comes from the generated ids file — <c>&lt;Project&gt;BlueprintIds.Scenes</c>,
+    /// e.g. <c>LsdedeDemoTsBlueprintIds.Scenes</c> — found by reflection so the drawer keeps
+    /// working when the project is renamed or a second export is added. The field NAME is the
+    /// scene path a writer reads (<c>simpleDialogFlow</c>); the constant's VALUE is the id that
+    /// survives a rename (<c>sc_60ql8la3</c>), which is what gets stored.</para>
+    ///
+    /// If no generated ids class is found, this falls back to a plain text field.
     /// </summary>
     [CustomPropertyDrawer(typeof(LsdeSceneSelectorAttribute))]
     public class LsdeSceneSelectorDrawer : PropertyDrawer
     {
+        /// <summary>Suffix of the generated ids class, e.g. LsdedeDemoTsBlueprintIds.</summary>
+        private const string GeneratedIdsClassSuffix = "BlueprintIds";
+
+        /// <summary>Name of the nested class holding the scenes.</summary>
+        private const string ScenesNestedClassName = "Scenes";
+
         private static readonly List<string> CachedSceneNames = new List<string>();
-        private static readonly List<string> CachedSceneUuids = new List<string>();
+        private static readonly List<string> CachedSceneIds = new List<string>();
         private static bool _isCacheInitialized;
 
         /// <summary>
-        /// Build the scene name/UUID lists from LSDE_SCENES via reflection.
+        /// Build the scene name/id lists from the generated ids class via reflection.
         /// Cached once per domain reload for performance.
         /// </summary>
         private static void EnsureCacheInitialized()
@@ -34,19 +46,19 @@ namespace LSDE.Editor
 
             _isCacheInitialized = true;
             CachedSceneNames.Clear();
-            CachedSceneUuids.Clear();
+            CachedSceneIds.Clear();
 
-            // Add a "None" option at index 0
+            // Index 0 is always "no scene": the field is legitimately empty when something else
+            // (a proximity trigger, the WebGL sidebar) decides which scene to launch.
             CachedSceneNames.Add("(none)");
-            CachedSceneUuids.Add("");
+            CachedSceneIds.Add("");
 
-            // Find LSDE_SCENES class via reflection (it's auto-generated, not in a namespace)
-            var scenesClass = FindTypeByName("LSDE_SCENES");
+            var scenesClass = FindGeneratedScenesClass();
             if (scenesClass == null)
             {
                 Debug.LogWarning(
-                    "[LSDE] LSDE_SCENES class not found. "
-                        + "Make sure BlueprintEnums.cs is in the project."
+                    "[LSDE] No generated ids class found. Make sure the "
+                        + "*.blueprints.ids.cs file exported by LSDE is in the project."
                 );
                 return;
             }
@@ -59,24 +71,53 @@ namespace LSDE.Editor
             {
                 if (field.IsLiteral && field.FieldType == typeof(string))
                 {
-                    var sceneUuid = (string)field.GetRawConstantValue();
                     CachedSceneNames.Add(field.Name);
-                    CachedSceneUuids.Add(sceneUuid);
+                    CachedSceneIds.Add((string)field.GetRawConstantValue());
                 }
             }
         }
 
         /// <summary>
-        /// Search all loaded assemblies for a type by name (LSDE_SCENES has no namespace).
+        /// Find the <c>Scenes</c> class nested in the generated ids class.
+        /// The generated class has no namespace and its name depends on the LSDE project name, so
+        /// we look for any type whose name ends with <c>BlueprintIds</c> and take its nested
+        /// <c>Scenes</c>.
         /// </summary>
-        private static System.Type FindTypeByName(string typeName)
+        private static Type FindGeneratedScenesClass()
         {
-            foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                var foundType = assembly.GetType(typeName);
-                if (foundType != null)
+                Type[] assemblyTypes;
+
+                try
                 {
-                    return foundType;
+                    assemblyTypes = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException)
+                {
+                    // A partially loaded assembly is not where the generated file lives.
+                    continue;
+                }
+
+                foreach (var type in assemblyTypes)
+                {
+                    if (
+                        type.Namespace == null
+                        && type.IsAbstract
+                        && type.IsSealed
+                        && type.Name.EndsWith(GeneratedIdsClassSuffix, StringComparison.Ordinal)
+                    )
+                    {
+                        var nestedScenes = type.GetNestedType(
+                            ScenesNestedClassName,
+                            BindingFlags.Public
+                        );
+
+                        if (nestedScenes != null)
+                        {
+                            return nestedScenes;
+                        }
+                    }
                 }
             }
 
@@ -93,19 +134,21 @@ namespace LSDE.Editor
 
             EnsureCacheInitialized();
 
-            // If no scenes found, fall back to plain text field
+            // No scenes found: fall back to a plain text field rather than an empty dropdown.
             if (CachedSceneNames.Count <= 1)
             {
                 EditorGUI.PropertyField(position, property, label);
                 return;
             }
 
-            // Find current selection index from the stored UUID
-            string currentUuid = property.stringValue;
-            int selectedIndex = CachedSceneUuids.IndexOf(currentUuid);
+            string currentSceneId = property.stringValue;
+            int selectedIndex = CachedSceneIds.IndexOf(currentSceneId);
+
+            // A stored value the current payload does not know — a leftover from another export,
+            // or a v1 uuid. Fall back to "(none)" so the field reads as "nothing picked yet"
+            // rather than showing a scene it will not launch.
             if (selectedIndex < 0)
             {
-                // UUID exists but not in our list — show it as-is with a warning
                 selectedIndex = 0;
             }
 
@@ -120,7 +163,7 @@ namespace LSDE.Editor
 
             if (newSelectedIndex != selectedIndex)
             {
-                property.stringValue = CachedSceneUuids[newSelectedIndex];
+                property.stringValue = CachedSceneIds[newSelectedIndex];
             }
 
             EditorGUI.EndProperty();

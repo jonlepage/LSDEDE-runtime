@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using LSDE.Runtime;
 using LsdeDialogEngine;
@@ -8,10 +9,13 @@ using UnityEngine;
 namespace LSDE.Demo
 {
     /// <summary>
-    /// Phase 1 implementation of <see cref="IDialoguePresenter"/> that outputs
-    /// all dialogue events to the Unity console via Debug.Log.
-    /// This is a plain C# class (not a MonoBehaviour) — it has no Unity lifecycle needs.
-    /// Replace this with a UI-based presenter in Phase 2 for bubble text rendering.
+    /// Implementation of <see cref="IDialoguePresenter"/> that writes every dialogue event to the
+    /// Unity console and advances immediately. A plain C# class — no Unity lifecycle needed.
+    ///
+    /// <para>Useful to read a whole scene's flow in one pass, and as the smallest complete
+    /// integration: it shows what the engine asks of a game and nothing else. It deliberately
+    /// ignores <c>timeout</c>, <c>waitInput</c> and <c>delay</c> — there is nothing to look at, so
+    /// there is nothing to wait for. <see cref="BubbleDialoguePresenter"/> is where those matter.</para>
     /// </summary>
     public class ConsoleDialoguePresenter : IDialoguePresenter
     {
@@ -19,122 +23,139 @@ namespace LSDE.Demo
 
         /// <inheritdoc />
         public void PresentDialogueBlock(
-            DialogBlock dialogBlock,
-            BlockCharacter resolvedCharacter,
+            string presentationKey,
+            BlueprintBlock block,
+            Card resolvedCharacter,
             string localizedText,
             Action advanceToNextBlock
         )
         {
-            var characterName = resolvedCharacter?.Name ?? "???";
-            var characterId = resolvedCharacter?.Id ?? "unknown";
-            var emotion = resolvedCharacter?.Emotion ?? "";
-            var emotionSuffix = string.IsNullOrEmpty(emotion) ? "" : $" [{emotion}]";
+            var speakerName = resolvedCharacter != null ? resolvedCharacter.Name : "———";
+            var speakerId = resolvedCharacter != null ? resolvedCharacter.Id : "nobody";
 
             Debug.Log(
-                $"{LogPrefix} DIALOG  {dialogBlock.Label}\n"
-                    + $"{LogPrefix}   Character: {characterName} ({characterId}){emotionSuffix}\n"
+                $"{LogPrefix} DIALOG  {LsdeUtils.GetBlockLabel(block)}\n"
+                    + $"{LogPrefix}   Speaker: {speakerName} ({speakerId})\n"
                     + $"{LogPrefix}   \"{localizedText ?? "—"}\""
             );
 
-            // Console mode: advance immediately (no player interaction needed)
+            // Console mode: advance at once, no player interaction needed.
             advanceToNextBlock();
         }
 
         /// <inheritdoc />
         public void PresentChoiceBlock(
-            ChoiceBlock choiceBlock,
-            BlockCharacter resolvedCharacter,
-            IReadOnlyList<RuntimeChoiceItem> visibleChoices,
+            string presentationKey,
+            BlueprintBlock block,
+            Card resolvedCharacter,
+            IReadOnlyList<Card> cast,
+            IReadOnlyList<RuntimeChoiceItem> offeredOptions,
             Action<string> selectChoiceAndAdvance
         )
         {
-            var totalChoiceCount = choiceBlock.Choices?.Count ?? 0;
+            var totalOptionCount = block.Options?.Count ?? 0;
             var logBuilder = new StringBuilder();
             logBuilder.AppendLine(
-                $"{LogPrefix} CHOICE  {choiceBlock.Label} — "
-                    + $"{visibleChoices.Count}/{totalChoiceCount} choices visible"
+                $"{LogPrefix} CHOICE  {LsdeUtils.GetBlockLabel(block)} — "
+                    + $"{offeredOptions.Count}/{totalOptionCount} offered"
             );
 
-            for (int choiceIndex = 0; choiceIndex < visibleChoices.Count; choiceIndex++)
+            for (int optionIndex = 0; optionIndex < offeredOptions.Count; optionIndex++)
             {
-                var choice = visibleChoices[choiceIndex];
-                var choiceText = LsdeUtils.GetLocalizedText(choice.DialogueText);
-                var choiceLabel = choice.Label ?? choice.Uuid.Substring(0, 8);
-                var activeMarker = choiceIndex == 0 ? " (auto-selected)" : "";
+                var option = offeredOptions[optionIndex];
+                var optionText = LsdeText.Localized(option.Text);
+                var pickedMarker = optionIndex == 0 ? " (auto-selected)" : "";
 
                 logBuilder.AppendLine(
-                    $"{LogPrefix}   -> {choiceLabel}: \"{choiceText ?? "—"}\"{activeMarker}"
+                    $"{LogPrefix}   -> {option.Id}: \"{optionText ?? "—"}\"{pickedMarker}"
                 );
             }
 
             Debug.Log(logBuilder.ToString().TrimEnd());
 
-            // Console mode: auto-select first visible choice (no player interaction needed)
-            if (visibleChoices.Count > 0)
+            // Console mode: take the first offered option. The id IS the exit port.
+            if (offeredOptions.Count > 0)
             {
-                selectChoiceAndAdvance(visibleChoices[0].Uuid);
+                selectChoiceAndAdvance(offeredOptions[0].Id);
             }
         }
 
         /// <inheritdoc />
         public void PresentConditionBlock(
-            ConditionBlock conditionBlock,
-            IReadOnlyList<RuntimeConditionGroup> conditionGroups,
-            object resolvedResult
+            BlueprintBlock block,
+            IReadOnlyList<RuntimeConditionCase> cases
         )
         {
-            var isDispatcher = conditionBlock.NativeProperties?.EnableDispatcher == true;
-            var modeLabel = isDispatcher ? " [DISPATCHER]" : "";
+            var nativeProperties = LsdeUtils.GetNativeProperties(block);
+            var modeLabel =
+                nativeProperties.PortPerCase == true
+                    ? " [portPerCase: the first true case takes its own port]"
+                    : " [every case must hold → out, else default]";
 
             var logBuilder = new StringBuilder();
             logBuilder.AppendLine(
-                $"{LogPrefix} CONDITION  {conditionBlock.Label} — "
-                    + $"{conditionGroups.Count} groups{modeLabel}"
+                $"{LogPrefix} CONDITION  {LsdeUtils.GetBlockLabel(block)} — "
+                    + $"{cases.Count} case(s){modeLabel}"
             );
 
-            for (int groupIndex = 0; groupIndex < conditionGroups.Count; groupIndex++)
-            {
-                var group = conditionGroups[groupIndex];
-                foreach (var condition in group.Conditions)
-                {
-                    logBuilder.AppendLine(
-                        $"{LogPrefix}   [case {groupIndex}] port:{group.PortIndex} "
-                            + $"key:{condition.Key} {condition.Operator} {condition.Value} "
-                            + $"-> {group.Result}"
-                    );
-                }
-            }
+            AppendCases(logBuilder, cases);
 
-            logBuilder.Append($"{LogPrefix}   Result: {resolvedResult}");
+            Debug.Log(logBuilder.ToString().TrimEnd());
+        }
+
+        /// <inheritdoc />
+        public void PresentRouterBlock(
+            BlueprintBlock block,
+            IReadOnlyList<RuntimeConditionCase> cases,
+            IReadOnlyList<string> launchedPorts
+        )
+        {
+            var logBuilder = new StringBuilder();
+            logBuilder.AppendLine(
+                $"{LogPrefix} ROUTER  {LsdeUtils.GetBlockLabel(block)} — "
+                    + $"{cases.Count} case(s), all evaluated"
+            );
+
+            AppendCases(logBuilder, cases);
+
+            logBuilder.Append(
+                $"{LogPrefix}   launching: {string.Join(" → ", launchedPorts)} "
+                    + "(continuation last)"
+            );
+
             Debug.Log(logBuilder.ToString());
         }
 
         /// <inheritdoc />
         public void PresentActionBlock(
-            ActionBlock actionBlock,
+            string presentationKey,
+            BlueprintBlock block,
+            IReadOnlyList<ActionCall> calls,
             Action resolveAndAdvance,
             Action<object> rejectAndAdvance
         )
         {
-            var actions = actionBlock.Actions;
             var logBuilder = new StringBuilder();
             logBuilder.AppendLine(
-                $"{LogPrefix} ACTION  {actionBlock.Label} — {actions?.Count ?? 0} actions"
+                $"{LogPrefix} ACTION  {LsdeUtils.GetBlockLabel(block)} — {calls?.Count ?? 0} call(s)"
             );
 
-            if (actions != null)
+            if (calls != null)
             {
-                foreach (var action in actions)
+                foreach (var call in calls)
                 {
-                    var parameters = string.Join(", ", action.Params);
-                    logBuilder.AppendLine($"{LogPrefix}   -> {action.ActionId}({parameters})");
+                    var functionName = string.IsNullOrEmpty(call.Fn)
+                        ? "«no function picked»"
+                        : call.Fn;
+                    logBuilder.AppendLine(
+                        $"{LogPrefix}   -> {functionName}({LsdeActionArgs.Describe(call.Args)})"
+                    );
                 }
             }
 
             Debug.Log(logBuilder.ToString().TrimEnd());
 
-            // Console mode: resolve and advance immediately (no execution needed).
-            // Same pattern as PresentDialogueBlock which calls advanceToNextBlock() immediately.
+            // Console mode: nothing runs, so nothing can fail.
             resolveAndAdvance();
         }
 
@@ -151,19 +172,58 @@ namespace LSDE.Demo
         }
 
         /// <inheritdoc />
-        public void PresentBeforeBlock(BlueprintBlock block)
+        public void PresentBeforeBlock(BlueprintBlock block, NativeProperties nativeProperties)
         {
-            var delay = block.NativeProperties?.Delay;
-            if (delay.HasValue)
+            if (nativeProperties == null)
+            {
+                return;
+            }
+
+            var notes = new List<string>();
+            if (nativeProperties.Delay.HasValue)
+            {
+                notes.Add($"delay={nativeProperties.Delay.Value}ms");
+            }
+            if (nativeProperties.Timeout.HasValue)
+            {
+                notes.Add($"timeout={nativeProperties.Timeout.Value}ms");
+            }
+            if (nativeProperties.WaitInput == true)
+            {
+                notes.Add("waitInput");
+            }
+            if (nativeProperties.IsAsync == true)
+            {
+                notes.Add("isAsync");
+            }
+            if (nativeProperties.WaitForBlocks != null && nativeProperties.WaitForBlocks.Count > 0)
+            {
+                notes.Add($"waitForBlocks=[{string.Join(", ", nativeProperties.WaitForBlocks)}]");
+            }
+            if (nativeProperties.InPortPerCharacter == true)
+            {
+                notes.Add("inPortPerCharacter");
+            }
+            if (nativeProperties.PortPerCharacter == true)
+            {
+                notes.Add("portPerCharacter");
+            }
+            if (nativeProperties.SkipIfMissingActor == true)
+            {
+                notes.Add("skipIfMissingActor");
+            }
+
+            if (notes.Count > 0)
             {
                 Debug.Log(
-                    $"{LogPrefix}   before: {LsdeUtils.GetBlockLabel(block)} delay={delay.Value}s"
+                    $"{LogPrefix}   before: {LsdeUtils.GetBlockLabel(block)} "
+                        + $"[{string.Join(", ", notes)}]"
                 );
             }
         }
 
         /// <inheritdoc />
-        public void PresentBlockCleanup(BlueprintBlock block)
+        public void PresentBlockCleanup(string presentationKey, BlueprintBlock block)
         {
             Debug.Log($"{LogPrefix}   cleanup: {LsdeUtils.GetBlockLabel(block)}");
         }
@@ -174,19 +234,45 @@ namespace LSDE.Demo
             IReadOnlyDictionary<string, IReadOnlyList<string>> choiceHistory
         )
         {
-            var visitedList = string.Join(", ", visitedBlockLabels);
-            Debug.Log($"{LogPrefix} Visited: {visitedList}");
+            Debug.Log($"{LogPrefix} Visited: {string.Join(", ", visitedBlockLabels)}");
 
             if (choiceHistory.Count > 0)
             {
                 var historyBuilder = new StringBuilder();
-                historyBuilder.AppendLine($"{LogPrefix} Choice History:");
+                historyBuilder.AppendLine($"{LogPrefix} Choice history:");
                 foreach (var entry in choiceHistory)
                 {
-                    var selectedChoices = string.Join(", ", entry.Value);
-                    historyBuilder.AppendLine($"{LogPrefix}   {entry.Key} -> [{selectedChoices}]");
+                    historyBuilder.AppendLine(
+                        $"{LogPrefix}   {entry.Key} -> [{string.Join(", ", entry.Value)}]"
+                    );
                 }
                 Debug.Log(historyBuilder.ToString().TrimEnd());
+            }
+        }
+
+        /// <summary>
+        /// Append one line per test of every case, with the pre-evaluated result.
+        /// </summary>
+        private static void AppendCases(
+            StringBuilder logBuilder,
+            IReadOnlyList<RuntimeConditionCase> cases
+        )
+        {
+            foreach (var conditionCase in cases)
+            {
+                var tests =
+                    conditionCase.When != null && conditionCase.When.Count > 0
+                        ? string.Join(
+                            " ",
+                            conditionCase.When.Select(test =>
+                                $"{test.Join ?? ""} {test.Dict}.{test.Entry} {test.Op} {test.Value}".Trim()
+                            )
+                        )
+                        : "(no test — always true)";
+
+                logBuilder.AppendLine(
+                    $"{LogPrefix}   [{conditionCase.Port}] {tests} -> {conditionCase.Result}"
+                );
             }
         }
     }

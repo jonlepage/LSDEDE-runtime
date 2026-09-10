@@ -1,24 +1,31 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace LSDE.Demo
 {
     /// <summary>
-    /// Marks a GameObject in the scene as a dialogue character and links it to
-    /// an LSDE character ID from <see cref="lsdeCharacter"/>.
-    /// Attach this to each character prefab instance in the scene and fill in the
-    /// character ID in the Inspector (e.g. "l1", "l4", "boss").
+    /// Marks a GameObject in the scene as a dialogue character and links it to an LSDE card.
+    /// Attach this to each character prefab instance in the scene and fill in the character
+    /// name in the Inspector (e.g. "l1", "l4", "boss").
+    ///
+    /// <para>The value is the card's <b>Name</b> — what the writer typed in LSDE — not its uuid.
+    /// That is the identity the rest of the payload speaks: the <c>party</c> dictionary asks about
+    /// <c>party.l1</c>, and <c>moveCharacterAt</c> is called with <c>id: "l1"</c>. Rename a card
+    /// in LSDE and this field has to follow.</para>
     ///
     /// The <see cref="DialogueCharacterRegistry"/> discovers these markers at startup
     /// to build the character-to-GameObject mapping.
     /// </summary>
     public class DialogueCharacterMarker : MonoBehaviour
     {
+        [FormerlySerializedAs("_lsdeCharacterId")]
         [SerializeField]
         [Tooltip(
-            "The LSDE character ID this GameObject represents. "
-                + "Must match a value from lsdeCharacter (e.g. l1, l2, l3, l4, boss)."
+            "The LSDE card NAME this GameObject represents — l1, l2, l3, l4, boss. "
+                + "It must match the card name in the blueprint, which is also the key the "
+                + "party dictionary and the moveCharacterAt calls use."
         )]
-        private string _lsdeCharacterId;
+        private string _lsdeCharacterName;
 
         [SerializeField]
         [Tooltip(
@@ -36,10 +43,10 @@ namespace LSDE.Demo
         private Transform _cameraAnchorPoint;
 
         /// <summary>
-        /// The LSDE character ID this marker represents (e.g. "l1", "boss").
-        /// Corresponds to constants in <see cref="lsdeCharacter"/>.
+        /// The LSDE card name this marker represents (e.g. "l1", "boss") — the value
+        /// <c>Card.Name</c> carries, and the key the <c>party</c> dictionary uses.
         /// </summary>
-        public string LsdeCharacterId => _lsdeCharacterId;
+        public string LsdeCharacterName => _lsdeCharacterName;
 
         /// <summary>
         /// The world-space Transform where speech bubbles should be positioned.

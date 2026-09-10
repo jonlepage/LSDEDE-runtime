@@ -14,7 +14,8 @@ namespace LSDE.Runtime
     /// private string _sceneUuidToLaunch;
     /// </code>
     ///
-    /// The dropdown reads all public const string fields from <c>LSDE_SCENES</c>
+    /// The dropdown reads all public const string fields from the generated
+    /// <c>&lt;Project&gt;BlueprintIds.Scenes</c> class
     /// and displays them as selectable options.
     /// </summary>
     public class LsdeSceneSelectorAttribute : PropertyAttribute { }

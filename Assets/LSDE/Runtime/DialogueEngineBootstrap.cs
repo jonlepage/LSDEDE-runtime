@@ -12,12 +12,16 @@ namespace LSDE.Runtime
     ///
     /// Dependencies (IDialoguePresenter, ICharacterResolver, IConditionResolver) must be
     /// set before calling <see cref="InitializeEngine"/>. The demo trigger handles this wiring.
+    ///
+    /// <para>Engine <b>2.x</b> reads <c>lsde-blueprints</c> version 1, the format LSDE 2.x
+    /// exports. A project still on LSDE 1.6 stays on engine 0.3.x — the two formats share no
+    /// field, so there is no dual reader and no fallback.</para>
     /// </summary>
     public class DialogueEngineBootstrap : MonoBehaviour
     {
         [SerializeField]
         [Tooltip(
-            "Drag blueprint.json here from Assets/LSDE/blueprints/. "
+            "Drag the .blueprints.json here from Assets/LSDEv2/blueprints/. "
                 + "This TextAsset is parsed into the engine's BlueprintExport data structure."
         )]
         private TextAsset _blueprintTextAsset;
@@ -32,7 +36,8 @@ namespace LSDE.Runtime
         public DialogueEngine Engine => _dialogueEngine;
 
         /// <summary>
-        /// The parsed blueprint data. Useful for UUID-to-label mapping when logging visited blocks.
+        /// The parsed blueprint data. Useful for id-to-label mapping when logging visited blocks,
+        /// and to find the ROUTER blocks of a scene before starting it.
         /// </summary>
         public BlueprintExport BlueprintData => _blueprintExport;
 
@@ -49,13 +54,13 @@ namespace LSDE.Runtime
         public IDialoguePresenter DialoguePresenter { get; set; }
 
         /// <summary>
-        /// The resolver that determines which character is authorized at runtime.
+        /// The resolver that determines which actor carries a block at runtime.
         /// Must be set before calling <see cref="InitializeEngine"/>.
         /// </summary>
         public ICharacterResolver CharacterResolver { get; set; }
 
         /// <summary>
-        /// The resolver that evaluates game-state conditions (inventory, flags, variables).
+        /// The resolver that evaluates game-state conditions (inventory, party, variables).
         /// Must be set before calling <see cref="InitializeEngine"/>.
         /// </summary>
         public IConditionResolver ConditionResolver { get; set; }
@@ -69,7 +74,8 @@ namespace LSDE.Runtime
         {
             ValidateDependencies();
 
-            // Step 1: Parse blueprint JSON via the safe polymorphic deserializer
+            // Step 1: Parse the payload. camelCase JSON only — the keys of Text, Props and Args
+            // are the game's own data and renaming them would corrupt the three bags.
             _blueprintExport = BlueprintLoader.Parse(_blueprintTextAsset);
 
             // Step 2: Create and initialize the engine
@@ -86,13 +92,20 @@ namespace LSDE.Runtime
                 return;
             }
 
-            // Step 3: Set locale for text resolution
-            _dialogueEngine.SetLocale("fr");
+            // Step 3: locale and text policy.
+            // The engine picks a locale and stops there: what to show when a translation
+            // is MISSING, and what `{{@l3}}` means, are game decisions — they live in
+            // LsdeText, which needs the payload header and the cards.
+            LsdeText.UseBlueprint(_dialogueEngine, _blueprintExport);
+            LsdeText.SetCurrentLanguage("fr");
 
             // Step 4: Register resolvers (game-state callbacks)
             RegisterResolvers();
 
-            // Step 5: Register the 4 mandatory block handlers
+            // Step 5: Register the block handlers.
+            // FOUR types have a handler: dialog, choice, condition, action. The fifth dispatched
+            // type, ROUTER, has none and needs none — the engine reads its cases, launches the
+            // true ones and continues on its own. NOTE blocks are never dispatched at all.
             RegisterBlockHandlers();
 
             // Step 6: Register optional lifecycle handlers
@@ -106,8 +119,8 @@ namespace LSDE.Runtime
             if (_blueprintTextAsset == null)
             {
                 throw new InvalidOperationException(
-                    "Blueprint TextAsset is not assigned. "
-                        + "Drag blueprint.json onto the DialogueEngineBootstrap component in the Inspector."
+                    "Blueprint TextAsset is not assigned. Drag the .blueprints.json onto the "
+                        + "DialogueEngineBootstrap component in the Inspector."
                 );
             }
 
@@ -135,13 +148,16 @@ namespace LSDE.Runtime
 
         private void RegisterResolvers()
         {
+            // The engine hands over the whole CAST and keeps whatever comes back. It does not
+            // elect a first one — the order of `actors` carries no meaning in LSDE.
             _dialogueEngine.OnResolveCharacter(availableCharacters =>
                 CharacterResolver.ResolveCharacter(availableCharacters)
             );
 
-            _dialogueEngine.OnResolveCondition(condition =>
-                ConditionResolver.EvaluateCondition(condition)
-            );
+            // ONE evaluator, used for two things: tagging option visibility before a CHOICE, and
+            // pre-evaluating the cases of a CONDITION or a ROUTER. Tests on the reserved `choice`
+            // dictionary never reach it — the engine answers those from its own history.
+            _dialogueEngine.OnResolveCondition(test => ConditionResolver.EvaluateCondition(test));
         }
 
         private void RegisterBlockHandlers()
@@ -158,24 +174,28 @@ namespace LSDE.Runtime
         }
 
         /// <summary>
-        /// Conversion factor from blueprint delay values (milliseconds) to seconds.
-        /// Blueprint JSON stores durations in milliseconds (e.g. 1000 for 1 second).
-        /// Unity's WaitForSeconds expects seconds.
+        /// Conversion factor from blueprint durations (MILLISECONDS in v2) to seconds.
+        /// They were seconds in v1 and nothing in a payload reports the change: a v1 timer copied
+        /// across runs a thousand times too short.
         /// </summary>
         private const double MillisecondsToSeconds = 1000.0;
 
         private void RegisterLifecycleHandlers()
         {
             // OnBeforeBlock: MUST call Resolve() or the flow blocks permanently.
-            // Resolve is a property on BeforeBlockArgs (not on Context).
-            // If the block has a delay (NativeProperties.Delay), we wait that duration
-            // before resolving — this defers the block's execution as intended by the
-            // narrative designer. The engine does NOT enforce delay automatically.
+            // The native properties arrive on the CONTEXT — the engine has already read them out
+            // of block.Props, where they sit next to the writer's own properties.
+            //
+            // `delay` is the MILLISECONDS to wait BEFORE the block runs, and the engine enforces
+            // none of it: no timers, no game loop. Deferring here is what the writer is owed when
+            // they fill the field.
             _dialogueEngine.OnBeforeBlock(arguments =>
             {
-                DialoguePresenter.PresentBeforeBlock(arguments.Block);
+                var nativeProperties = arguments.Context.NativeProperties ?? new NativeProperties();
 
-                var delayMilliseconds = arguments.Block.NativeProperties?.Delay;
+                DialoguePresenter.PresentBeforeBlock(arguments.Block, nativeProperties);
+
+                var delayMilliseconds = nativeProperties.Delay;
                 if (delayMilliseconds.HasValue && delayMilliseconds.Value > 0)
                 {
                     var delayInSeconds = (float)(delayMilliseconds.Value / MillisecondsToSeconds);
@@ -197,9 +217,19 @@ namespace LSDE.Runtime
                 DialoguePresenter.PresentSceneExit();
             });
 
+            // The gate. It runs before every block and can refuse it — but refusing is a DEAD END:
+            // the track that was entering the block ends there, and the block is neither marked
+            // visited nor marked finished.
+            //
+            // That last part is the trap. A block listed in someone else's `waitForBlocks` only
+            // releases the join once the flow has LEFT it, so refusing such a block hangs the
+            // waiting branch for good. In this payload DIALOG-011 waits on DIALOG-010, and
+            // DIALOG-010 carries `skipIfMissingActor` — so "skip when the actor is absent" is
+            // implemented in the presenter, which advances through the block without drawing a
+            // bubble. Skipping is not refusing.
             _dialogueEngine.OnValidateNextBlock(arguments =>
             {
-                return new ValidationResult { Valid = true };
+                return ValidationResult.Ok();
             });
 
             _dialogueEngine.OnInvalidateBlock(arguments =>
@@ -211,8 +241,7 @@ namespace LSDE.Runtime
 
         /// <summary>
         /// Coroutine that waits for the specified delay then calls the resolve callback.
-        /// Used by OnBeforeBlock to defer block execution when a delay is specified
-        /// in the block's <see cref="NativeProperties.Delay"/>.
+        /// Used by OnBeforeBlock to defer block execution when a <c>delay</c> is specified.
         /// </summary>
         /// <param name="delayInSeconds">How long to wait before resolving.</param>
         /// <param name="resolve">The resolve callback that unblocks the engine flow.</param>
@@ -242,7 +271,7 @@ namespace LSDE.Runtime
                 $"[LSDE] Stats — "
                     + $"scenes: {report.Stats.SceneCount}, "
                     + $"blocks: {report.Stats.BlockCount}, "
-                    + $"connections: {report.Stats.ConnectionCount}"
+                    + $"wires: {report.Stats.ConnectionCount}"
             );
         }
     }

@@ -8,109 +8,168 @@ namespace LSDE.Runtime
     /// Abstraction layer between LSDEDE runtime handlers and the game's rendering system.
     /// Handlers delegate all presentation and flow control to this interface — they never
     /// render or call Next() directly. The presenter decides when to advance the dialogue
-    /// (immediately for console mode, on player click for visual mode).
+    /// (immediately for console mode, on player click or timeout for visual mode).
     /// This pattern matches the official LSDEDE handler design where Next is deferred.
+    ///
+    /// <para><b>Presentation keys.</b> Every call carries a <c>presentationKey</c> instead of a
+    /// block id. A block can be on screen MORE THAN ONCE at the same time: with
+    /// <c>inPortPerCharacter</c>, several wires reach one block and each stands for a different
+    /// actor, so the engine dispatches it once per wire, in parallel. The key identifies one
+    /// presentation — one bubble — and is the same string in
+    /// <see cref="PresentDialogueBlock"/> and in the matching <see cref="PresentBlockCleanup"/>.
+    /// Build it with <see cref="LsdePresentationKey.For"/>; never key visuals by block id alone.</para>
     /// </summary>
     public interface IDialoguePresenter
     {
         /// <summary>
         /// Present a DIALOG block — display character dialogue text.
         /// The presenter is responsible for calling <paramref name="advanceToNextBlock"/>
-        /// when it is ready to advance (e.g. immediately for console, on player click for UI).
+        /// when it is ready to advance.
+        ///
+        /// <para>Three native properties say WHEN to advance, and the presenter owns all three —
+        /// the engine enforces none of them. Read them with
+        /// <c>LsdeUtils.GetNativeProperties( block )</c>:</para>
+        /// <list type="bullet">
+        ///   <item><c>Timeout</c> — MILLISECONDS the block STAYS once its line has been SAID.
+        ///     The countdown is armed at the END of the reveal, never on arrival, or a line
+        ///     slower to type than the timeout allows gets cut mid-sentence. It outranks
+        ///     <c>WaitInput</c> and outranks leaving at once, so a click may only HURRY the
+        ///     reveal, never dismiss the bubble.</item>
+        ///   <item><c>WaitInput</c> — wait for the player instead of leaving on its own.</item>
+        ///   <item><c>IsAsync</c> — read by the ENGINE on the wire, not here. It only tells the
+        ///     presenter that this bubble coexists with others.</item>
+        /// </list>
         /// </summary>
-        /// <param name="dialogBlock">The dialog block being executed.</param>
-        /// <param name="resolvedCharacter">The character resolved by the game (may be null if unavailable).</param>
+        /// <param name="presentationKey">
+        /// Identifies this one presentation of the block. Use it as the key of any per-bubble
+        /// state; the same value comes back in <see cref="PresentBlockCleanup"/>.
+        /// </param>
+        /// <param name="block">The dialog block being executed.</param>
+        /// <param name="resolvedCharacter">
+        /// The actor the game picked through <c>OnResolveCharacter</c>, or null when nobody could
+        /// carry the line. With <c>inPortPerCharacter</c> the engine offered only the actor the
+        /// wire named, so this is the speaker that path stands for.
+        /// </param>
         /// <param name="localizedText">The dialogue text in the current locale.</param>
-        /// <param name="advanceToNextBlock">Callback to advance the engine to the next block. Must be called exactly once.</param>
+        /// <param name="advanceToNextBlock">Callback to advance the engine. Must be called exactly once.</param>
         void PresentDialogueBlock(
-            DialogBlock dialogBlock,
-            BlockCharacter resolvedCharacter,
+            string presentationKey,
+            BlueprintBlock block,
+            Card resolvedCharacter,
             string localizedText,
             Action advanceToNextBlock
         );
 
         /// <summary>
-        /// Present a CHOICE block — display available choices for the player.
-        /// The presenter calls <paramref name="selectChoiceAndAdvance"/> with the chosen UUID
-        /// when the player makes a selection. This encapsulates both SelectChoice and Next.
+        /// Present a CHOICE block — display the answers for the player.
+        /// The presenter calls <paramref name="selectChoiceAndAdvance"/> with the chosen option id
+        /// when the player decides. That id IS the exit port the flow leaves by.
         /// </summary>
-        /// <param name="choiceBlock">The choice block being executed.</param>
-        /// <param name="resolvedCharacter">
-        /// The character resolved by the engine at runtime (from <c>context.Character</c>).
-        /// Used as the primary source to determine which character presents the choices.
-        /// May be null if the engine could not resolve a character.
+        /// <param name="presentationKey">Identifies this one presentation of the block.</param>
+        /// <param name="block">The choice block being executed.</param>
+        /// <param name="resolvedCharacter">The actor the game picked, or null.</param>
+        /// <param name="cast">
+        /// Every card the block cites, resolved. Used as a fallback when no single actor was
+        /// picked — a choice still has to appear somewhere.
         /// </param>
-        /// <param name="visibleChoices">Choices filtered by visibility (Visible != false).</param>
-        /// <param name="selectChoiceAndAdvance">Callback that selects a choice by UUID and advances the engine. Must be called exactly once.</param>
+        /// <param name="offeredOptions">
+        /// The options to show: those whose <c>Visible</c> is not false. The engine hands over ALL
+        /// of them tagged, so keeping the hidden ones to grey them out is equally valid.
+        /// </param>
+        /// <param name="selectChoiceAndAdvance">
+        /// Callback that selects an option BY ITS ID and advances the engine. Exactly once.
+        /// </param>
         void PresentChoiceBlock(
-            ChoiceBlock choiceBlock,
-            BlockCharacter resolvedCharacter,
-            IReadOnlyList<RuntimeChoiceItem> visibleChoices,
+            string presentationKey,
+            BlueprintBlock block,
+            Card resolvedCharacter,
+            IReadOnlyList<Card> cast,
+            IReadOnlyList<RuntimeChoiceItem> offeredOptions,
             Action<string> selectChoiceAndAdvance
         );
 
         /// <summary>
-        /// Present a CONDITION block — display condition evaluation results.
+        /// Present a CONDITION block — invisible routing, useful to log.
+        /// The engine has already picked the exit port from these pre-evaluated cases; the handler
+        /// is a logging or override hook, nothing more.
         /// </summary>
-        /// <param name="conditionBlock">The condition block being executed.</param>
-        /// <param name="conditionGroups">All condition groups with pre-evaluated results.</param>
-        /// <param name="resolvedResult">The resolved routing result (int for switch, List&lt;int&gt; for dispatcher).</param>
-        void PresentConditionBlock(
-            ConditionBlock conditionBlock,
-            IReadOnlyList<RuntimeConditionGroup> conditionGroups,
-            object resolvedResult
+        /// <param name="block">The condition block being executed.</param>
+        /// <param name="cases">The block's cases, each with its port and its pre-evaluated Result.</param>
+        void PresentConditionBlock(BlueprintBlock block, IReadOnlyList<RuntimeConditionCase> cases);
+
+        /// <summary>
+        /// Present a ROUTER block — the sixth block type, and the one with NO handler of its own.
+        ///
+        /// <para>A router carries the same <c>cases</c> as a condition and reads them the opposite
+        /// way: EVERY case is evaluated, each true one launches its own port, and the flow then
+        /// always continues — by <c>then</c> when they all held, by <c>catch</c> when any did not.
+        /// All of that happens before a handler could speak, which is why the engine requires
+        /// none. A game that wants to WATCH one goes through <c>handle.OnBlock( id )</c> — see
+        /// <see cref="RouterBlockObserver"/>. There is nothing to resolve and nothing to override.</para>
+        /// </summary>
+        /// <param name="block">The router block being traversed.</param>
+        /// <param name="cases">Every case, with its port and its pre-evaluated Result. ALL of them ran.</param>
+        /// <param name="launchedPorts">The ports the router is launching, continuation last.</param>
+        void PresentRouterBlock(
+            BlueprintBlock block,
+            IReadOnlyList<RuntimeConditionCase> cases,
+            IReadOnlyList<string> launchedPorts
         );
 
         /// <summary>
-        /// Present an ACTION block — execute game actions and control flow via callbacks.
-        /// The presenter is responsible for executing all actions in the block (in parallel),
-        /// then calling <paramref name="resolveAndAdvance"/> on success or
-        /// <paramref name="rejectAndAdvance"/> on failure.
-        /// This mirrors the DIALOG/CHOICE pattern where the presenter controls when to advance.
+        /// Present an ACTION block — execute the game calls and control flow via callbacks.
+        /// The presenter runs every call (in parallel), then calls
+        /// <paramref name="resolveAndAdvance"/> on success or <paramref name="rejectAndAdvance"/>
+        /// on failure.
         /// </summary>
-        /// <param name="actionBlock">The action block being executed.</param>
-        /// <param name="resolveAndAdvance">
-        /// Callback that resolves the action (success, follows the "then" port) and advances
-        /// the engine to the next block. Must be called exactly once on the success path.
+        /// <param name="presentationKey">Identifies this one presentation of the block.</param>
+        /// <param name="block">The action block being executed.</param>
+        /// <param name="calls">
+        /// What the block asks the game to run, in order, with their arguments BY NAME.
+        /// An argument the writer left empty is simply absent from the bag.
         /// </param>
+        /// <param name="resolveAndAdvance">Success: the flow leaves by "then". Exactly once.</param>
         /// <param name="rejectAndAdvance">
-        /// Callback that rejects the action (failure, follows the "catch" port) and advances
-        /// the engine. Must be called exactly once on the failure path. Pass the error/exception.
+        /// Failure: the flow leaves by "catch", or by "then" when no error branch was drawn.
+        /// The error is optional and the engine does nothing with it.
         /// </param>
         void PresentActionBlock(
-            ActionBlock actionBlock,
+            string presentationKey,
+            BlueprintBlock block,
+            IReadOnlyList<ActionCall> calls,
             Action resolveAndAdvance,
             Action<object> rejectAndAdvance
         );
 
-        /// <summary>
-        /// Called when a scene starts executing.
-        /// </summary>
+        /// <summary>Called when a scene starts executing.</summary>
         /// <param name="sceneHandle">The scene handle that just started.</param>
         void PresentSceneEnter(ISceneHandle sceneHandle);
 
-        /// <summary>
-        /// Called when a scene finishes executing.
-        /// </summary>
+        /// <summary>Called when a scene finishes executing.</summary>
         void PresentSceneExit();
 
         /// <summary>
-        /// Called before each block is executed (from OnBeforeBlock handler).
+        /// Called before each block is executed (from OnBeforeBlock).
         /// </summary>
         /// <param name="block">The block about to be executed.</param>
-        void PresentBeforeBlock(BlueprintBlock block);
+        /// <param name="nativeProperties">
+        /// The block's native properties, already read out of <c>block.Props</c> by the engine.
+        /// </param>
+        void PresentBeforeBlock(BlueprintBlock block, NativeProperties nativeProperties);
 
         /// <summary>
-        /// Called when a block's cleanup function fires (engine moves to next block).
+        /// Called when a block's cleanup function fires — the engine has LEFT the block, which is
+        /// also what marks it finished for a <c>waitForBlocks</c> elsewhere.
         /// </summary>
+        /// <param name="presentationKey">The key given to the matching Present* call.</param>
         /// <param name="block">The block being cleaned up.</param>
-        void PresentBlockCleanup(BlueprintBlock block);
+        void PresentBlockCleanup(string presentationKey, BlueprintBlock block);
 
         /// <summary>
-        /// Called when a scene completes — display visited blocks and choice history summary.
+        /// Called when a scene completes — display visited blocks and choice history.
         /// </summary>
-        /// <param name="visitedBlockLabels">Ordered list of visited block labels.</param>
-        /// <param name="choiceHistory">Map of choice block UUID to selected choice UUIDs.</param>
+        /// <param name="visitedBlockLabels">Labels of the blocks the flow reached.</param>
+        /// <param name="choiceHistory">Map of CHOICE block id to the option ids the player picked.</param>
         void PresentSceneComplete(
             IReadOnlyList<string> visitedBlockLabels,
             IReadOnlyDictionary<string, IReadOnlyList<string>> choiceHistory

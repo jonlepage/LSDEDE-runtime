@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LsdeDialogEngine.Newtonsoft</name>
+    </assembly>
+    <members>
+        <member name="T:LsdeDialogEngine.Newtonsoft.LsdeJson">
+            <summary>
+            JSON loader for LSDE blueprints using Newtonsoft.Json.
+            Recommended for Unity projects (com.unity.nuget.newtonsoft-json).
+            <para>The polymorphic block converter is gone: v2 has ONE Block whose optional fields depend
+            on its Type, so there is nothing left to dispatch on while reading. That is also why the
+            engine reads camelCase JSON only — the naming policy below already does the conversion, and
+            renaming keys inside the payload would corrupt the three bags whose KEYS are the game's own
+            data: Text, Props and Args.</para>
+            </summary>
+        </member>
+        <member name="P:LsdeDialogEngine.Newtonsoft.LsdeJson.Settings">
+            <summary>Pre-configured settings with camelCase naming.</summary>
+        </member>
+        <member name="M:LsdeDialogEngine.Newtonsoft.LsdeJson.Parse(System.String)">
+            <summary>Parse a JSON string into a BlueprintExport.</summary>
+        </member>
+    </members>
+</doc>
