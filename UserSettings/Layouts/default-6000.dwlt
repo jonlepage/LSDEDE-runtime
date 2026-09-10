@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_PixelRect:
     serializedVersion: 2
-    x: 833.1429
+    x: 0
     y: -1037
     width: 1920
     height: 1037
@@ -297,7 +297,7 @@ MonoBehaviour:
   m_MaxSize: {x: 4000, y: 4000}
   m_TitleContent:
     m_Text: Project Settings
-    m_Image: {fileID: 866346219090771560, guid: 0000000000000000d000000000000000, type: 0}
+    m_Image: {fileID: -5712115415447495865, guid: 0000000000000000d000000000000000, type: 0}
     m_Tooltip: 
     m_TextWithWhitespace: "Project Settings\u200B"
   m_Pos:
@@ -363,7 +363,7 @@ MonoBehaviour:
   m_MaxSize: {x: 4000, y: 4000}
   m_TitleContent:
     m_Text: Console
-    m_Image: {fileID: -4950941429401207979, guid: 0000000000000000d000000000000000, type: 0}
+    m_Image: {fileID: -4327648978806127646, guid: 0000000000000000d000000000000000, type: 0}
     m_Tooltip: 
     m_TextWithWhitespace: "Console\u200B"
   m_Pos:
@@ -667,7 +667,7 @@ MonoBehaviour:
   m_MaxSize: {x: 4000, y: 4000}
   m_TitleContent:
     m_Text: Hierarchy
-    m_Image: {fileID: -3734745235275155857, guid: 0000000000000000d000000000000000, type: 0}
+    m_Image: {fileID: 7966133145522015247, guid: 0000000000000000d000000000000000, type: 0}
     m_Tooltip: 
     m_TextWithWhitespace: "Hierarchy\u200B"
   m_Pos:
@@ -740,7 +740,7 @@ MonoBehaviour:
   m_MaxSize: {x: 4000, y: 4000}
   m_TitleContent:
     m_Text: Scene
-    m_Image: {fileID: 8634526014445323508, guid: 0000000000000000d000000000000000, type: 0}
+    m_Image: {fileID: 2593428753322112591, guid: 0000000000000000d000000000000000, type: 0}
     m_Tooltip: 
     m_TextWithWhitespace: "Scene\u200B"
   m_Pos:
@@ -1367,9 +1367,9 @@ MonoBehaviour:
   m_AudioPlay: 0
   m_DebugDrawModesUseInteractiveLightBakingData: 0
   m_Position:
-    m_Target: {x: -24.883884, y: 0.89310277, z: -73.38103}
+    m_Target: {x: -26.001854, y: 0.38808027, z: -71.948074}
     speed: 2
-    m_Value: {x: -24.883884, y: 0.89310277, z: -73.38103}
+    m_Value: {x: -26.001854, y: 0.38808027, z: -71.948074}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -1416,13 +1416,13 @@ MonoBehaviour:
     m_gridOpacity: 0.482
     m_NearestPlaneToHandleMode: 0
   m_Rotation:
-    m_Target: {x: 0.28234705, y: -0.03226862, z: 0.009522637, w: 0.95880896}
+    m_Target: {x: 0.27550074, y: -0.008247159, z: 0.0023636941, w: 0.9613494}
     speed: 2
-    m_Value: {x: -0.28234705, y: 0.03226862, z: -0.009522637, w: -0.95880896}
+    m_Value: {x: -0.27550074, y: 0.008247159, z: -0.0023636941, w: -0.9613495}
   m_Size:
-    m_Target: 2.8852243
+    m_Target: 3.3694909
     speed: 2
-    m_Value: 2.8852243
+    m_Value: 3.3694909
   m_Ortho:
     m_Target: 0
     speed: 2
@@ -1472,7 +1472,7 @@ MonoBehaviour:
   m_MaxSize: {x: 4000, y: 4000}
   m_TitleContent:
     m_Text: Game
-    m_Image: {fileID: 4621777727084837110, guid: 0000000000000000d000000000000000, type: 0}
+    m_Image: {fileID: -6423792434712278376, guid: 0000000000000000d000000000000000, type: 0}
     m_Tooltip: 
     m_TextWithWhitespace: "Game\u200B"
   m_Pos:
@@ -1515,10 +1515,10 @@ MonoBehaviour:
     m_VRangeLocked: 0
     hZoomLockedByDefault: 0
     vZoomLockedByDefault: 0
-    m_HBaseRangeMin: -731.4286
-    m_HBaseRangeMax: 731.4286
-    m_VBaseRangeMin: -411.4286
-    m_VBaseRangeMax: 411.4286
+    m_HBaseRangeMin: -1280
+    m_HBaseRangeMax: 1280
+    m_VBaseRangeMin: -720
+    m_VBaseRangeMax: 720
     m_HAllowExceedBaseRangeMin: 1
     m_HAllowExceedBaseRangeMax: 1
     m_VAllowExceedBaseRangeMin: 1
@@ -1538,7 +1538,7 @@ MonoBehaviour:
       y: 21
       width: 1041
       height: 689
-    m_Scale: {x: 0.7116211, y: 0.7116211}
+    m_Scale: {x: 0.40664062, y: 0.40664062}
     m_Translation: {x: 520.5, y: 344.5}
     m_MarginLeft: 0
     m_MarginRight: 0
@@ -1546,12 +1546,12 @@ MonoBehaviour:
     m_MarginBottom: 0
     m_LastShownAreaInsideMargins:
       serializedVersion: 2
-      x: -731.4286
-      y: -484.10593
-      width: 1462.8572
-      height: 968.21185
+      x: -1280
+      y: -847.1854
+      width: 2560
+      height: 1694.3708
     m_MinimalGUI: 1
-  m_defaultScale: 0.7116211
+  m_defaultScale: 0.40664062
   m_LastWindowPixelSize: {x: 1041, y: 710}
   m_ClearInEditMode: 1
   m_NoCameraWarning: 1
@@ -1575,7 +1575,7 @@ MonoBehaviour:
   m_MaxSize: {x: 2048, y: 2048}
   m_TitleContent:
     m_Text: Asset Store
-    m_Image: {fileID: -7444545952099596278, guid: 0000000000000000d000000000000000, type: 0}
+    m_Image: {fileID: -8693916549880196297, guid: 0000000000000000d000000000000000, type: 0}
     m_Tooltip: 
     m_TextWithWhitespace: "Asset Store\u200B"
   m_Pos:
@@ -1613,7 +1613,7 @@ MonoBehaviour:
   m_MaxSize: {x: 10000, y: 10000}
   m_TitleContent:
     m_Text: Project
-    m_Image: {fileID: -5179483145760003458, guid: 0000000000000000d000000000000000, type: 0}
+    m_Image: {fileID: -5467254957812901981, guid: 0000000000000000d000000000000000, type: 0}
     m_Tooltip: 
     m_TextWithWhitespace: "Project\u200B"
   m_Pos:
@@ -1670,12 +1670,12 @@ MonoBehaviour:
       m_Data: 63106
     m_ExpandedIDs:
     - m_Data: 0
-    - m_Data: 64144
-    - m_Data: 69776
-    - m_Data: 69778
-    - m_Data: 69780
-    - m_Data: 69782
-    - m_Data: 69784
+    - m_Data: 58180
+    - m_Data: 64676
+    - m_Data: 64678
+    - m_Data: 64680
+    - m_Data: 64682
+    - m_Data: 64684
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1709,12 +1709,12 @@ MonoBehaviour:
       m_Data: 0
     m_ExpandedIDs:
     - m_Data: 0
-    - m_Data: 64144
-    - m_Data: 69776
-    - m_Data: 69778
-    - m_Data: 69780
-    - m_Data: 69782
-    - m_Data: 69784
+    - m_Data: 58180
+    - m_Data: 64676
+    - m_Data: 64678
+    - m_Data: 64680
+    - m_Data: 64682
+    - m_Data: 64684
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1797,7 +1797,7 @@ MonoBehaviour:
   m_MaxSize: {x: 4000, y: 4000}
   m_TitleContent:
     m_Text: Inspector
-    m_Image: {fileID: -440750813802333266, guid: 0000000000000000d000000000000000, type: 0}
+    m_Image: {fileID: -2667387946076563598, guid: 0000000000000000d000000000000000, type: 0}
     m_Tooltip: 
     m_TextWithWhitespace: "Inspector\u200B"
   m_Pos:
