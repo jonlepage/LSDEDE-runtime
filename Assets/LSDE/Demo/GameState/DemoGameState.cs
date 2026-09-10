@@ -21,11 +21,16 @@ namespace LSDE.Demo
         [Header("Inventory")]
         [SerializeField]
         [Tooltip(
-            "Demo toggle: does the player have a carrot? "
-                + "Toggle this between Play sessions to test different condition paths. "
-                + "A real game would manage inventory through its own system."
+            "How many carrots the player starts with. Set it between Play sessions to reach a "
+                + "condition port without walking the whole field. A real game would load this "
+                + "from a save file.\n\n"
+                + "A COUNT and not a toggle: advance-full-demo's COND-005 tests "
+                + "`inventory.carrot >= 3`, so a boolean could never open that port — the whole "
+                + "second half of the scene would be dead graph. Leave it at 0 to play it the "
+                + "honest way, by picking the three carrots up off the ground."
         )]
-        private bool _playerHasCarrot = false;
+        [Min(0)]
+        private int _startingCarrotCount = 0;
 
         [Header("Party")]
         [SerializeField]
@@ -62,18 +67,37 @@ namespace LSDE.Demo
             // Snapshot the initial party composition before any runtime changes
             _initialPartyMembers = new List<string>(_partyMembers);
 
-            // Build inventory from the Inspector toggle.
+            // Build inventory from the Inspector count.
             // A real game would load this from a save file or persistent state.
-            if (_playerHasCarrot)
-            {
-                _inventory[LsdedeDemoTsBlueprintIds.DictionaryEntries.inventory.carrot] = 1;
-            }
+            SeedInventoryFromInspector();
 
             // Build party set from the serialized list
             foreach (string memberId in _partyMembers)
             {
                 _partyMemberSet.Add(memberId);
             }
+        }
+
+        /// <summary>
+        /// Put the Inspector's starting carrots into an inventory that has just been cleared.
+        ///
+        /// <para>Shared by <c>Awake</c> and <see cref="ResetToInitialState"/> so a scene switch
+        /// starts from exactly the state the first Play did — the two drifting apart is how a
+        /// condition starts answering differently on the second run than on the first.</para>
+        ///
+        /// <para>Zero writes no entry at all, which is not the same as writing zero only in
+        /// spirit: <see cref="GetItemQuantity"/> answers 0 either way. Leaving the key out keeps
+        /// the log line honest about what the player is actually carrying.</para>
+        /// </summary>
+        private void SeedInventoryFromInspector()
+        {
+            if (_startingCarrotCount <= 0)
+            {
+                return;
+            }
+
+            _inventory[LsdedeDemoTsBlueprintIds.DictionaryEntries.inventory.carrot] =
+                _startingCarrotCount;
         }
 
         /// <summary>
@@ -190,10 +214,7 @@ namespace LSDE.Demo
         {
             // Reset inventory
             _inventory.Clear();
-            if (_playerHasCarrot)
-            {
-                _inventory[LsdedeDemoTsBlueprintIds.DictionaryEntries.inventory.carrot] = 1;
-            }
+            SeedInventoryFromInspector();
 
             // Reset party to initial composition
             _partyMembers.Clear();

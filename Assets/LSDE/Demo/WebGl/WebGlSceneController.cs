@@ -66,8 +66,8 @@ namespace LSDE.Demo
 
         [SerializeField]
         [Tooltip(
-            "Select a locale here, then right-click this component → 'Test: Change Locale' "
-                + "to switch language in Play mode (no React needed)."
+            "Pick a language here while in Play mode: it applies immediately and the running "
+                + "demo restarts so the text on screen changes too. No React needed."
         )]
         private DemoLocale _editorTestLocale = DemoLocale.French;
 
@@ -363,25 +363,57 @@ namespace LSDE.Demo
             }
         }
 
+#if UNITY_EDITOR
         /// <summary>
-        /// Editor test: change locale to the one selected in <see cref="_editorTestLocale"/>.
-        /// Right-click this component in the Inspector → "Test: Change Locale".
-        /// Only works in Play mode.
+        /// Editor: applies <see cref="_editorTestLocale"/> the moment it is changed in the
+        /// Inspector, so picking a language is all there is to do.
+        ///
+        /// <para>Two things made the old right-click command confusing enough to be useless.
+        /// Changing the dropdown did nothing on its own — it only stored a value, and the
+        /// command still had to be found in a context menu on the component header. And even
+        /// then the screen did not change: the engine resolves a line's text when its block is
+        /// dispatched, so a bubble already showing keeps the words it was handed. Restarting
+        /// the running demo is what actually puts the new language on screen.</para>
+        ///
+        /// <para>The work is deferred to <see cref="Update"/> rather than done here: restarting
+        /// a scene tears down and rebuilds objects, which Unity forbids during OnValidate.</para>
         /// </summary>
-        [ContextMenu("Test: Change Locale")]
-        private void EditorTestChangeLocale()
+        private DemoLocale _appliedEditorLocale = DemoLocale.French;
+        private bool _editorLocaleChangePending;
+
+        private void OnValidate()
         {
-            if (!Application.isPlaying)
+            if (!Application.isPlaying || _editorTestLocale == _appliedEditorLocale)
             {
-                Debug.LogWarning("[LSDE WebGL] Test only works in Play mode.");
                 return;
             }
 
-            if (LocaleToCode.TryGetValue(_editorTestLocale, out string localeCode))
+            _editorLocaleChangePending = true;
+        }
+
+        private void Update()
+        {
+            if (!_editorLocaleChangePending)
             {
-                SetLocale(localeCode);
+                return;
+            }
+
+            _editorLocaleChangePending = false;
+            _appliedEditorLocale = _editorTestLocale;
+
+            if (!LocaleToCode.TryGetValue(_editorTestLocale, out string localeCode))
+            {
+                return;
+            }
+
+            SetLocale(localeCode);
+
+            if (_currentSceneName != null)
+            {
+                SelectScene(_currentSceneName);
             }
         }
+#endif
 
         /// <summary>
         /// Assign the selected scene UUID to all <see cref="DialogueProximityTrigger"/>

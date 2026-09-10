@@ -3,6 +3,7 @@ using System.Linq;
 using LSDE.Runtime;
 using LsdeDialogEngine;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 
 namespace LSDE.Demo
@@ -122,6 +123,59 @@ namespace LSDE.Demo
             if (!string.IsNullOrEmpty(_autoLaunchSceneRef))
             {
                 LaunchDialogueScene(_autoLaunchSceneRef);
+            }
+        }
+
+        /// <summary>
+        /// Unity calls this every frame. Escape abandons the running dialogue.
+        /// </summary>
+        private void Update()
+        {
+            if (Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                return;
+            }
+
+            AbandonActiveScene();
+        }
+
+        /// <summary>
+        /// Leave the running dialogue and give the player the world back.
+        ///
+        /// <para>A graph is allowed to loop with no way out, and one here does:
+        /// <c>advance-full-demo</c> has exactly ONE exit — recruit l3, then pick C3 — and
+        /// <c>DIALOG-021</c> wires straight back into <c>CHOICE-003</c>. Any other play goes round
+        /// forever, the exit handler never fires, nothing ever re-arms the trigger, and the scene
+        /// looks dead while it is in fact still running. A game must never be able to trap the
+        /// player in a dialogue, whatever the blueprint says — this is the way out, and the
+        /// reference TypeScript demo puts it on the same key.</para>
+        ///
+        /// <para><c>Cancel()</c> and not <see cref="ForceStopActiveScene"/>: it stops this
+        /// scene's tracks, runs every block cleanup and FIRES the exit handler, which is what
+        /// clears <see cref="IsDialogueSceneActive"/> and lets the trigger be walked into again.
+        /// <c>ForceStopActiveScene</c> stops the whole engine and is for switching demos.</para>
+        ///
+        /// <para>Idempotent: nothing running is not an error.</para>
+        /// </summary>
+        public void AbandonActiveScene()
+        {
+            if (!IsDialogueSceneActive || _currentSceneHandle == null)
+            {
+                return;
+            }
+
+            Debug.Log("[LSDE Demo] Abandoning the running dialogue scene (Escape).");
+
+            try
+            {
+                _currentSceneHandle.Cancel();
+            }
+            catch (System.Exception error)
+            {
+                // Cancel() re-throws a fault raised by a cleanup, but only AFTER it has closed the
+                // scene down: the exit handler has already run and the trigger is already back.
+                // This is a report, not something to recover from.
+                Debug.LogError($"[LSDE Demo] A cleanup failed while abandoning the scene: {error}");
             }
         }
 

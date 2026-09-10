@@ -63,12 +63,11 @@ namespace LSDE.Demo
         )]
         private float _maxTiltAngle = 15f;
 
-        [SerializeField]
-        [Tooltip(
-            "How fast the smoothed velocity catches up to actual velocity. "
-                + "Port of INERTIA_VELOCITY_LERP = 0.1. Lower = more inertia lag."
-        )]
-        private float _inertiaVelocityLerp = 0.1f;
+        // The reference demo smooths its own velocity by hand
+        // (`movement.ts`, INERTIA_VELOCITY_LERP = 0.1) because it integrates position itself.
+        // This port moves with SmoothDamp, which keeps a smoothed velocity of its own and hands
+        // it back through _smoothDampVelocity — so the tilt reads that directly and there is no
+        // second lag factor to expose. See section 6 of UpdateMovement.
 
         [Header("Terrain Following")]
         [SerializeField]

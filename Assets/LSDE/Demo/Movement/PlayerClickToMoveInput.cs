@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 namespace LSDE.Demo
@@ -60,6 +61,18 @@ namespace LSDE.Demo
                 return;
             }
 
+            // A click that lands on the interface is NOT an order to walk.
+            //
+            // This class reads the mouse device straight from the Input System, so a click never
+            // passes through the event system and the UI cannot consume it: picking an answer in a
+            // CHOICE bubble both selected the answer AND sent the player marching off to wherever
+            // the bubble happened to be floating. Asking the event system what is under the
+            // pointer is the only thing that separates the two.
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                return;
+            }
+
             if (_cachedMainCamera == null)
             {
                 _cachedMainCamera = Camera.main;
@@ -104,6 +117,18 @@ namespace LSDE.Demo
                         hitInfo.collider.GetComponentInChildren<PartyRecruitmentTrigger>();
 
                     if (recruitmentTrigger != null && recruitmentTrigger.TryRecruit())
+                    {
+                        return;
+                    }
+
+                    // Priority 1c: Something lying on the ground to collect.
+                    // Last of the three because a carrot at a rabbit's feet should not be taken
+                    // instead of the rabbit being talked to — and because an item is the only one
+                    // of the three the player can walk PAST, so refusing it (out of range) has to
+                    // fall through to the movement below rather than swallow the click.
+                    var pickableItem = hitInfo.collider.GetComponentInChildren<PickableItem>();
+
+                    if (pickableItem != null && pickableItem.TryPickUp())
                     {
                         return;
                     }

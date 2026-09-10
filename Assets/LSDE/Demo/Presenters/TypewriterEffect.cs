@@ -48,6 +48,25 @@ namespace LSDE.Demo
         private string _currentDialogueText;
 
         /// <summary>
+        /// What to call once every character is on screen — however that happened.
+        ///
+        /// <para>Held in a field rather than passed down to the coroutine, because the reveal has
+        /// TWO ends: the coroutine running out, and <see cref="Skip"/> cutting it short. Only the
+        /// first used to notify anyone, and <see cref="Skip"/> kills the coroutine before its tail
+        /// ever runs — so a line the player hurried never reported itself finished.</para>
+        ///
+        /// <para>That silence is what hangs a scene. A block carrying <c>timeout</c> arms its
+        /// countdown from this callback, precisely because the countdown starts when the line has
+        /// been SAID; no callback, no countdown, and the block stays on screen for good. A block on
+        /// <c>waitInput</c> survived it only because its advance was registered up front. The
+        /// reference demo cannot have this bug: its typewriter exposes <c>isComplete</c> as STATE
+        /// and skipping sets it, so both ends meet at the same flag.</para>
+        ///
+        /// <para>Cleared as it fires, so a reveal reports itself finished exactly once.</para>
+        /// </summary>
+        private Action _onRevealComplete;
+
+        /// <summary>
         /// Cached WaitForSeconds for normal character delay.
         /// Avoids GC allocation every tick inside the coroutine.
         /// </summary>
@@ -96,17 +115,22 @@ namespace LSDE.Demo
 
             _currentDialogueText = dialogueText;
             _isTypewriterPlaying = true;
+            _onRevealComplete = onComplete;
 
             // Assign full text so TMP computes the final layout (and BubbleSizeFitter
             // gets the correct size immediately). Then hide all characters.
             _textComponent.text = dialogueText;
             _textComponent.maxVisibleCharacters = 0;
 
-            _activeTypewriterCoroutine = StartCoroutine(RevealCharactersCoroutine(onComplete));
+            _activeTypewriterCoroutine = StartCoroutine(RevealCharactersCoroutine());
         }
 
         /// <summary>
         /// Immediately reveal all characters, stopping the coroutine.
+        ///
+        /// <para>The line still counts as SAID: a hurried reveal reports itself finished exactly
+        /// like one that ran its course, which is what lets a <c>timeout</c> start counting. See
+        /// <see cref="_onRevealComplete"/>.</para>
         /// </summary>
         public void Skip()
         {
@@ -126,12 +150,32 @@ namespace LSDE.Demo
                 _textComponent.maxVisibleCharacters = _currentDialogueText.Length;
             }
 
+            CompleteReveal();
+        }
+
+        /// <summary>
+        /// Mark the reveal finished and notify whoever was waiting, once.
+        ///
+        /// <para>The single exit both ends of the reveal go through — the coroutine running out,
+        /// and <see cref="Skip"/>. The callback is taken out of the field BEFORE being invoked, so
+        /// a handler that starts another line from inside it cannot see a stale one.</para>
+        /// </summary>
+        private void CompleteReveal()
+        {
             _isTypewriterPlaying = false;
+
+            var callback = _onRevealComplete;
+            _onRevealComplete = null;
+            callback?.Invoke();
         }
 
         /// <summary>
         /// Stop the typewriter without revealing remaining characters.
         /// Used internally for cleanup when a new text starts.
+        ///
+        /// <para>Drops the pending callback instead of firing it, which is the difference with
+        /// <see cref="Skip"/>: this line is being REPLACED, not finished. Reporting it as said
+        /// would arm the timeout of a block that is no longer on screen.</para>
         /// </summary>
         private void Stop()
         {
@@ -143,6 +187,7 @@ namespace LSDE.Demo
 
             _isTypewriterPlaying = false;
             _currentDialogueText = null;
+            _onRevealComplete = null;
         }
 
         /// <summary>
@@ -165,7 +210,7 @@ namespace LSDE.Demo
         /// GetParsedText, ForceMeshUpdate). This is reliable on every frame, including
         /// the very first text display after scene load.
         /// </summary>
-        private IEnumerator RevealCharactersCoroutine(Action onComplete)
+        private IEnumerator RevealCharactersCoroutine()
         {
             int totalCharacterCount = _currentDialogueText.Length;
 
@@ -185,8 +230,8 @@ namespace LSDE.Demo
                 }
             }
 
-            _isTypewriterPlaying = false;
-            onComplete?.Invoke();
+            _activeTypewriterCoroutine = null;
+            CompleteReveal();
         }
 
         /// <summary>

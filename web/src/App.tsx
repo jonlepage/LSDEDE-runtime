@@ -32,8 +32,16 @@ export default function App() {
     (locale: string) => {
       setActiveLocale(locale);
       setLocale(locale);
+
+      // The engine resolves a line's text when the block is dispatched, so a bubble already
+      // on screen keeps the words it was given: switching locale mid-scene changes nothing
+      // visible until the next block. Replaying the running demo is what makes the button
+      // do what the player expects it to do.
+      if (selectedScene !== null) {
+        selectScene(selectedScene);
+      }
     },
-    [setLocale],
+    [setLocale, selectScene, selectedScene],
   );
 
   // When Unity is ready, select the first scene

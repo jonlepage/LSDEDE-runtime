@@ -99,6 +99,17 @@ namespace LSDE.Demo
                 {
                     _canvasGroup = canvas.gameObject.AddComponent<CanvasGroup>();
                 }
+
+                // A World Space canvas needs to be told which camera the pointer is looking
+                // through. Left empty — which is how every bubble in the scene was set up — the
+                // GraphicRaycaster has no reliable way to turn a screen position into a point on
+                // a canvas floating in the world, and hit-testing the answers of a CHOICE block
+                // becomes a matter of luck. Resolved here rather than wired per bubble in the
+                // Inspector so a bubble added later cannot be forgotten.
+                if (canvas.renderMode == RenderMode.WorldSpace && canvas.worldCamera == null)
+                {
+                    canvas.worldCamera = Camera.main;
+                }
             }
 
             // Resolve the TypewriterEffect on the dialogue content text
@@ -184,13 +195,37 @@ namespace LSDE.Demo
             }
         }
 
+        /// <summary>Font size of an answer.</summary>
+        private const float ChoiceFontSize = 20f;
+
+        /// <summary>Breathing room between an answer's text and the edge of its clickable row.</summary>
+        private const float ChoiceHorizontalPadding = 10f;
+        private const float ChoiceVerticalPadding = 8f;
+
+        /// <summary>
+        /// How short a row may get. A one-line answer still deserves a comfortable target — the
+        /// player is aiming with a mouse at a bubble floating over a character's head.
+        /// </summary>
+        private const float ChoiceMinimumRowHeight = 44f;
+
+        /// <summary>
+        /// How wide an answer's text is allowed to be before it wraps.
+        ///
+        /// <para>A constant, and not the panel's measured width, because the rows are built BEFORE
+        /// the layout has run for this bubble: reading the panel at that moment gives its
+        /// unlaid-out size, which then feeds a wrap width of a few units and a row that collapses.
+        /// This is the width the panel has always given its content — the dialogue line uses the
+        /// same one — so the bubble keeps the proportions it had.</para>
+        /// </summary>
+        private const float ChoiceTextWidth = 330f;
+
         /// <summary>
         /// Show choice buttons inside the bubble instead of dialogue text.
         /// Hides the character name and dialogue content, then creates interactive
         /// <see cref="ChoiceButtonItem"/> elements for each visible choice.
         ///
-        /// Each button displays the localized choice text with a triangle marker (▸)
-        /// and changes color on hover. Clicking a button invokes the selection callback.
+        /// Each answer is a full-width row: a background plate that takes the pointer and lights
+        /// up under it, with the text drawn on top. Clicking a row invokes the selection callback.
         ///
         /// The bubble uses the same fade-in animation as dialogue display.
         /// </summary>
@@ -227,25 +262,89 @@ namespace LSDE.Demo
             {
                 foreach (var (choiceUuid, choiceLocalizedText) in choices)
                 {
-                    var buttonGameObject = new GameObject($"Choice_{choiceUuid.Substring(0, 8)}");
+                    // The whole id, not a slice of it. In v1 an option id was a uuid and this
+                    // took its first 8 characters to keep the name readable; in v2 the option id
+                    // IS the exit port — "C1", "C2", "C3" — so slicing 8 characters off a
+                    // 2-character string threw, and took every CHOICE block in every scene with it.
+                    var buttonGameObject = new GameObject($"Choice_{choiceUuid}");
                     buttonGameObject.transform.SetParent(textPanel, false);
 
-                    // TextMeshProUGUI acts as both the visual and the raycast target
-                    var buttonText = buttonGameObject.AddComponent<TextMeshProUGUI>();
-                    buttonText.fontSize = 20f;
-                    buttonText.alignment = TextAlignmentOptions.TopLeft;
+                    // The ROW is what the pointer hits, not the glyphs.
+                    //
+                    // The text used to be the raycast target itself, and that is what made these
+                    // so hard to click: a TextMeshProUGUI is hit-tested on its RectTransform, the
+                    // row was pinned to 32 units high, and a two-line answer at font size 20 needs
+                    // more than that — so with overflow on, the second line was DRAWN outside the
+                    // rectangle that could be clicked. The player aimed at text that was not a
+                    // target, and rows visually ran into each other.
+                    //
+                    // A stretched Image behind the text fixes both halves at once: it is the full
+                    // row, so the whole strip is clickable, and it is something that can be
+                    // TINTED — which is the hover feedback the text colour alone never really
+                    // gave.
+                    var rowBackground = buttonGameObject.AddComponent<Image>();
+                    rowBackground.color = ChoiceButtonItem.NormalBackgroundColor;
+                    rowBackground.raycastTarget = true;
+
+                    var labelObject = new GameObject("Label");
+                    labelObject.transform.SetParent(buttonGameObject.transform, false);
+
+                    var buttonText = labelObject.AddComponent<TextMeshProUGUI>();
+                    buttonText.fontSize = ChoiceFontSize;
+                    buttonText.alignment = TextAlignmentOptions.Left;
                     buttonText.textWrappingMode = TextWrappingModes.Normal;
                     buttonText.overflowMode = TextOverflowModes.Overflow;
-                    buttonText.raycastTarget = true;
+                    // The row behind it is the target; a second one here would only steal the
+                    // pointer from its own background and break the hover state.
+                    buttonText.raycastTarget = false;
 
-                    // LayoutElement ensures consistent sizing in the vertical layout
-                    var layoutElement = buttonGameObject.AddComponent<LayoutElement>();
-                    layoutElement.preferredHeight = 32f;
-                    layoutElement.flexibleWidth = 1f;
+                    // Inset from the row's edges, so the highlight reads as a band around the
+                    // answer rather than as a box cropping it.
+                    var labelRect = labelObject.GetComponent<RectTransform>();
+                    labelRect.anchorMin = Vector2.zero;
+                    labelRect.anchorMax = Vector2.one;
+                    labelRect.offsetMin = new Vector2(
+                        ChoiceHorizontalPadding,
+                        ChoiceVerticalPadding
+                    );
+                    labelRect.offsetMax = new Vector2(
+                        -ChoiceHorizontalPadding,
+                        -ChoiceVerticalPadding
+                    );
 
-                    // ChoiceButtonItem handles hover color change and click detection
+                    // ChoiceButtonItem handles hover feedback and click detection
                     var choiceButton = buttonGameObject.AddComponent<ChoiceButtonItem>();
-                    choiceButton.Initialize(choiceUuid, choiceLocalizedText, onChoiceSelected);
+                    choiceButton.Initialize(
+                        choiceUuid,
+                        choiceLocalizedText,
+                        onChoiceSelected,
+                        buttonText,
+                        rowBackground
+                    );
+
+                    // The row has to state its own size, both ways.
+                    //
+                    // A TextMeshProUGUI reports a preferred width and height from its text, which
+                    // is how these rows used to size themselves — and how the panel, whose
+                    // ContentSizeFitter follows its children, knew how wide to be. An Image
+                    // reports neither, so with the plate as the row the panel had nothing to
+                    // measure and collapsed to its own padding.
+                    //
+                    // So the row is told: this wide, and as tall as the text wraps to at that
+                    // width. Height comes from the text and not from a fixed number, which is the
+                    // half that stops a two-line answer from being drawn outside the strip that
+                    // can be clicked.
+                    float textHeight = buttonText
+                        .GetPreferredValues(buttonText.text, ChoiceTextWidth, 0f)
+                        .y;
+
+                    var layoutElement = buttonGameObject.AddComponent<LayoutElement>();
+                    layoutElement.preferredWidth = ChoiceTextWidth + (ChoiceHorizontalPadding * 2f);
+                    layoutElement.preferredHeight = Mathf.Max(
+                        ChoiceMinimumRowHeight,
+                        textHeight + (ChoiceVerticalPadding * 2f)
+                    );
+                    layoutElement.flexibleWidth = 1f;
 
                     _dynamicChoiceButtons.Add(buttonGameObject);
                 }

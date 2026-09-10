@@ -36,14 +36,10 @@ namespace LSDE.Demo
         private DialogueCharacterRegistry _characterRegistry;
 
         [Header("Camera Settings")]
-        [FormerlySerializedAs("_playerCharacterId")]
-        [SerializeField]
-        [Tooltip(
-            "The LSDE card NAME of the player character. When moveCameraToLabel targets "
-                + "this character, the camera resumes following after arriving. "
-                + "For other targets, the camera stays on the target until the next command."
-        )]
-        private string _playerCharacterName = "l4";
+        // There was a "player character name" here, naming the one target after which
+        // moveCameraToLabel would hand the camera back to the follow. It is gone because the
+        // camera is handed back after EVERY pan now — see ExecuteMoveCameraToLabel — so there is
+        // no longer a privileged target to name.
 
         [SerializeField]
         [Tooltip(
@@ -213,15 +209,21 @@ namespace LSDE.Demo
 
         /// <summary>
         /// Smoothly move the camera to focus on a character named by a dictionary key.
-        /// Pauses the camera follow, lerps to the character's anchor with ease-in-out cubic
-        /// easing, then:
-        /// - If the target is the player character (<see cref="_playerCharacterName"/>):
-        ///   resumes follow so the camera tracks the player again.
-        /// - Otherwise: leaves follow paused so the camera stays on the target
-        ///   until the next camera command or scene exit.
         ///
-        /// Arguments: <c>id</c> (a key of the <c>moveCameraToLabel_id</c> dictionary — a card
-        /// name), <c>duration</c> (number, seconds).
+        /// <para>The follow is paused for the PAN and resumed the moment it lands — always, whoever
+        /// was targeted. Resuming does not snap: the follow lerp glides back from wherever the
+        /// camera stopped, so the shot still lingers on what it was sent to show before drifting
+        /// home.</para>
+        ///
+        /// <para>This used to resume only when the target WAS the player, and leave the camera
+        /// parked on anything else "until the next camera command or scene exit". No such command
+        /// comes in <c>advance-full-demo</c>: both of its calls aim at the beast, so the camera
+        /// stayed on it for the whole scene while the rabbits spoke off-screen — and the three
+        /// simultaneous bubbles of <c>DIALOG-015</c>, the point of that scene, were never in
+        /// frame. The reference demo resumes in a <c>finally</c>, and it is right to.</para>
+        ///
+        /// <para>Arguments: <c>id</c> (a key of the <c>moveCameraToLabel_id</c> dictionary — a card
+        /// name), <c>duration</c> (number, seconds).</para>
         /// </summary>
         private IEnumerator ExecuteMoveCameraToLabel(Dictionary<string, object> arguments)
         {
@@ -283,37 +285,35 @@ namespace LSDE.Demo
 
             _cameraFollowController.PauseFollow();
 
-            Vector3 startCameraPosition = _cameraFollowController.transform.position;
-            float elapsedTime = 0f;
-
-            while (elapsedTime < durationInSeconds)
+            // try/finally so the follow comes back even if this coroutine is cut short — a scene
+            // abandoned on Escape stops it mid-pan, and a camera left paused there would never
+            // track the player again.
+            try
             {
-                elapsedTime += Time.deltaTime;
-                float linearProgress = Mathf.Clamp01(elapsedTime / durationInSeconds);
-                float easedProgress = EaseInOutCubic(linearProgress);
+                Vector3 startCameraPosition = _cameraFollowController.transform.position;
+                float elapsedTime = 0f;
 
-                _cameraFollowController.transform.position = Vector3.Lerp(
-                    startCameraPosition,
-                    targetCameraPosition,
-                    easedProgress
-                );
+                while (elapsedTime < durationInSeconds)
+                {
+                    elapsedTime += Time.deltaTime;
+                    float linearProgress = Mathf.Clamp01(elapsedTime / durationInSeconds);
+                    float easedProgress = EaseInOutCubic(linearProgress);
 
-                yield return null;
+                    _cameraFollowController.transform.position = Vector3.Lerp(
+                        startCameraPosition,
+                        targetCameraPosition,
+                        easedProgress
+                    );
+
+                    yield return null;
+                }
+
+                _cameraFollowController.transform.position = targetCameraPosition;
             }
-
-            _cameraFollowController.transform.position = targetCameraPosition;
-
-            // Resume follow only when returning to the player character.
-            // For other targets, the camera stays on the target until the next
-            // camera command or scene exit (which calls ResetCameraState).
-            bool isTargetingPlayerCharacter = string.Equals(
-                targetName,
-                _playerCharacterName,
-                StringComparison.OrdinalIgnoreCase
-            );
-
-            if (isTargetingPlayerCharacter)
+            finally
             {
+                // Always. The shot has been delivered; the camera now belongs to the player again
+                // and lerps home on its own, without snapping.
                 _cameraFollowController.ResumeFollow();
             }
 

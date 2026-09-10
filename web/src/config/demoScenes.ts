@@ -73,4 +73,16 @@ export const DEMO_SCENES: DemoScene[] = [
       full: `${BLUEPRINT_BASE}lsde-blueprint-6.webp`,
     },
   },
+  {
+    // Unity attend ce nom depuis le debut (BuildSceneNameMapping) et les objets de la
+    // scene sont filtres dessus — le boss et les carottes ne sont visibles que sous ce
+    // drapeau. Sans cette entree la barre laterale ne l'envoie jamais : le dernier
+    // bouton lance conditionDispatch, et la demo parait vide.
+    // Aucun apercu de blueprint n'est publie pour cette scene (404), d'ou le null.
+    sceneName: "advanceFullDemo",
+    label: "advance-full-demo",
+    description:
+      "Démo complète : router, boucle de choix et dictionnaire réservé",
+    blueprint: null,
+  },
 ];
