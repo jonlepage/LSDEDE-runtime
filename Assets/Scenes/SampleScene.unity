@@ -5883,7 +5883,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9cddf279edf5d16498cb9db04bff07e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.PartyRecruitmentTrigger
-  _interactionRadius: 0.48
+  _interactionRadius: 0.57
   _gameState: {fileID: 1914617372}
   _interactionHintDisplay: {fileID: 883980583}
 --- !u!114 &1315641506
@@ -9041,7 +9041,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LSDE.Demo.PickableItem
   _itemKey: carrot
   _quantity: 1
-  _interactionRadius: 1.6
+  _interactionRadius: 1
   _interactionHintDisplay: {fileID: 0}
   _tintColor: {r: 1, g: 0.6615062, b: 0, a: 1}
   _gameState: {fileID: 1914617372}
